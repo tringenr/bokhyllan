@@ -178,3 +178,5 @@ body{padding:0}
 #toTop{bottom:calc(4.8rem + env(safe-area-inset-bottom))}
 .photos{margin-top:1.4rem}
 @media (max-width:640px){body{padding:0}}
+
+.heat-lag{background:var(--tag);color:var(--muted)}

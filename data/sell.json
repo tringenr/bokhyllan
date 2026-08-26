@@ -1,6 +1,6 @@
 {
  "updated": "2026-08-26",
- "note": "Pilotbevakning. Priser = aktuellt begagnat-pris på Studentapan (vad köpare betalar; du får något mindre efter avgift). Terminsstart = högsäsong nu.",
+ "note": "Priser = vad köpare betalar för begagnat på Studentapan (du får mindre efter avgift). Terminsstart nu = högsäsong. Tradera ger klart lägre priser för kurslitteratur — använd bara för böcker Studentapan inte tar.",
  "items": [
   {
    "title": "Klinisk barnpsykologi : Utveckling på avvägar (uppl 2)",
@@ -32,20 +32,20 @@
   {
    "title": "Dynamisk psykiatri",
    "match": "Dynamisk psykiatri",
-   "price": "ej verifierat",
-   "heat": "medel",
-   "why": "Cullbergs klassiker, återkommande på psykiatri-/psykoterapikurser. Flera upplagor — kolla vilken du har.",
-   "url": "https://www.studentapan.se/kurslitteratur/dynamisk-psykiatri-9789127093362",
-   "checked": false
+   "price": "30–50 kr (Tradera)",
+   "heat": "lag",
+   "why": "Cullbergs klassiker finns i massor på Tradera för 30–50 kr — utbudet är stort och äldre upplagor har tappat kursstatus. Behåll eller skänk hellre.",
+   "url": "https://www.tradera.com/search?q=dynamisk+psykiatri+cullberg",
+   "checked": true
   },
   {
    "title": "Beteendets ABC",
    "match": "Beteendets ABC",
-   "price": "ej verifierat",
+   "price": "ny 489 kr — begagnat varierar",
    "heat": "medel",
-   "why": "Grundbok i KBT-utbildningar, du har två exemplar (bokhylla 2 + bokskåpet) — sälj ena. Uppl 3 (2020) är den gångbara.",
+   "why": "Uppl 3 (2020) säljs ny för 489 kr på Studentapan. Du har två exemplar (bokhylla 2 + bokskåpet) — sälj det ena.",
    "url": "https://www.studentapan.se/kurslitteratur/beteendets-abc-en-introduktion-till-behavioristisk-psykoterapi-9789144136639",
-   "checked": false
+   "checked": true
   },
   {
    "title": "Kompetensbaserad rekrytering, intervjuteknik och testning",
@@ -59,11 +59,11 @@
   {
    "title": "Hur moderna organisationer fungerar",
    "match": "Hur moderna organisationer fungerar",
-   "price": "ej verifierat",
-   "heat": "kolla",
-   "why": "Jacobsen & Thorsvik — bred organisationsteorikurs-bok i hela Norden.",
-   "url": "https://www.studentapan.se/sok?q=hur%20moderna%20organisationer%20fungerar",
-   "checked": false
+   "price": "359 kr (uppl 5) / 175 kr (uppl 4)",
+   "heat": "het",
+   "why": "Jacobsen & Thorsvik — bred org-kursbok i hela Norden. Uppl 5 (2021) ger 359 kr, uppl 4 (2014) 175 kr.",
+   "url": "https://www.studentapan.se/kurslitteratur/hur-moderna-organisationer-fungerar-9789144150956",
+   "checked": true
   },
   {
    "title": "Organisationer, ledning och processer",
@@ -77,11 +77,11 @@
   {
    "title": "Clinical Handbook of Psychological Disorders",
    "match": "Clinical Handbook of Psychological Disorders",
-   "price": "ej verifierat",
-   "heat": "kolla",
-   "why": "Barlow — psykologprogrammens klinikkursbok.",
-   "url": "https://www.studentapan.se/sok?q=clinical%20handbook%20of%20psychological%20disorders",
-   "checked": false
+   "price": "begagnad SLUT (ny 1 491 kr)",
+   "heat": "het",
+   "why": "Barlow uppl 6: begagnade exemplar är slutsålda medan nypriset är 1 491 kr — högt tryck, inget utbud. Kolla vilken upplaga du har; uppl 6 (2021) är den gångbara.",
+   "url": "https://www.studentapan.se/kurslitteratur/clinical-handbook-of-psychological-disorders-9781462547043",
+   "checked": true
   },
   {
    "title": "Handbok i missbrukspsykologi",

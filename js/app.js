@@ -301,7 +301,7 @@ fetch("data/sell.json").then(r=>r.json()).then(s=>{
   document.getElementById("sellList").innerHTML=s.items.map(it=>{
     const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
     const loc=d?locLabel(d.shelf):"";
-    return `<div class="sell-item"><h4>${it.title}<span class="heat heat-${it.heat}">${it.heat==="het"?"HET":it.heat==="medel"?"MEDEL":"KOLLA"}</span></h4>
+    return `<div class="sell-item"><h4>${it.title}<span class="heat heat-${it.heat}">${({het:"HET",medel:"MEDEL",lag:"LÅGT VÄRDE"})[it.heat]||"KOLLA"}</span></h4>
     <p><span class="sell-price">${it.price}</span>${loc?" · står i: "+loc:""}</p>
     <p>${it.why}</p>
     <p><a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan →</a></p></div>`}).join("");
