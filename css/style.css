@@ -198,3 +198,6 @@ body{padding:0}
 .gap-state{font-size:.72rem;border-radius:999px;padding:.15rem .6rem;font-weight:700;margin-left:.4rem}
 .gap-state.waiting{background:var(--lent-bg);color:var(--lent)}
 .gap-state.done{background:var(--home-bg);color:var(--home)}
+
+.gap-cat-row{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
+.gap-cat,.gap-newcat{flex:1 1 45%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:.5rem .6rem;font-size:.85rem}

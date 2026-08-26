@@ -337,11 +337,24 @@ function renderGaps(){
         ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klarmarkera</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna igen</button>`}
       </div>
       <div class="gap-form" id="form-${g.id}" style="display:none">
-        <textarea id="ta-${g.id}" placeholder="En titel per rad, t.ex.&#10;Sociologins teorier&#10;Att förstå vardagen"></textarea>
+        <textarea id="ta-${g.id}" placeholder="En bok per rad. Lägg till författare efter | om du vill:&#10;Sociologins teorier | Månson&#10;Att förstå vardagen"></textarea>
+        <div class="gap-cat-row">
+          <select id="cat-${g.id}" class="gap-cat"></select>
+          <input id="newcat-${g.id}" class="gap-newcat" placeholder="…eller ny kategori" style="display:none">
+        </div>
         <div class="gap-actions" style="margin-top:.4rem"><button onclick="gapSave('${g.id}')">Spara till katalogen</button></div>
       </div></div>`}).join(""):"<p style='color:var(--muted)'>Inga luckor i den här vyn.</p>";
 }
-function gapWrite(id){const f=document.getElementById("form-"+id);f.style.display=f.style.display==="none"?"":"none"}
+function fillCatSelect(id){
+  const sel=document.getElementById("cat-"+id);if(!sel||sel.dataset.done)return;
+  const cats=[...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
+  sel.innerHTML=`<option value="">Välj kategori…</option>`+cats.map(c=>`<option>${c}</option>`).join("")+`<option value="__new">➕ Ny kategori…</option>`;
+  sel.dataset.done="1";
+  sel.addEventListener("change",()=>{document.getElementById("newcat-"+id).style.display=sel.value==="__new"?"":"none"});
+}
+function gapWrite(id){const f=document.getElementById("form-"+id);
+  const open=f.style.display==="none";f.style.display=open?"":"none";
+  if(open)fillCatSelect(id)}
 async function gapSet(id,state,photo){
   if(!sbUser){alert("Logga in för att ändra luckor.");return}
   gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo))};
@@ -363,10 +376,17 @@ async function gapSave(id){
   const g=GAPS.find(x=>x.id===id);
   const lines=document.getElementById("ta-"+id).value.split("\n").map(s=>s.trim()).filter(Boolean);
   if(!lines.length)return;
-  const rows=lines.map(t=>({title:t,author:"",cat:"Okategoriserad",shelf:g.shelf,gap_id:id,created_by:sbUser.id}));
+  const sel=document.getElementById("cat-"+id);
+  let cat=sel?sel.value:"";
+  if(cat==="__new")cat=(document.getElementById("newcat-"+id).value||"").trim();
+  if(!cat)cat="Okategoriserad";
+  const parse=t=>{const p=t.split("|");return {title:p[0].trim(),author:(p[1]||"").trim()}};
+  const rows=lines.map(t=>({...parse(t),cat,shelf:g.shelf,gap_id:id,created_by:sbUser.id}));
   const {error}=await sb.from("manual_books").insert(rows);
   if(error){alert("Kunde inte spara: "+error.message);return}
-  lines.forEach(t=>data.push({id:1e6+data.length,title:t,author:"",cat:"Okategoriserad",shelf:g.shelf,status:"hylla",lentTo:"",ts:null}));
+  rows.forEach(r=>data.push({id:1e6+data.length,title:r.title,author:r.author,cat:r.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null}));
+  buildShelfOptions();
+  const fc=$("#fCat");if(fc&&![...fc.options].some(o=>o.value===cat)){const o=document.createElement("option");o.textContent=cat;fc.appendChild(o)}
   render();await gapSet(id,"done");
   alert(lines.length+" böcker tillagda!");
 }
