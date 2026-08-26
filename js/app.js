@@ -65,6 +65,7 @@ function render(){
   $("#stUt").textContent=data.filter(d=>d.status==="utlanad").length;
   $("#stFly").textContent=data.filter(d=>d.status==="flyter").length;
   $("#count").textContent=list.length+" böcker visas";
+  if(window.__lt)window.__lt();
   $("#grid").innerHTML=list.map(d=>{
     const [label,cls]=STATUS[d.status];
     const lent=d.status==="utlanad"&&d.lentTo?` → ${d.lentTo}`:"";
@@ -75,7 +76,7 @@ function render(){
     ${lentInp}<div class="cat">${d.cat} · <a class="var-link" onclick="lbShelf('${d.shelf}',${d.id})">📍 sågs senast${d.ts?" "+d.ts:""}</a></div></div>`}).join("");
   renderBcEditor();
 }
-$("#q").addEventListener("input",e=>{q=e.target.value;render()});
+$("#q").addEventListener("input",e=>{q=e.target.value;render();if(q)setList(true)});
 $("#fShelf").addEventListener("change",e=>{fShelf=e.target.value;render()});
 $("#fCat").addEventListener("change",e=>{fCat=e.target.value;render()});
 document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");fs=c.dataset.s;render()}));
@@ -264,14 +265,35 @@ sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table
   if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
 }).subscribe();
 
-/* ---------- Flikar ---------- */
-document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
-  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
+/* ---------- Flikar (bottennav) ---------- */
+document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tabbar .tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
   const id=t.dataset.tab;
-  document.getElementById("tab-sok").style.display=id==="sok"?"":"none";
-  document.getElementById("tab-salj").style.display=id==="salj"?"":"none";
-  document.getElementById("tab-install").style.display=id==="install"?"":"none";
+  ["sok","salj","install"].forEach(k=>document.getElementById("tab-"+k).style.display=(k===id?"":"none"));
   scrollTo({top:0});
+}));
+/* ---------- Konto-panel ---------- */
+document.getElementById("authToggle").addEventListener("click",()=>document.getElementById("authPanel").classList.toggle("open"));
+/* ---------- Hero + boklista ---------- */
+const heroBtn=document.getElementById("heroShelves");
+if(SHELF_IMGS.length&&SHELF_IMGS[0].imgs[0])
+  heroBtn.insertAdjacentHTML("afterbegin",`<img src="${SHELF_IMGS[0].imgs[0].thumb}" alt="">`);
+heroBtn.addEventListener("click",()=>{renderPhotoGrid();document.getElementById("photos").scrollIntoView({behavior:"smooth"})});
+const listWrap=document.getElementById("listWrap"),listToggle=document.getElementById("listToggle");
+function setList(open){listWrap.style.display=open?"":"none";
+  listToggle.textContent=(open?"📖 Dölj boklistan ":"📖 Visa hela boklistan ")+(document.getElementById("count").textContent||"");}
+listToggle.addEventListener("click",()=>setList(listWrap.style.display==="none"));
+/* ---------- Snabbknappar ---------- */
+const QUICK=["Psykologi","Terapi","Religion","Buddhism","Skönlitteratur","Mat","Ledarskap","Organisation","Filosofi"];
+const qr=document.getElementById("quickRow");
+qr.innerHTML=`<button class="quick" data-q="utlanad">📤 Utlånade</button>`+QUICK.map(c=>`<button class="quick" data-cat="${c}">${c}</button>`).join("");
+qr.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>{
+  const on=b.classList.contains("on");
+  qr.querySelectorAll(".quick").forEach(x=>x.classList.remove("on"));
+  fCat="";fs="";
+  if(!on){b.classList.add("on");if(b.dataset.cat){fCat=b.dataset.cat;$("#fCat").value=fCat}else{fs="utlanad"}}
+  else{$("#fCat").value=""}
+  render();setList(!on);
 }));
 /* ---------- Sälj ---------- */
 fetch("data/sell.json").then(r=>r.json()).then(s=>{
@@ -284,5 +306,6 @@ fetch("data/sell.json").then(r=>r.json()).then(s=>{
     <p>${it.why}</p>
     <p><a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan →</a></p></div>`}).join("");
 }).catch(()=>{document.getElementById("sellList").innerHTML="<p>Kunde inte ladda säljlistan.</p>"});
+window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();

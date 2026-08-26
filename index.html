@@ -2,43 +2,53 @@
 <html lang="sv">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f7f5f1">
 <title>Bokhyllan</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
-<div class="wrap">
-<header>
-  <h1>📚 Bokhyllan</h1>
-  <p>Prototyp — katalogiserad från foto av vardagsrumshyllan, 25 aug 2026. Klicka på statusknappen för att växla plats/utlånad/flyter runt.</p>
-  <a class="shelves-btn" href="#photos">🖼 Till hyllorna ↓</a>
-  <div id="authBar" class="auth-bar"></div>
-  <nav class="tabs">
-    <button class="tab active" data-tab="sok">🔍 Sök</button>
-    <button class="tab" data-tab="salj">💰 Sälj</button>
-    <button class="tab" data-tab="install">⚙️ Inställningar</button>
-  </nav>
+<header class="app-bar">
+  <span class="app-title">📚 Bokhyllan</span>
+  <button id="authToggle" class="auth-icon" aria-label="Konto">👤</button>
 </header>
+<div id="authPanel" class="auth-panel"><div id="authBar" class="auth-bar"></div></div>
+
+<main class="wrap">
+
 <div id="tab-sok">
-<div class="stats">
-  <div class="stat"><b id="stTot">0</b><span>böcker</span></div>
-  <div class="stat"><b id="stHylla">0</b><span>på plats</span></div>
-  <div class="stat"><b id="stUt">0</b><span>utlånade</span></div>
-  <div class="stat"><b id="stFly">0</b><span>flyter runt</span></div>
-</div>
-<div id="bcEditor" class="bc-editor"></div>
-<div class="controls">
-  <input id="q" type="search" placeholder="Sök titel eller författare…">
-  <select id="fShelf"><option value="">Alla hyllplan</option></select>
-  <select id="fCat"><option value="">Alla kategorier</option></select>
-  <button class="chip active" data-s="">Alla</button>
-  <button class="chip" data-s="hylla">På plats</button>
-  <button class="chip" data-s="utlanad">Utlånad</button>
-  <button class="chip" data-s="flyter">Flyter runt</button>
-</div>
-<div id="count"></div>
-<div class="grid" id="grid"></div>
+  <button class="hero-shelves" id="heroShelves">
+    <span class="hero-txt">🖼 Hyllorna<small>Bläddra bland alla hyllor och foton</small></span>
+  </button>
+
+  <div class="search-row">
+    <input id="q" type="search" placeholder="Sök titel eller författare…">
+  </div>
+  <div class="quick-row" id="quickRow"></div>
+
+  <button class="list-toggle" id="listToggle">📖 Visa hela boklistan <span id="listCount"></span></button>
+
+  <div id="listWrap" style="display:none">
+    <div class="controls">
+      <select id="fShelf"></select>
+      <select id="fCat"><option value="">Alla kategorier</option></select>
+      <button class="chip active" data-s="">Alla</button>
+      <button class="chip" data-s="hylla">På plats</button>
+      <button class="chip" data-s="utlanad">Utlånad</button>
+      <button class="chip" data-s="flyter">Flyter runt</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stTot">0</b><span>böcker</span></div>
+      <div class="stat"><b id="stHylla">0</b><span>på plats</span></div>
+      <div class="stat"><b id="stUt">0</b><span>utlånade</span></div>
+      <div class="stat"><b id="stFly">0</b><span>flyter runt</span></div>
+    </div>
+    <div id="count"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
 <section class="photos" id="photos">
   <h2>🖼 Hyllorna</h2>
   <p class="photo-intro">Klicka på en hylla för att se bilden i stort format och böckerna som står där. <span class="badge-hard">Rödmarkerat</span> = svårlästa ryggar.</p>
@@ -49,21 +59,30 @@
   </div>
 </section>
 </div><!-- /tab-sok -->
+
 <div id="tab-salj" style="display:none">
   <h2 class="salj-h">💰 Säljbara böcker</h2>
   <p id="sellNote" class="photo-intro"></p>
   <div id="sellList"></div>
 </div>
+
 <div id="tab-install" style="display:none">
   <h2 class="salj-h">⚙️ Inställningar</h2>
   <h3 class="ins-h">Hyllornas namn</h3>
-  <p class="photo-intro">Klicka för att byta namn. Namnen delas med hela familjen när du är inloggad.</p>
+  <p class="photo-intro">Klicka för att byta namn. Namnen delas med familjen när du är inloggad.</p>
   <div id="bcEditorIns"></div>
   <h3 class="ins-h">Om appen</h3>
   <div class="note">Detta är en prototyp med böckerna från ett foto (två sektioner av vardagsrumshyllan, ca 150 av titlarna gick att läsa av). Statusändringar sparas lokalt i din webbläsare. Nästa steg: fler foton, rättning av feltolkade titlar, och ev. en riktig databas så status kan delas mellan enheter.<br><br><b>Backlogg:</b> exakta bokmarkeringar på fotona (koordinater per bokrygg istället för "ungefär här") · soffan och resten av sovrummet · kökets nedersta hylla · de rödmarkerade svårlästa partierna.</div>
-</div>
-
 </div><!-- /tab-install -->
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab" data-tab="salj"><span>💰</span>Sälj</button>
+  <button class="tab active" data-tab="sok"><span>🔍</span>Sök</button>
+  <button class="tab" data-tab="install"><span>⚙️</span>Inställningar</button>
+</nav>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/app.js"></script>
 </body>
