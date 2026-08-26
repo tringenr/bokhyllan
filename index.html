@@ -6,10 +6,34 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f5f1">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=202608261639">
+<link rel="stylesheet" href="css/style.css?v=202608261640">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
+<div id="errBanner" style="display:none;position:fixed;left:0;right:0;top:0;z-index:999;background:#c0392b;color:#fff;
+ padding:.7rem .9rem;font:12px/1.4 monospace;white-space:pre-wrap;max-height:45vh;overflow:auto"></div>
+<script>
+(function(){
+  var b=document.getElementById?null:null;
+  function show(msg){
+    var el=document.getElementById("errBanner");
+    if(!el)return;
+    el.style.display="block";
+    el.textContent=(el.textContent?el.textContent+"\n":"")+msg;
+  }
+  window.addEventListener("error",function(e){
+    show("FEL: "+(e.message||"")+" @ "+(e.filename||"").split("/").pop()+":"+(e.lineno||""));
+  });
+  window.addEventListener("unhandledrejection",function(e){
+    show("LÖFTE AVVISAT: "+((e.reason&&e.reason.message)||e.reason||""));
+  });
+  window.__appStarted=false;
+  setTimeout(function(){
+    if(!window.__appStarted)show("Appen startade aldrig. Kontrollera nätverk/JS-laddning.\nVersion: 202608261639");
+  },5000);
+})();
+</script>
+
 <header class="app-bar">
   <span class="app-title">📚 Bokhyllan</span>
   <span class="bar-btns"><button id="shareBtn" class="auth-icon" aria-label="Dela">🔗</button><button id="authToggle" class="auth-icon" aria-label="Konto">👤</button></span>
@@ -109,6 +133,6 @@
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=202608261639"></script>
+<script src="js/app.js?v=202608261640"></script>
 </body>
 </html>
