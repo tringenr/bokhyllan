@@ -13,13 +13,15 @@ Hyllkoder: `bokhylla:sektion+plan`, t.ex. `1:V3` = bokhylla 1, vänster sektion,
 
 ## Backlogg
 
-### Funktioner framåt
-- **Uppdatera hylla via foto** — ladda upp en ny bild av en hylla/bokhylla och låta katalogen uppdateras (nya/borttagna böcker diffas in)
-- **Lägg till ny hylla** — ny plats med böcker direkt i appen
-- **Delafunktion** — delbar länk/bild för sociala medier: "titta i min bokhylla — vill du låna någon / prata om någon?"
-- **Bokomslag i popupen** — framsidan visas i beskrivnings-popupen (hämtad från nätet); saknas bild visas en uppladdningsruta där man kan fota omslaget själv
-- **Redigera kategorietiketter** — byta namn på etiketter, lägga till/ta bort etiketter, och ändra vilka etiketter en bok har
-- ~~Svårläst-lista~~ **KLAR** — Luckor-vyn (Inställningar → Luckor): 51 olästa partier med utsnitt, handinmatning och fotouppladdning till Claude-kö
+### Klart
+- ✅ **Luckor** (Inställningar → Luckor) — 51 olästa partier granskade: 47 lösta, 16 nya böcker inlagda, 4 kvar som behöver närbild
+- ✅ **Kategoriredigering** — byt namn/slå ihop i Inställningar, ändra kategori per bok i popupen
+- ✅ **Bokomslag** — hämtas live från Open Library, egen kamerauppladdning när omslag saknas
+- ✅ **Lägg till/uppdatera hylla via foto** — kö som Claude läser av
+- ✅ **Delafunktion** — 🔗 i appraden, färdig text + systemets delningsmeny
+
+### Kvar
+- **Automatisk diff vid hylluppdatering** — idag läser Claude av den uppladdade bilden manuellt; på sikt jämföra mot befintlig katalog och föreslå ändringar
 
 ### Teknik & data
 - Veckobevakning sälj: automatisk prisuppdatering av `data/sell.json` (Studentapan)
