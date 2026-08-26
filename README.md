@@ -12,7 +12,19 @@ Familjens bokkatalog — ca 720 böcker på 8 platser, med hyllfoton, sök, stat
 Hyllkoder: `bokhylla:sektion+plan`, t.ex. `1:V3` = bokhylla 1, vänster sektion, plan 3 (räknat nedifrån). `S`=hylla, `K`=köket.
 
 ## Backlogg
-- Supabase: delad status + familjeinloggning (ersätter localStorage)
-- Exakta bokmarkeringar på fotona
-- Kvalitetssäkra beskrivningar mot Google Books
-- Arbetsrummet & barnens rum
+
+### Funktioner framåt
+- **Uppdatera hylla via foto** — ladda upp en ny bild av en hylla/bokhylla och låta katalogen uppdateras (nya/borttagna böcker diffas in)
+- **Lägg till ny hylla** — ny plats med böcker direkt i appen
+- **Delafunktion** — delbar länk/bild för sociala medier: "titta i min bokhylla — vill du låna någon / prata om någon?"
+- **Bokomslag i popupen** — framsidan visas i beskrivnings-popupen (hämtad från nätet); saknas bild visas en uppladdningsruta där man kan fota omslaget själv
+- **Redigera kategorietiketter** — byta namn på etiketter, lägga till/ta bort etiketter, och ändra vilka etiketter en bok har
+- **Svårläst-lista** — egen vy med alla böcker/partier flaggade som svårlästa (samma kortinfo som sök: titel, text, bild, hyllplats) så man kan fota om eller rätta titeln manuellt
+
+### Teknik & data
+- Veckobevakning sälj: automatisk prisuppdatering av `data/sell.json` (Studentapan)
+- Bokbörsens efterlysningar — kräver webbläsarläsning (JS-renderad sajt)
+- Exakta bokmarkeringar på hyllfotona (koordinater per bokrygg)
+- Kvalitetssäkra bokbeskrivningarna mot Google Books/Open Library
+- Arbetsrummet & barnens rum (nya foton)
+- Kökets nedersta hylla + rödmarkerade svårlästa partier
