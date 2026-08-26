@@ -362,31 +362,56 @@ function renderGaps(){
         <div class="gap-body">
           <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}</div>
           <div class="gap-actions">
-            <button onclick="gapWrite('${g.id}')">✏️ Skriv in</button>
+            <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
             <label class="ghost">📷 Fota<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
             ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klar</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna</button>`}
           </div>
           <div class="gap-form" id="form-${g.id}" style="display:none">
-            <textarea id="ta-${g.id}" placeholder="En bok per rad. Författare efter | om du vill:&#10;Sociologins teorier | Månson"></textarea>
-            <div class="gap-cat-row">
-              <select id="cat-${g.id}" class="gap-cat"></select>
-              <input id="newcat-${g.id}" class="gap-newcat" placeholder="…eller ny kategori" style="display:none">
+            <p class="gap-help">Lägg till en rad per bok. Kategorin ärvs från raden ovanför – ändra där den skiljer sig.</p>
+            <div class="gap-rows" id="rows-${g.id}"></div>
+            <div class="gap-actions" style="margin-top:.5rem">
+              <button class="ghost" onclick="gapAddRow('${g.id}')">➕ Rad till</button>
+              <button onclick="gapSave('${g.id}')">💾 Spara <span id="cnt-${g.id}"></span></button>
             </div>
-            <div class="gap-actions" style="margin-top:.4rem"><button onclick="gapSave('${g.id}')">Spara till katalogen</button></div>
           </div>
         </div>
       </div></div>`}).join(""):"<p style='color:var(--muted)'>Inga luckor i den här vyn.</p>";
 }
-function fillCatSelect(id){
-  const sel=document.getElementById("cat-"+id);if(!sel||sel.dataset.done)return;
+function catOptions(sel){
   const cats=[...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
-  sel.innerHTML=`<option value="">Välj kategori…</option>`+cats.map(c=>`<option>${c}</option>`).join("")+`<option value="__new">➕ Ny kategori…</option>`;
-  sel.dataset.done="1";
-  sel.addEventListener("change",()=>{document.getElementById("newcat-"+id).style.display=sel.value==="__new"?"":"none"});
+  return `<option value="">Kategori…</option>`+cats.map(c=>`<option${c===sel?" selected":""}>${c}</option>`).join("")+`<option value="__new">➕ Ny kategori…</option>`;
 }
-function gapWrite(id){const f=document.getElementById("form-"+id);
+function gapAddRow(id,inherit){
+  const wrap=document.getElementById("rows-"+id);if(!wrap)return;
+  const prev=wrap.querySelector(".gap-brow:last-child select");
+  const cat=inherit||(prev?prev.value:"");
+  const div=document.createElement("div");div.className="gap-brow";
+  div.innerHTML=`<input class="gb-title" placeholder="Titel">
+    <input class="gb-auth" placeholder="Författare (valfritt)">
+    <select class="gb-cat">${catOptions(cat)}</select>
+    <input class="gb-newcat" placeholder="Ny kategoris namn" style="display:none">
+    <button class="gb-del" title="Ta bort rad">✕</button>`;
+  wrap.appendChild(div);
+  const sel=div.querySelector(".gb-cat"),nc=div.querySelector(".gb-newcat");
+  sel.addEventListener("change",()=>{nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus()});
+  div.querySelector(".gb-del").addEventListener("click",()=>{div.remove();gapCount(id)});
+  div.querySelector(".gb-title").addEventListener("input",()=>gapCount(id));
+  div.querySelector(".gb-title").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){e.preventDefault();gapAddRow(id);
+      const rows=wrap.querySelectorAll(".gap-brow");rows[rows.length-1].querySelector(".gb-title").focus()}});
+  gapCount(id);
+  return div;
+}
+function gapCount(id){
+  const n=[...document.querySelectorAll(`#rows-${id} .gb-title`)].filter(i=>i.value.trim()).length;
+  const el=document.getElementById("cnt-"+id);if(el)el.textContent=n?`(${n} ${n===1?"bok":"böcker"})`:"";
+}
+function gapWrite(id){
+  const f=document.getElementById("form-"+id);
   const open=f.style.display==="none";f.style.display=open?"":"none";
-  if(open)fillCatSelect(id)}
+  if(open&&!document.querySelector(`#rows-${id} .gap-brow`)){gapAddRow(id);gapAddRow(id);gapAddRow(id)}
+}
+window.gapAddRow=gapAddRow;
 async function gapSet(id,state,photo){
   if(!sbUser){alert("Logga in för att ändra luckor.");return}
   gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo))};
@@ -406,21 +431,20 @@ async function gapUpload(id,input){
 async function gapSave(id){
   if(!sbUser){alert("Logga in för att spara.");return}
   const g=GAPS.find(x=>x.id===id);
-  const lines=document.getElementById("ta-"+id).value.split("\n").map(s=>s.trim()).filter(Boolean);
-  if(!lines.length)return;
-  const sel=document.getElementById("cat-"+id);
-  let cat=sel?sel.value:"";
-  if(cat==="__new")cat=(document.getElementById("newcat-"+id).value||"").trim();
-  if(!cat)cat="Okategoriserad";
-  const parse=t=>{const p=t.split("|");return {title:p[0].trim(),author:(p[1]||"").trim()}};
-  const rows=lines.map(t=>({...parse(t),cat,shelf:g.shelf,gap_id:id,created_by:sbUser.id}));
-  const {error}=await sb.from("manual_books").insert(rows);
+  const rows=[...document.querySelectorAll(`#rows-${id} .gap-brow`)].map(r=>{
+    let cat=r.querySelector(".gb-cat").value;
+    if(cat==="__new")cat=(r.querySelector(".gb-newcat").value||"").trim();
+    return {title:r.querySelector(".gb-title").value.trim(),
+            author:r.querySelector(".gb-auth").value.trim(),
+            cat:cat||"Okategoriserad"}}).filter(r=>r.title);
+  if(!rows.length){alert("Skriv in minst en titel först.");return}
+  const {error}=await sb.from("manual_books").insert(
+    rows.map(r=>({...r,shelf:g.shelf,gap_id:id,created_by:sbUser.id})));
   if(error){alert("Kunde inte spara: "+error.message);return}
   rows.forEach(r=>data.push({id:1e6+data.length,title:r.title,author:r.author,cat:r.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null}));
-  buildShelfOptions();
-  const fc=$("#fCat");if(fc&&![...fc.options].some(o=>o.value===cat)){const o=document.createElement("option");o.textContent=cat;fc.appendChild(o)}
-  render();await gapSet(id,"done");
-  alert(lines.length+" böcker tillagda!");
+  buildShelfOptions();rebuildCatFilter();render();
+  await gapSet(id,"done");
+  alert(rows.length+" böcker tillagda!");
 }
 async function loadManualBooks(){
   const {data:rows}=await sb.from("manual_books").select("*");
