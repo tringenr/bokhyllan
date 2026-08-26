@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=202608261700";
+const DV="?v=202608261710";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -408,13 +408,14 @@ function gapStateOf(id){
   return (g&&g.auto)||"open";
 }
 function updateGapCount(){
-  const open=GAPS.filter(g=>gapStateOf(g.id)==="open").length;
+  const open=GAPS.filter(g=>gapStateOf(g.id)!=="done").length;
   const el=document.getElementById("gapCount");if(el)el.textContent="("+open+")";
   const rem=document.getElementById("gapReminder");
   if(rem){if(open){rem.style.display="";rem.textContent=`🔍 ${open} luckor kvar att fylla i katalogen →`}else rem.style.display="none"}
 }
 function renderGaps(){
-  const list=GAPS.filter(g=>gapStateOf(g.id)===gapFilter);
+  const list=GAPS.filter(g=>{const s=gapStateOf(g.id);
+    return gapFilter==="open" ? (s==="open"||s==="waiting") : s===gapFilter;});
   document.getElementById("gapIntro").textContent=
     `${GAPS.length} partier i hyllfotona gick inte att läsa av. Varje lucka rymmer ofta 3–10 böcker.`;
   document.getElementById("gapList").innerHTML=list.length?list.map(g=>{
@@ -423,7 +424,7 @@ function renderGaps(){
       <div class="gap-row">
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
-          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
+          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"FOTO SKICKAT – VÄNTAR PÅ CLAUDE":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
             ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].map(x=>x.title).join(", ")}</span>`:""}</div>
           <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
@@ -526,7 +527,7 @@ async function gapUpload(id,input){
   if(error){alert("Kunde inte ladda upp: "+error.message);return}
   const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
   await gapSet(id,"waiting",pub.publicUrl);
-  alert("Foto uppladdat! Luckan är markerad 'väntar på Claude' — säg till i chatten så läser jag av den.");
+  alert("Foto uppladdat! Luckan står kvar i listan tills du själv klarmarkerar den.\n\nSäg till i chatten så läser jag av bilden och fyller i böckerna — sedan kan du kontrollera dem och trycka ✓ Klar.");
 }
 let saving={};
 async function gapSave(id){
