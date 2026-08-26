@@ -1,11 +1,12 @@
 (async()=>{
+const DV="?v=202608261624";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="sb_publishable_u-v5m6eOpJlxBF3r-QV1JA_ImYKF6W3";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
 let sbUser=null;
 
 const [booksRaw,photos,BOOK_INFO]=await Promise.all(
-  ["data/books.json","data/photos.json","data/bookinfo.json"].map(u=>fetch(u).then(r=>r.json())));
+  ["data/books.json"+DV,"data/photos.json"+DV,"data/bookinfo.json"+DV].map(u=>fetch(u).then(r=>r.json())));
 const BOOKS=booksRaw.map(b=>[b.title,b.author,b.cat,b.shelf]);
 const SHELF_IMGS=[];
 photos.forEach(p=>{
@@ -337,7 +338,7 @@ qr.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>{
   render();setList(!on);
 }));
 /* ---------- Sälj ---------- */
-fetch("data/sell.json").then(r=>r.json()).then(s=>{
+fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{
   document.getElementById("sellNote").textContent=s.note+" Uppdaterad "+s.updated+".";
   document.getElementById("sellList").innerHTML=s.items.map(it=>{
     const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
@@ -351,7 +352,7 @@ fetch("data/sell.json").then(r=>r.json()).then(s=>{
 /* ---------- Luckor ---------- */
 let GAPS=[],gapState={},gapFilter="open";
 async function loadGaps(){
-  GAPS=await fetch("data/gaps.json").then(r=>r.json());
+  GAPS=await fetch("data/gaps.json"+DV).then(r=>r.json());
   if(sbUser||true){const {data:rows}=await sb.from("gap_status").select("*");
     if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note});}
   updateGapCount();renderGaps();
