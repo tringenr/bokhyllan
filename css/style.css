@@ -247,3 +247,6 @@ body{padding:0}
 .gap-brow .gb-newcat{grid-column:1/-1}
 .gb-del{border:none;background:transparent;color:var(--muted);font-size:1rem;cursor:pointer;padding:.2rem .35rem}
 @media (max-width:640px){.gap-brow{grid-template-columns:1fr auto}.gap-brow .gb-auth,.gap-brow .gb-cat{grid-column:1/-1}}
+
+.gap-added{font-size:.75rem;color:var(--home)}
+.gap-saved{font-size:.78rem;color:var(--home);min-height:1rem;margin:.2rem 0}

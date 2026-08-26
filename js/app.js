@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=202608261640";
+const DV="?v=202608261651";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -423,7 +423,9 @@ function renderGaps(){
       <div class="gap-row">
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
-          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}</div>
+          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
+            ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].join(", ")}</span>`:""}</div>
+          <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
             <label class="ghost">📷 Fota<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
@@ -509,14 +511,25 @@ async function gapSave(id){
   const {error}=await sb.from("manual_books").insert(
     rows.map(r=>({...r,shelf:g.shelf,gap_id:id,created_by:sbUser.id})));
   if(error){alert("Kunde inte spara: "+error.message);return}
-  rows.forEach(r=>data.push({id:1e6+data.length,title:r.title,author:r.author,cat:r.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null}));
+  rows.forEach(r=>{
+    data.push({id:1e6+data.length,title:r.title,author:r.author,cat:r.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null});
+    (gapAdded[id]=gapAdded[id]||[]).push(r.title);
+  });
   buildShelfOptions();rebuildCatFilter();render();
-  await gapSet(id,"done");
-  alert(rows.length+" böcker tillagda!");
+  renderGaps();                       // luckan stannar kvar
+  const f=document.getElementById("form-"+id);
+  if(f){f.style.display="";gapAddRow(id);gapAddRow(id)}   // färska tomma rader
+  const t=document.getElementById("saved-"+id);
+  if(t){t.textContent=`✓ ${rows.length} tillagd${rows.length>1?"a":""} – fortsätt eller tryck "✓ Klar" när luckan är avbetad.`;
+        setTimeout(()=>{if(t)t.textContent=""},6000)}
 }
+let gapAdded={};
 async function loadManualBooks(){
   const {data:rows}=await sb.from("manual_books").select("*");
-  if(rows)rows.forEach(r=>data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null}));
+  if(rows)rows.forEach(r=>{
+    data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+    if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push(r.title)}
+  });
 }
 function openGapView(o){
   document.getElementById("gapView").classList.toggle("open",o);
