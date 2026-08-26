@@ -140,6 +140,10 @@ function showInfo(id){
   const q=encodeURIComponent(d.title+" "+(d.author||""));
   document.getElementById("ibBody").innerHTML=(info?`<p>${info}</p>`:`<p style="color:var(--muted)">Ingen beskrivning inlagd ännu för den här boken.</p>`)+
     `<p><a href="https://www.goodreads.com/search?q=${q}" target="_blank" rel="noopener">Sök på Goodreads →</a> · <a href="https://www.adlibris.com/se/sok?q=${q}" target="_blank" rel="noopener">Adlibris →</a></p>`;
+  const cats=[...new Set(data.map(x=>x.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
+  document.getElementById("ibBody").insertAdjacentHTML("beforeend",
+    `<div class="info-cat"><label style="font-size:.8rem;color:var(--muted)">Kategori:</label>
+     <select onchange="setBookCat(${id},this.value)">${cats.map(c=>`<option${c===d.cat?" selected":""}>${c}</option>`).join("")}</select></div>`);
   document.getElementById("ibSrc").textContent=info?"Sammanfattning skriven av Claude – kan innehålla fel.":"";
   infoModal.classList.add("open");
 }
@@ -418,6 +422,51 @@ window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidd
 window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;
 await loadManualBooks();
 await loadGaps();
+await loadCatEdits();
+
+/* ---------- Kategoriredigering ---------- */
+let catRenames={};
+async function loadCatEdits(){
+  const [{data:rn},{data:bc}]=await Promise.all([
+    sb.from("cat_renames").select("*"), sb.from("book_cat").select("*")]);
+  if(rn)rn.forEach(r=>catRenames[r.old_name]=r.new_name);
+  data.forEach(d=>{if(catRenames[d.cat])d.cat=catRenames[d.cat]});
+  if(bc){const m={};bc.forEach(r=>m[r.book_id]=r.cat);
+    data.forEach(d=>{if(m[d.id])d.cat=m[d.id]})}
+  rebuildCatFilter();render();renderCatEditor();
+}
+function rebuildCatFilter(){
+  const sel=$("#fCat"),cur=sel.value;
+  sel.innerHTML='<option value="">Alla kategorier</option>'+
+    [...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv")).map(c=>`<option>${c}</option>`).join("");
+  sel.value=cur;
+}
+function renderCatEditor(){
+  const el=document.getElementById("catEditor");if(!el)return;
+  const counts={};data.forEach(d=>counts[d.cat]=(counts[d.cat]||0)+1);
+  const cats=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  el.innerHTML=`<div class="cat-list">`+cats.map(c=>
+    `<div class="cat-row"><input value="${c.replace(/"/g,'&quot;')}" data-old="${c.replace(/"/g,'&quot;')}"><span class="cat-n">${counts[c]}</span></div>`).join("")+`</div>`;
+  el.querySelectorAll(".cat-row input").forEach(inp=>{
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur()});
+    inp.addEventListener("blur",async()=>{
+      const oldN=inp.dataset.old,newN=inp.value.trim();
+      if(!newN||newN===oldN){inp.value=oldN;return}
+      if(!sbUser){alert("Logga in för att ändra kategorier.");inp.value=oldN;return}
+      data.forEach(d=>{if(d.cat===oldN)d.cat=newN});
+      catRenames[oldN]=newN;
+      await sb.from("cat_renames").upsert({old_name:oldN,new_name:newN,updated_at:new Date().toISOString()});
+      rebuildCatFilter();render();renderCatEditor();
+    })});
+}
+async function setBookCat(id,cat){
+  if(!sbUser){alert("Logga in för att ändra kategori.");return}
+  const d=data.find(x=>x.id===id);if(!d)return;
+  d.cat=cat;
+  await sb.from("book_cat").upsert({book_id:id,cat,updated_at:new Date().toISOString()});
+  rebuildCatFilter();render();renderCatEditor();
+}
+window.setBookCat=setBookCat;
 window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();

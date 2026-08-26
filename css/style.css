@@ -207,3 +207,11 @@ body{padding:0}
 .gap-card{padding:.7rem}
 .gap-actions button,.gap-actions label{padding:.45rem .7rem;font-size:.8rem}
 @media (max-width:400px){.gap-card img{width:84px;flex-basis:84px}.gap-actions button,.gap-actions label{padding:.4rem .55rem;font-size:.75rem}}
+
+.cat-list{display:flex;flex-direction:column;gap:.35rem;max-height:22rem;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:.5rem;background:var(--card)}
+.cat-row{display:flex;align-items:center;gap:.5rem}
+.cat-row input{flex:1;min-width:0;border:1px solid transparent;background:transparent;color:var(--ink);border-radius:8px;padding:.4rem .5rem;font-size:.9rem}
+.cat-row input:focus{border-color:var(--accent);background:var(--bg);outline:none}
+.cat-n{font-size:.75rem;color:var(--muted);background:var(--tag);border-radius:999px;padding:.1rem .55rem;white-space:nowrap}
+.info-cat{margin-top:.6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.info-cat select{flex:1;min-width:8rem;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:.45rem .6rem;font-size:.85rem}
