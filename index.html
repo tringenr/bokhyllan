@@ -6,13 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f5f1">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20260826173535">
+<link rel="stylesheet" href="css/style.css?v=20260826175657">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
 <script id="verGuard">
 (function(){
-  var MY="20260826173535";
+  var MY="20260826175657";
   try{
     fetch("data/version.json?t="+Date.now(),{cache:"no-store"})
       .then(function(r){return r.json()})
@@ -113,12 +113,10 @@
   <h3 class="ins-h">Hyllornas namn</h3>
   <p class="photo-intro">Klicka för att byta namn. Namnen delas med familjen när du är inloggad.</p>
   <div id="bcEditorIns"></div>
-  <h3 class="ins-h">Lägg till hylla eller uppdatera foto</h3>
-  <p class="photo-intro">Fota en ny hylla — eller en hylla som ändrats. Bilden hamnar i kö och jag läser av den och uppdaterar katalogen.</p>
-  <div class="newshelf">
-    <input id="nsName" placeholder="Vad är det för hylla? T.ex. Arbetsrummet, vänster">
-    <label class="ns-btn">📷 Fota hyllan<input type="file" accept="image/*" capture="environment" style="display:none" id="nsFile"></label>
-  </div>
+  <h3 class="ins-h">Hyllor</h3>
+  <p class="photo-intro">Lägg till en ny plats i hemmet, eller skicka ett nytt foto av en hylla som ändrats.</p>
+  <button class="ns-start" id="nsStart">➕ Ny hylla</button>
+  <div id="nsWizard" class="ns-wiz"></div>
   <div id="nsList"></div>
 
   <h3 class="ins-h">Kategorier</h3>
@@ -150,6 +148,6 @@
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20260826173535"></script>
+<script src="js/app.js?v=20260826175657"></script>
 </body>
 </html>

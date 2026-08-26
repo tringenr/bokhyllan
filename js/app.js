@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260826173535";
+const DV="?v=20260826175657";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -174,7 +174,7 @@ function showInfo(id){
 }
 function coverUploadHtml(id){
   return `<label class="ib-ph up">📷<span>Lägg till omslag</span>
-    <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadCover(${id},this)"></label>`;
+    <input type="file" accept="image/*" style="display:none" onchange="uploadCover(${id},this)"></label>`;
 }
 window.coverUploadHtml=coverUploadHtml;
 /* ---------- Lightbox ---------- */
@@ -430,7 +430,7 @@ function renderGaps(){
           <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
-            <label class="ghost">📷 Fota<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
+            <label class="ghost">📷 Fota<input type="file" accept="image/*" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
             ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klar</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna</button>`}
           </div>
           <div class="gap-form" id="form-${g.id}" style="display:none">
@@ -700,29 +700,189 @@ async function uploadCover(id,input){
 }
 
 
-/* ---------- Ny hylla / uppdatera foto ---------- */
+/* ---------- Ny hylla (guide) ---------- */
+let nsState=null;
+
+function nextFreeBc(){
+  const used=new Set([...Object.keys(bcNames),...data.map(d=>d.shelf.split(":")[0])].map(Number).filter(n=>!isNaN(n)));
+  let n=1; while(used.has(n)) n++; return String(n);
+}
+function nsRender(){
+  const el=document.getElementById("nsWizard");if(!el)return;
+  if(!nsState){el.innerHTML="";el.classList.remove("open");return}
+  el.classList.add("open");
+  const S=nsState;
+  let html=`<div class="ns-head"><strong>${S.mode==="new"?"Ny plats":"Nytt foto"}</strong>
+    <button class="ns-x" onclick="nsCancel()">✕</button></div>`;
+
+  if(S.step===1){
+    html+=`<p class="ns-q">Vad vill du göra?</p>
+      <div class="ns-choices">
+        <button onclick="nsPick('new')">🆕 Lägg till en ny plats<small>En bokhylla eller ett rum som inte finns i appen</small></button>
+        <button onclick="nsPick('update')">🔄 Nytt foto av en hylla som finns<small>Hyllan har ändrats sedan sist</small></button>
+      </div>`;
+  }
+  else if(S.step===2&&S.mode==="new"){
+    html+=`<p class="ns-q">Vad heter platsen?</p>
+      <input id="nsNameInp" class="ns-inp" placeholder="T.ex. Arbetsrummet" value="${(S.name||"").replace(/"/g,'&quot;')}">
+      <p class="ns-hint">Får platsnummer <strong>${S.bc}</strong> — används i hyllkoderna, t.ex. <code>${S.bc}:V3</code>.</p>
+      <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
+        <button onclick="nsSaveName()">Nästa →</button></div>`;
+  }
+  else if(S.step===2&&S.mode==="update"){
+    const places=Object.keys(bcNames).sort((a,b)=>Number(a)-Number(b));
+    html+=`<p class="ns-q">Vilken hylla gäller det?</p>
+      <select id="nsBcSel" class="ns-inp">${places.map(b=>`<option value="${b}">${bcNames[b]}</option>`).join("")}</select>
+      <input id="nsCodeInp" class="ns-inp" placeholder="Hyllkod, t.ex. 1:V3 (valfritt)">
+      <p class="ns-hint">Plan räknas nedifrån. Lämnar du koden tom listar jag ut den från fotot.</p>
+      <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
+        <button onclick="nsPickExisting()">Nästa →</button></div>`;
+  }
+  else if(S.step===3){
+    html+=`<p class="ns-q">Hur är ${S.name} uppbyggd?</p>
+      <div class="ns-choices">
+        <button onclick="nsType('VH')">📚 Sektioner + hyllplan<small>Som Bokhylla 1–2: vänster och höger sektion, flera plan. Koder som <code>${S.bc}:V3</code></small></button>
+        <button onclick="nsType('S')">🗄 Enkla hyllor<small>Som Bokskåpet: bara hyllplan utan sektioner. Koder som <code>${S.bc}:S1</code></small></button>
+      </div>
+      <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button></div>`;
+  }
+  else if(S.step===4){
+    html+=`<p class="ns-q">Fota ${S.mode==="new"?"varje hyllplan":"hyllan"}</p>
+      <p class="ns-hint">${S.mode==="new"
+        ? (S.type==="VH"
+           ? "Ett foto per sektion och plan. Plan 1 är nederst."
+           : "Ett foto per hylla. Hylla 1 är nederst.")
+        : "Ta ett foto rakt framifrån så att ryggarna syns."}</p>
+      <div class="ns-shots" id="nsShots"></div>
+      <button class="ghost ns-add" onclick="nsAddShot()">➕ Lägg till foto</button>
+      <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
+        <button onclick="nsFinish()">✓ Skicka <span id="nsCount"></span></button></div>`;
+  }
+  el.innerHTML=html;
+  if(S.step===4)nsRenderShots();
+}
+function nsRenderShots(){
+  const wrap=document.getElementById("nsShots");if(!wrap)return;
+  const S=nsState;
+  wrap.innerHTML=S.shots.map((s,i)=>`
+    <div class="ns-shot${s.dataUrl?" has":""}">
+      <label class="ns-thumb">
+        ${s.dataUrl?`<img src="${s.dataUrl}" alt="">`:`<span>📷</span>`}
+        <input type="file" accept="image/*" style="display:none" onchange="nsShotFile(${i},this)">
+      </label>
+      <input class="ns-lbl" placeholder="${S.type==="VH"?"T.ex. Vänster plan 3":"T.ex. Hylla 2"}"
+             value="${(s.label||"").replace(/"/g,'&quot;')}" onchange="nsShotLabel(${i},this.value)">
+      <button class="ns-x" onclick="nsDelShot(${i})">✕</button>
+    </div>`).join("");
+  const n=S.shots.filter(s=>s.dataUrl).length;
+  const c=document.getElementById("nsCount");
+  if(c)c.textContent=n?`(${n} foto${n>1?"n":""})`:"";
+}
+function nsStartWizard(){nsState={step:1,mode:null,shots:[],bc:nextFreeBc()};nsRender();
+  document.getElementById("nsWizard").scrollIntoView({behavior:"smooth",block:"nearest"})}
+function nsCancel(){nsState=null;nsRender()}
+function nsBack(){if(!nsState)return;
+  if(nsState.step===4&&nsState.mode==="update")nsState.step=2;
+  else nsState.step=Math.max(1,nsState.step-1);
+  nsRender()}
+function nsPick(mode){nsState.mode=mode;nsState.step=2;nsRender()}
+function nsSaveName(){
+  const v=(document.getElementById("nsNameInp").value||"").trim();
+  if(!v){alert("Skriv ett namn på platsen.");return}
+  nsState.name=v;nsState.step=3;nsRender();
+}
+function nsPickExisting(){
+  const bc=document.getElementById("nsBcSel").value;
+  const code=(document.getElementById("nsCodeInp").value||"").trim();
+  nsState.bc=bc;nsState.name=bcNames[bc];nsState.code=code;
+  nsState.type=code&&/^\d+:[VH]/.test(code)?"VH":"S";
+  nsState.step=4;nsState.shots=[{label:code||"",dataUrl:null,file:null}];nsRender();
+}
+function nsType(t){nsState.type=t;nsState.step=4;
+  nsState.shots=[{label:"",dataUrl:null,file:null}];nsRender()}
+function nsAddShot(){nsState.shots.push({label:"",dataUrl:null,file:null});nsRenderShots()}
+function nsDelShot(i){nsState.shots.splice(i,1);if(!nsState.shots.length)nsAddShot();else nsRenderShots()}
+function nsShotLabel(i,v){nsState.shots[i].label=v}
+async function nsShotFile(i,input){
+  const f=input.files[0];if(!f)return;
+  nsState.shots[i].file=f;
+  try{nsState.shots[i].dataUrl=await shrinkToDataURL(f,1100,0.62)}
+  catch(e){
+    try{nsState.shots[i].dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
+    catch(e2){alert("Kunde inte läsa bilden. Prova en annan.");return}
+  }
+  nsRenderShots();
+}
+async function nsFinish(){
+  if(!sbUser){alert("Logga in för att skicka hyllan.");return}
+  const S=nsState;
+  const shots=S.shots.filter(s=>s.dataUrl);
+  if(!shots.length){alert("Lägg till minst ett foto först.");return}
+  const btn=document.querySelector("#nsWizard .ns-nav button:last-child");
+  if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
+  try{
+    if(S.mode==="new"&&!bcNames[S.bc]){
+      bcNames[S.bc]=S.name;
+      await sb.from("bc_names").upsert({bc:S.bc,name:S.name});
+    }
+    for(let i=0;i<shots.length;i++){
+      const s=shots[i];
+      let url=null;
+      try{
+        const path=`shelf-${S.bc}-${Date.now()}-${i}.jpg`;
+        const {error}=await sb.storage.from("gap-photos").upload(path,s.file,{upsert:true});
+        if(!error){const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);url=pub.publicUrl}
+      }catch(e){console.warn("storage",e)}
+      await sb.from("new_shelves").insert({
+        name:S.name, bc:S.bc, shelf_code:S.code||null, label:s.label||null,
+        photo_url:url, photo_data:s.dataUrl, state:"waiting", created_by:sbUser.id});
+    }
+    nsState=null;nsRender();
+    buildShelfOptions();renderBcEditor();
+    await loadNewShelves();
+    alert(`Skickat! ${shots.length} foto${shots.length>1?"n":""} ligger i kö.\n\nJag läser av bokryggarna och lägger in böckerna – sedan kontrollerar du och trycker ✓ Klar.`);
+  }catch(e){
+    alert("Något gick fel: "+(e.message||e));
+  }finally{
+    const b2=document.querySelector("#nsWizard .ns-nav button:last-child");
+    if(b2){b2.disabled=false;b2.style.opacity=""}
+  }
+}
 async function loadNewShelves(){
   const {data:rows}=await sb.from("new_shelves").select("*").order("created_at",{ascending:false});
   const el=document.getElementById("nsList");if(!el)return;
-  el.innerHTML=(rows||[]).map(r=>
-    `<div class="ns-item"><span>${r.state==="done"?"✅":"⏳"} ${r.name}</span>
-     <a href="${r.photo_url}" target="_blank" rel="noopener" style="font-size:.8rem">Visa foto</a></div>`).join("");
+  if(!rows||!rows.length){el.innerHTML="";return}
+  el.innerHTML=`<h4 class="ns-listh">Inskickade hyllfoton</h4>`+rows.map(r=>{
+    const done=r.state==="done";
+    return `<div class="ns-item">
+      <div><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
+        ${r.claude_note?`<div class="ns-note">🤖 ${r.claude_note}</div>`:
+          (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}</div>
+      <div class="ns-item-acts">
+        ${r.photo_data||r.photo_url?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
+        ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
+      </div></div>`}).join("");
+  window.__nsRows=rows;
 }
-const nsFile=document.getElementById("nsFile");
-if(nsFile)nsFile.addEventListener("change",async e=>{
-  if(!sbUser){alert("Logga in för att lägga till hylla.");return}
-  const name=(document.getElementById("nsName").value||"").trim();
-  if(!name){alert("Skriv först vad hyllan heter.");e.target.value="";return}
-  const f=e.target.files[0];if(!f)return;
-  const path=`shelf-${Date.now()}.jpg`;
-  const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
-  if(error){alert("Kunde inte ladda upp: "+error.message);return}
-  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
-  await sb.from("new_shelves").insert({name,photo_url:pub.publicUrl,created_by:sbUser.id});
-  document.getElementById("nsName").value="";e.target.value="";
+function nsView(id){
+  const r=(window.__nsRows||[]).find(x=>x.id===id);if(!r)return;
+  const src=r.photo_data||r.photo_url;if(!src)return;
+  lb.classList.add("open");document.body.style.overflow="hidden";
+  markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";
+  lbImg.src=src;lbCap.textContent=r.name+(r.label?" · "+r.label:"");
+  lbImg.onload=()=>{measureBase();applyT()};
+}
+async function nsDone(id){
+  if(!sbUser){alert("Logga in först.");return}
+  await sb.from("new_shelves").update({state:"done"}).eq("id",id);
   await loadNewShelves();
-  alert("Tack! Hyllan ligger i kö — säg till i chatten så läser jag av bilden.");
-});
+}
+const nsBtn=document.getElementById("nsStart");
+if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
+window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
+window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
+window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
+window.nsFinish=nsFinish;window.nsView=nsView;window.nsDone=nsDone;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
