@@ -81,7 +81,7 @@ $("#fCat").addEventListener("change",e=>{fCat=e.target.value;render()});
 document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");fs=c.dataset.s;render()}));
 render();
 function renderBcEditor(){
-  const el=$("#bcEditor");if(!el)return;
+  const el=$("#bcEditorIns")||$("#bcEditor");if(!el)return;
   el.innerHTML=Object.keys(bcNames).map(bc=>`<button class="bc-name" data-bc="${bc}" title="Klicka för att byta namn">✏️ ${bcNames[bc]}</button>`).join("")
     ;
   el.querySelectorAll("button.bc-name").forEach(b=>b.addEventListener("click",()=>{
@@ -263,5 +263,26 @@ sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table
   const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
   if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
 }).subscribe();
+
+/* ---------- Flikar ---------- */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
+  const id=t.dataset.tab;
+  document.getElementById("tab-sok").style.display=id==="sok"?"":"none";
+  document.getElementById("tab-salj").style.display=id==="salj"?"":"none";
+  document.getElementById("tab-install").style.display=id==="install"?"":"none";
+  scrollTo({top:0});
+}));
+/* ---------- Sälj ---------- */
+fetch("data/sell.json").then(r=>r.json()).then(s=>{
+  document.getElementById("sellNote").textContent=s.note+" Uppdaterad "+s.updated+".";
+  document.getElementById("sellList").innerHTML=s.items.map(it=>{
+    const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
+    const loc=d?locLabel(d.shelf):"";
+    return `<div class="sell-item"><h4>${it.title}<span class="heat heat-${it.heat}">${it.heat==="het"?"HET":it.heat==="medel"?"MEDEL":"KOLLA"}</span></h4>
+    <p><span class="sell-price">${it.price}</span>${loc?" · står i: "+loc:""}</p>
+    <p>${it.why}</p>
+    <p><a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan →</a></p></div>`}).join("");
+}).catch(()=>{document.getElementById("sellList").innerHTML="<p>Kunde inte ladda säljlistan.</p>"});
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();

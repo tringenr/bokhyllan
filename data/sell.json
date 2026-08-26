@@ -1,0 +1,105 @@
+{
+ "updated": "2026-08-26",
+ "note": "Pilotbevakning. Priser = aktuellt begagnat-pris på Studentapan (vad köpare betalar; du får något mindre efter avgift). Terminsstart = högsäsong nu.",
+ "items": [
+  {
+   "title": "Klinisk barnpsykologi : Utveckling på avvägar (uppl 2)",
+   "match": "Klinisk barnpsykologi",
+   "price": "439 kr",
+   "heat": "het",
+   "why": "Standardverk på psykolog-, socionom- och sjuksköterskeprogram. 4,7 i betyg (24 rec), säljs aktivt just nu. Terminsstart = bästa läget.",
+   "url": "https://www.studentapan.se/kurslitteratur/klinisk-barnpsykologi-utveckling-pa-avvagar-9789127135888",
+   "checked": true
+  },
+  {
+   "title": "Utvecklingspsykologi (uppl 3)",
+   "match": "Utvecklingspsykologi",
+   "price": "205 kr",
+   "heat": "het",
+   "why": "'Standardverk och återkommande kurslitteratur' enligt köparrecension 19 dagar gammal. 4,8 (40 rec).",
+   "url": "https://www.studentapan.se/kurslitteratur/utvecklingspsykologi-9789147093380",
+   "checked": true
+  },
+  {
+   "title": "Motiverande samtal (uppl 3)",
+   "match": "Motivational Interviewing",
+   "price": "189 kr",
+   "heat": "medel",
+   "why": "Stor efterfrågan i många yrkesutbildningar, men upplaga 4 (2024) finns nu — priset på uppl 3 pressas gradvis. Sälj hellre förr än senare.",
+   "url": "https://www.studentapan.se/kurslitteratur/motiverande-samtal-att-hjalpa-manniskor-till-forandring-9789127135390",
+   "checked": true
+  },
+  {
+   "title": "Dynamisk psykiatri",
+   "match": "Dynamisk psykiatri",
+   "price": "ej verifierat",
+   "heat": "medel",
+   "why": "Cullbergs klassiker, återkommande på psykiatri-/psykoterapikurser. Flera upplagor — kolla vilken du har.",
+   "url": "https://www.studentapan.se/kurslitteratur/dynamisk-psykiatri-9789127093362",
+   "checked": false
+  },
+  {
+   "title": "Beteendets ABC",
+   "match": "Beteendets ABC",
+   "price": "ej verifierat",
+   "heat": "medel",
+   "why": "Grundbok i KBT-utbildningar, du har två exemplar (bokhylla 2 + bokskåpet) — sälj ena. Uppl 3 (2020) är den gångbara.",
+   "url": "https://www.studentapan.se/kurslitteratur/beteendets-abc-en-introduktion-till-behavioristisk-psykoterapi-9789144136639",
+   "checked": false
+  },
+  {
+   "title": "Kompetensbaserad rekrytering, intervjuteknik och testning",
+   "match": "Kompetensbaserad rekrytering, intervjuteknik och testning",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "HR-/PAO-programmens standardbok (Lindelöw).",
+   "url": "https://www.studentapan.se/sok?q=kompetensbaserad%20rekrytering",
+   "checked": false
+  },
+  {
+   "title": "Hur moderna organisationer fungerar",
+   "match": "Hur moderna organisationer fungerar",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "Jacobsen & Thorsvik — bred organisationsteorikurs-bok i hela Norden.",
+   "url": "https://www.studentapan.se/sok?q=hur%20moderna%20organisationer%20fungerar",
+   "checked": false
+  },
+  {
+   "title": "Organisationer, ledning och processer",
+   "match": "Organisationer, ledning och processer",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "Alvesson & Sveningsson — vanlig på org/ledarskapskurser.",
+   "url": "https://www.studentapan.se/sok?q=organisationer%20ledning%20och%20processer",
+   "checked": false
+  },
+  {
+   "title": "Clinical Handbook of Psychological Disorders",
+   "match": "Clinical Handbook of Psychological Disorders",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "Barlow — psykologprogrammens klinikkursbok.",
+   "url": "https://www.studentapan.se/sok?q=clinical%20handbook%20of%20psychological%20disorders",
+   "checked": false
+  },
+  {
+   "title": "Handbok i missbrukspsykologi",
+   "match": "Handbok i missbrukspsykologi",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "Fahlke — svensk standard inom beroendekurser.",
+   "url": "https://www.studentapan.se/sok?q=handbok%20i%20missbrukspsykologi",
+   "checked": false
+  },
+  {
+   "title": "Utvecklingspsykologi (Havnesköld) — OBS även din andra",
+   "match": "Theories of Developmental Psychology",
+   "price": "ej verifierat",
+   "heat": "kolla",
+   "why": "Millers Theories of Developmental Psychology används på engelskspråkiga kurser.",
+   "url": "https://www.studentapan.se/sok?q=theories%20of%20developmental%20psychology",
+   "checked": false
+  }
+ ]
+}

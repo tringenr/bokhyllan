@@ -126,3 +126,17 @@ select{padding:.55rem .7rem;border:1px solid var(--line);border-radius:10px;back
 .auth-bar button{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:.45rem .8rem;font-size:.82rem;cursor:pointer}
 .auth-bar .who{color:var(--muted)}
 .auth-bar .err{color:#c0392b}
+
+.tabs{display:flex;gap:.4rem;margin:.3rem 0 1.2rem;border-bottom:2px solid var(--line);padding-bottom:.5rem}
+.tab{border:none;background:none;color:var(--muted);font-size:.95rem;padding:.5rem .9rem;border-radius:9px;cursor:pointer}
+.tab.active{background:var(--accent);color:#fff}
+.salj-h{font-family:Georgia,serif;margin:.2rem 0 .4rem}
+.ins-h{font-family:Georgia,serif;font-size:1.05rem;margin:1.4rem 0 .3rem}
+.sell-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.8rem 1rem;margin-bottom:.6rem}
+.sell-item h4{margin:0 0 .2rem;font-size:1rem}
+.sell-item p{margin:.2rem 0;font-size:.88rem;color:var(--muted)}
+.sell-price{font-family:Georgia,serif;font-size:1.05rem;color:var(--accent);font-weight:700}
+.heat{font-size:.72rem;border-radius:999px;padding:.15rem .6rem;font-weight:700;margin-left:.5rem}
+.heat-het{background:#f7e0da;color:#b3401f}
+.heat-medel{background:#f7eeda;color:#8a6d1f}
+.heat-kolla{background:var(--tag);color:var(--muted)}
