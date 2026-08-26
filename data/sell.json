@@ -50,11 +50,11 @@
   {
    "title": "Kompetensbaserad rekrytering, intervjuteknik och testning",
    "match": "Kompetensbaserad rekrytering, intervjuteknik och testning",
-   "price": "ej verifierat",
-   "heat": "kolla",
-   "why": "HR-/PAO-programmens standardbok (Lindelöw).",
+   "price": "239 kr",
+   "heat": "medel",
+   "why": "Uppl 1 (2003) ligger på 239 kr begagnat. Uppl 3 kom 2025 under nytt namn (Kompetensbaserad rekrytering och personalstrategi) — den pressar din upplaga gradvis. Sälj hellre nu än om två år.",
    "url": "https://www.studentapan.se/sok?q=kompetensbaserad%20rekrytering",
-   "checked": false
+   "checked": true
   },
   {
    "title": "Hur moderna organisationer fungerar",
@@ -68,11 +68,11 @@
   {
    "title": "Organisationer, ledning och processer",
    "match": "Organisationer, ledning och processer",
-   "price": "ej verifierat",
-   "heat": "kolla",
-   "why": "Alvesson & Sveningsson — vanlig på org/ledarskapskurser.",
+   "price": "285–299 kr (uppl 3) / ~120–170 kr (uppl 1–2)",
+   "heat": "kolla-upplaga",
+   "why": "Uppl 3 (2019) går för 285–299 kr. Uppl 1 (2007) och 2 (2012) ligger runt 117–170 kr. Kolla ryggen innan du bestämmer — skillnaden är över 150 kr.",
    "url": "https://www.studentapan.se/sok?q=organisationer%20ledning%20och%20processer",
-   "checked": false
+   "checked": true
   },
   {
    "title": "Clinical Handbook of Psychological Disorders",
@@ -86,20 +86,101 @@
   {
    "title": "Handbok i missbrukspsykologi",
    "match": "Handbok i missbrukspsykologi",
-   "price": "ej verifierat",
-   "heat": "kolla",
-   "why": "Fahlke — svensk standard inom beroendekurser.",
+   "price": "299 kr",
+   "heat": "het",
+   "why": "299 kr begagnat, ingen nyare upplaga sedan 2012. Listad på ett femtontal kurskoder (socionom, psykolog, sjuksköterska) — bred och stabil efterfrågan.",
    "url": "https://www.studentapan.se/sok?q=handbok%20i%20missbrukspsykologi",
-   "checked": false
+   "checked": true
   },
   {
-   "title": "Utvecklingspsykologi (Havnesköld) — OBS även din andra",
-   "match": "Theories of Developmental Psychology",
-   "price": "ej verifierat",
+   "title": "Klinisk neuropsykologi (Nyman & Bartfai)",
+   "match": "Klinisk neuropsykologi",
+   "price": "435–489 kr (uppl 3) / ~120 kr (uppl 1)",
+   "heat": "kolla-upplaga",
+   "checked": true,
+   "why": "Uppl 3 (2023) är het: 435–489 kr. Uppl 1 (2000) går för runt 119 kr på Tradera. Du har två exemplar (2:V5 och 2:V1) — kolla vilka upplagor de är.",
+   "url": "https://www.studentapan.se/kurslitteratur/klinisk-neuropsykologi-9789144149066"
+  },
+  {
+   "title": "Återfallsprevention utifrån KBT och MI",
+   "match": "Återfallsprevention utifrån KBT och MI",
+   "price": "309 kr (uppl 2) / 149 kr (uppl 1)",
+   "heat": "het",
+   "checked": true,
+   "why": "Uppl 2 (2022) ligger på 309 kr. Står på Karolinskas kurslista för Återfallsprevention — återkommande efterfrågan. Uppl 1 (2017) ger bara 149 kr.",
+   "url": "https://www.studentapan.se/kurslitteratur/aterfallsprevention-utifran-kbt-och-mi-vid-problem-med-alkohol-och-narkotika-9789144153124"
+  },
+  {
+   "title": "Emotionsfokuserad terapi",
+   "match": "Emotionsfokuserad terapi",
+   "price": "379 kr",
+   "heat": "het",
+   "checked": true,
+   "why": "379 kr begagnat mot 437 nypris — liten rabatt, vilket betyder stark efterfrågan. Används på EFT-specialistkurser för psykologer. Bland de bästa i samlingen.",
+   "url": "https://www.studentapan.se/kurslitteratur/emotionsfokuserad-terapi-att-forsta-och-forandra-kanslor-9789144111803"
+  },
+  {
+   "title": "Implementeringsboken",
+   "match": "Implementeringsboken",
+   "price": "309 kr (endast ny i lager)",
+   "heat": "het",
+   "checked": true,
+   "why": "309 kr men just nu inga begagnade säljare alls — samma läge som Barlow: efterfrågan utan utbud. Ny (2023) och används på implementeringskurser. Lägg upp den snart.",
+   "url": "https://www.studentapan.se/kurslitteratur/implementeringsboken-sa-infor-du-nytt-som-gor-nytta-9789127461147"
+  },
+  {
+   "title": "Tillämpad beteendeanalys",
+   "match": "Tillämpad beteendeanalys",
+   "price": "ej fastställt (nypris ~540 kr)",
    "heat": "kolla",
-   "why": "Millers Theories of Developmental Psychology används på engelskspråkiga kurser.",
-   "url": "https://www.studentapan.se/sok?q=theories%20of%20developmental%20psychology",
-   "checked": false
+   "checked": false,
+   "why": "Nypris ~540 kr och står som kurslitteratur på SU:s masterprogram i TBA. Begagnatpriset gick inte att läsa av i sökningen — behöver kollas direkt på Studentapan.",
+   "url": "https://www.studentapan.se/kurslitteratur/tillampad-beteendeanalys-teori-och-praktik-9789144081724"
+  },
+  {
+   "title": "Grupphandledning",
+   "match": "Grupphandledning",
+   "price": "245–305 kr",
+   "heat": "het",
+   "checked": true,
+   "why": "245–305 kr beroende på skick (nypris 413–478). Aktiv kurslitteratur i sex universitetskurser, bl.a. GU:s PC2156 och PZ2117. Priset varierar mycket mellan säljare — sätt dig i övre delen om exemplaret är fint.",
+   "url": "https://www.studentapan.se/kurslitteratur/grupphandledning-forskning-och-erfarenheter-fran-olika-verksamhetsomraden-9789144060699"
+  },
+  {
+   "title": "Forensisk KBT",
+   "match": "Forensisk KBT",
+   "price": "334–357 kr",
+   "heat": "het",
+   "checked": true,
+   "why": "334–357 kr mot 351 nypris — begagnat går i praktiken till nypris, vilket betyder att utbudet är tunt. Nischad men efterfrågad (kriminalvård, forensiska verksamheter). En av de bättre i samlingen.",
+   "url": "https://www.studentapan.se/kurslitteratur/forensisk-kbt-behandling-for-brottsdomda-9789144123271"
+  },
+  {
+   "title": "Yrkesmässig handledning (Tveiten)",
+   "match": "Yrkesmässig handledning",
+   "price": "179 kr",
+   "heat": "medel",
+   "checked": true,
+   "why": "179 kr. Uppl 6 kom 2025, så äldre upplagor tappar värde nu. Sälj snart eller skänk — den här står inte still.",
+   "url": "https://www.studentapan.se/kurslitteratur/yrkesmassig-handledning-mer-an-ord-9789144136271"
+  },
+  {
+   "title": "Organisationspsykologi (Haslam m.fl.)",
+   "match": "Organisationspsykologi",
+   "price": "ej fastställt",
+   "heat": "kolla",
+   "checked": false,
+   "why": "Finns på Studentapan (ISBN 9789144092287) och riktar sig till master- och forskarnivå, men priset gick inte att läsa av. Näslund & Jerns bok med samma titel ligger på 179 kr — kolla vilken du har.",
+   "url": "https://www.studentapan.se/kurslitteratur/organisationspsykologi-9789144092287"
+  },
+  {
+   "title": "0–20 år (Mangs & Martell)",
+   "match": "0–20 år",
+   "price": "lågt värde",
+   "heat": "lag",
+   "checked": true,
+   "why": "Gav inga träffar på Studentapan. Boken är från 90-talet och har tappat kursstatus — behåll eller skänk.",
+   "url": ""
   }
  ]
 }
