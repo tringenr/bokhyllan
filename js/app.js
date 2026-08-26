@@ -169,91 +169,108 @@ const lb=document.createElement("div");lb.className="lb";lb.innerHTML=
 document.body.appendChild(lb);
 const lbImg=lb.querySelector("#lbImg"),lbCap=lb.querySelector("#lbCap"),stage=lb.querySelector(".lb-stage");
 const lbMark=document.createElement("div");lbMark.className="lb-mark";lb.appendChild(lbMark);
-let lbIdx=0,scale=1,tx=0,ty=0,markFrac=null;
+let lbIdx=0,scale=1,tx=0,ty=0,markFrac=null,baseRect=null;
+function measureBase(){
+  const prev=lbImg.style.transform;
+  lbImg.style.transition="none";lbImg.style.transform="none";
+  baseRect=lbImg.getBoundingClientRect();
+  lbImg.style.transform=prev;
+}
 function updateMark(){
-  if(!markFrac){lbMark.style.display="none";return}
-  const r=lbImg.getBoundingClientRect();
+  if(!markFrac||!baseRect){lbMark.style.display="none";return}
+  const L=baseRect.left+tx, T=baseRect.top+ty, W=baseRect.width*scale, H=baseRect.height*scale;
   lbMark.style.display="block";
-  lbMark.style.left=(r.left+r.width*markFrac.x0)+"px";
-  lbMark.style.width=(r.width*(markFrac.x1-markFrac.x0))+"px";
-  lbMark.style.top=(r.top+r.height*markFrac.y0)+"px";
-  lbMark.style.height=(r.height*(markFrac.y1-markFrac.y0))+"px";
+  lbMark.style.left=(L+W*markFrac.x0)+"px";
+  lbMark.style.width=(W*(markFrac.x1-markFrac.x0))+"px";
+  lbMark.style.top=(T+H*markFrac.y0)+"px";
+  lbMark.style.height=(H*(markFrac.y1-markFrac.y0))+"px";
 }
-function applyT(){lbImg.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;lbImg.style.cursor=scale>1?"grab":"zoom-in";requestAnimationFrame(updateMark)}
-function resetT(){scale=1;tx=0;ty=0;applyT()}
-function lbShow(i){lbIdx=(i+FLAT.length)%FLAT.length;lbImg.src=FLAT[lbIdx].src;lbCap.textContent=FLAT[lbIdx].cap;markFrac=null;resetT();lbImg.onload=updateMark}
+function applyT(){
+  lbImg.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  lbImg.style.cursor=scale>1?"grab":"zoom-in";
+  requestAnimationFrame(updateMark);
+}
+function resetT(){scale=1;tx=0;ty=0;lbImg.style.transition="";applyT()}
+/* zooma mot en punkt på skärmen */
+function zoomAt(clientX,clientY,ns){
+  if(!baseRect)measureBase();
+  ns=Math.min(6,Math.max(1,ns));
+  const localX=(clientX-baseRect.left-tx)/scale;
+  const localY=(clientY-baseRect.top-ty)/scale;
+  tx=clientX-baseRect.left-localX*ns;
+  ty=clientY-baseRect.top-localY*ns;
+  scale=ns;
+  if(scale===1){tx=0;ty=0}
+  applyT();
+}
+function lbShow(i){
+  lbIdx=(i+FLAT.length)%FLAT.length;
+  lbImg.src=FLAT[lbIdx].src;lbCap.textContent=FLAT[lbIdx].cap;markFrac=null;
+  scale=1;tx=0;ty=0;lbImg.style.transition="";lbImg.style.transform="none";
+  lbImg.onload=()=>{measureBase();applyT()};
+}
 function lbOpen(i){lb.classList.add("open");document.body.style.overflow="hidden";lbShow(i)}
-function lbShelf(shelf,bookId){
-  const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
-  let idx=0,found=-1;
-  SHELF_IMGS.forEach(g=>{g.imgs.forEach((im,j)=>{
-    if(found<0&&g.bc===bc){
-      if((bc==="1"||bc==="2")&&g.label==="plan "+plan&&j===(sec==="V"?0:1))found=idx;
-      else if(bc==="3"&&g.label==="hylla "+plan)found=idx;
-      else if(bc==="4"&&j===0&&g.label===(plan==="3"?"löst i köket":"kokbokshyllan"))found=idx;
-      else if(bc!=="1"&&bc!=="2"&&bc!=="3"&&bc!=="4")found=(found<0?idx:found);
-    }
-    idx++})});
-  if(found<0)found=0;
-  lbOpen(found);
-  lbCap.textContent="📍 "+locLabel(shelf);
-  /* ungefärlig markering: katalogordningen är vänster→höger per hylla */
-  if(bookId!==undefined){
-    const sib=data.filter(d=>d.shelf===shelf);
-    const rank=sib.findIndex(d=>d.id===bookId);
-    if(rank>=0&&sib.length>1){
-      const w=1/sib.length,pad=Math.min(.02,w*.3);
-      markFrac={x0:Math.max(0,rank*w-pad),x1:Math.min(1,(rank+1)*w+pad),y0:.08,y1:.95};
-      /* köksfotot & skåpfotot visar två hyllplan i samma bild */
-      if(bc==="4"||bc==="6"){markFrac.y0=(plan==="2"?.08:.52);markFrac.y1=(plan==="2"?.48:.95)}
-      updateMark()
-    }
-  }
-}
 function lbClose(){lb.classList.remove("open");document.body.style.overflow=""}
+addEventListener("resize",()=>{if(lb.classList.contains("open")){measureBase();applyT()}});
 lb.querySelector(".lb-close").addEventListener("click",lbClose);
 lb.querySelector(".lb-prev").addEventListener("click",e=>{e.stopPropagation();lbShow(lbIdx-1)});
 lb.querySelector(".lb-next").addEventListener("click",e=>{e.stopPropagation();lbShow(lbIdx+1)});
 lb.addEventListener("click",e=>{if(e.target===lb||e.target===stage)lbClose()});
 document.addEventListener("keydown",e=>{if(!lb.classList.contains("open"))return;
- if(e.key==="Escape")lbClose();if(e.key==="ArrowLeft")lbShow(lbIdx-1);if(e.key==="ArrowRight")lbShow(lbIdx+1)});
-/* wheel zoom (desktop) – mjuk */
-stage.addEventListener("wheel",e=>{e.preventDefault();
- lbImg.style.transition="transform .15s ease-out";
- const r=lbImg.getBoundingClientRect();
- const f=e.deltaY<0?1.06:1/1.06;const ns=Math.min(6,Math.max(1,scale*f));
- const px=(e.clientX-r.left)/scale,py=(e.clientY-r.top)/scale;
- tx+=px*(scale-ns);ty+=py*(scale-ns);scale=ns;if(scale===1){tx=0;ty=0}applyT()},{passive:false});
-/* dubbelklick/dubbeltapp växlar zoom */
+ if(e.key==="Escape")lbClose();
+ if(e.key==="ArrowLeft"&&scale===1)lbShow(lbIdx-1);
+ if(e.key==="ArrowRight"&&scale===1)lbShow(lbIdx+1);
+ if(e.key==="0")resetT();});
+/* Styrplatta/mus: ctrl+scroll (nyp) = zoom, vanlig scroll = panorera */
+stage.addEventListener("wheel",e=>{
+  e.preventDefault();
+  if(!baseRect)measureBase();
+  if(e.ctrlKey||e.metaKey){
+    lbImg.style.transition="";
+    zoomAt(e.clientX,e.clientY,scale*Math.pow(0.99,e.deltaY));
+  }else if(scale>1){
+    lbImg.style.transition="";
+    tx-=e.deltaX;ty-=e.deltaY;applyT();
+  }else{
+    lbImg.style.transition="transform .12s ease-out";
+    zoomAt(e.clientX,e.clientY,scale*Math.pow(0.995,e.deltaY));
+  }
+},{passive:false});
 lbImg.addEventListener("dblclick",e=>{e.preventDefault();
- lbImg.style.transition="transform .25s ease-out";
- if(scale>1){resetT()}else{const r=lbImg.getBoundingClientRect();
-  const px=(e.clientX-r.left)/scale,py=(e.clientY-r.top)/scale;
-  const ns=2.5;tx+=px*(scale-ns);ty+=py*(scale-ns);scale=ns;applyT()}});
-/* pointer: pan, pinch, svep */
+  lbImg.style.transition="transform .25s ease-out";
+  if(scale>1)resetT();else zoomAt(e.clientX,e.clientY,2.5);});
+/* Pekskärm: dra = panorera, nyp = zooma, svep = bläddra */
 const pts=new Map();let start=null,pinch=null,swipeX=null;
-lbImg.addEventListener("pointerdown",e=>{e.preventDefault();lbImg.style.transition="";lbImg.setPointerCapture(e.pointerId);
- pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(pts.size===1){start={x:e.clientX,y:e.clientY,tx,ty};swipeX=e.clientX}
- if(pts.size===2){const a=[...pts.values()];pinch={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),scale,
-  cx:(a[0].x+a[1].x)/2,cy:(a[0].y+a[1].y)/2,tx,ty};start=null}});
-lbImg.addEventListener("pointermove",e=>{if(!pts.has(e.pointerId))return;
- pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(pts.size===2&&pinch){const a=[...pts.values()];
-  const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
-  const ns=Math.min(6,Math.max(1,pinch.scale*d/pinch.d));
-  const r=lbImg.getBoundingClientRect();
-  const cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
-  const px=(pinch.cx-(r.left-tx)-0)/pinch.scale, py=(pinch.cy-(r.top-ty))/pinch.scale;
-  tx=pinch.tx+cx-pinch.cx+px*(pinch.scale-ns);ty=pinch.ty+cy-pinch.cy+py*(pinch.scale-ns);
-  scale=ns;applyT()}
- else if(pts.size===1&&start&&scale>1){tx=start.tx+e.clientX-start.x;ty=start.ty+e.clientY-start.y;applyT()}});
-function up(e){if(pts.has(e.pointerId)){
- if(pts.size===1&&scale===1&&swipeX!==null){const dx=e.clientX-swipeX;
-  if(dx<-60)lbShow(lbIdx+1);else if(dx>60)lbShow(lbIdx-1)}
- pts.delete(e.pointerId)}
- if(pts.size<2)pinch=null;if(pts.size===0){start=null;swipeX=null}}
+lbImg.addEventListener("pointerdown",e=>{
+  e.preventDefault();lbImg.style.transition="";lbImg.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===1){start={x:e.clientX,y:e.clientY,tx,ty};swipeX=e.clientX}
+  if(pts.size===2){const a=[...pts.values()];
+    pinch={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),s:scale,
+           cx:(a[0].x+a[1].x)/2,cy:(a[0].y+a[1].y)/2};start=null}});
+lbImg.addEventListener("pointermove",e=>{
+  if(!pts.has(e.pointerId))return;
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===2&&pinch){
+    const a=[...pts.values()];
+    const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+    zoomAt(pinch.cx,pinch.cy,pinch.s*d/pinch.d);
+  }else if(pts.size===1&&start&&scale>1){
+    tx=start.tx+e.clientX-start.x;ty=start.ty+e.clientY-start.y;applyT();
+  }});
+function up(e){
+  if(pts.has(e.pointerId)){
+    if(pts.size===1&&scale===1&&swipeX!==null){
+      const dx=e.clientX-swipeX;
+      if(dx<-60)lbShow(lbIdx+1);else if(dx>60)lbShow(lbIdx-1);
+    }
+    pts.delete(e.pointerId);
+  }
+  if(pts.size<2)pinch=null;
+  if(pts.size===0){start=null;swipeX=null}
+}
 lbImg.addEventListener("pointerup",up);lbImg.addEventListener("pointercancel",up);
+
 /* till toppen-knapp */
 const toTop=document.createElement("button");toTop.id="toTop";toTop.setAttribute("aria-label","Till toppen");toTop.textContent="↑";
 document.body.appendChild(toTop);
@@ -462,7 +479,7 @@ document.querySelectorAll(".gap-filter .quick").forEach(b=>b.addEventListener("c
   document.querySelectorAll(".gap-filter .quick").forEach(x=>x.classList.remove("on"));b.classList.add("on");
   gapFilter=b.dataset.g;renderGaps()}));
 document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>document.getElementById("gapView").classList.remove("open")));
-window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidden";lbImg.src=src;lbCap.textContent="Lucka – nyp för att zooma";markFrac=null;resetT()};
+window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidden";markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";lbImg.src=src;lbCap.textContent="Lucka – scrolla för att zooma, dra för att flytta";lbImg.onload=()=>{measureBase();applyT()}};
 
 /* ---------- Kategoriredigering ---------- */
 let catRenames={};
