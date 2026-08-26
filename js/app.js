@@ -413,9 +413,14 @@ function gapAddRow(id,inherit){
   sel.addEventListener("change",()=>{nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus()});
   div.querySelector(".gb-del").addEventListener("click",()=>{div.remove();gapCount(id)});
   div.querySelector(".gb-title").addEventListener("input",()=>gapCount(id));
-  div.querySelector(".gb-title").addEventListener("keydown",e=>{
-    if(e.key==="Enter"){e.preventDefault();gapAddRow(id);
-      const rows=wrap.querySelectorAll(".gap-brow");rows[rows.length-1].querySelector(".gb-title").focus()}});
+  const nextRow=()=>{
+    const rows=[...wrap.querySelectorAll(".gap-brow")];
+    const i=rows.indexOf(div);
+    const nxt=rows[i+1]||gapAddRow(id);
+    nxt.querySelector(".gb-title").focus();
+  };
+  div.querySelectorAll(".gb-title,.gb-auth,.gb-newcat").forEach(inp=>
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();nextRow()}}));
   gapCount(id);
   return div;
 }
