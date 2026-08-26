@@ -1,5 +1,5 @@
 (async()=>{
-const DV="?v=202608261637";
+const DV="?v=202608261639";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -305,6 +305,33 @@ function renderAuth(){
       const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
       if(error){el.querySelector("#aErr").textContent=error.message||"Inloggning misslyckades";console.warn("login",error);return}
       sbUser=res.user;renderAuth();loadStatuses();};}
+}
+
+
+function lbShelf(shelf,bookId){
+  const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
+  let idx=0,found=-1;
+  SHELF_IMGS.forEach(g=>{g.imgs.forEach((im,j)=>{
+    if(found<0&&g.bc===bc){
+      if((bc==="1"||bc==="2")&&g.label==="plan "+plan&&j===(sec==="V"?0:1))found=idx;
+      else if(bc==="3"&&g.label==="hylla "+plan)found=idx;
+      else if(bc==="4"&&j===0&&g.label===(plan==="3"?"löst i köket":"kokbokshyllan"))found=idx;
+      else if(bc!=="1"&&bc!=="2"&&bc!=="3"&&bc!=="4")found=(found<0?idx:found);
+    }
+    idx++})});
+  if(found<0)found=0;
+  lbOpen(found);
+  lbCap.textContent="📍 "+locLabel(shelf);
+  if(bookId!==undefined){
+    const sib=data.filter(d=>d.shelf===shelf);
+    const rank=sib.findIndex(d=>d.id===bookId);
+    if(rank>=0&&sib.length>1){
+      const w=1/sib.length,pad=Math.min(.02,w*.3);
+      markFrac={x0:Math.max(0,rank*w-pad),x1:Math.min(1,(rank+1)*w+pad),y0:.08,y1:.95};
+      if(bc==="4"||bc==="6"){markFrac.y0=(plan==="2"?.08:.52);markFrac.y1=(plan==="2"?.48:.95)}
+      requestAnimationFrame(updateMark);
+    }
+  }
 }
 
 /* exportera klickhanterare tidigt så UI aldrig dör av ett misslyckat DB-anrop */
