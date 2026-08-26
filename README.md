@@ -19,7 +19,7 @@ Hyllkoder: `bokhylla:sektion+plan`, t.ex. `1:V3` = bokhylla 1, vänster sektion,
 - **Delafunktion** — delbar länk/bild för sociala medier: "titta i min bokhylla — vill du låna någon / prata om någon?"
 - **Bokomslag i popupen** — framsidan visas i beskrivnings-popupen (hämtad från nätet); saknas bild visas en uppladdningsruta där man kan fota omslaget själv
 - **Redigera kategorietiketter** — byta namn på etiketter, lägga till/ta bort etiketter, och ändra vilka etiketter en bok har
-- **Svårläst-lista** — egen vy med alla böcker/partier flaggade som svårlästa (samma kortinfo som sök: titel, text, bild, hyllplats) så man kan fota om eller rätta titeln manuellt
+- ~~Svårläst-lista~~ **KLAR** — Luckor-vyn (Inställningar → Luckor): 51 olästa partier med utsnitt, handinmatning och fotouppladdning till Claude-kö
 
 ### Teknik & data
 - Veckobevakning sälj: automatisk prisuppdatering av `data/sell.json` (Studentapan)

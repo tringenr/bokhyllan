@@ -306,6 +306,89 @@ fetch("data/sell.json").then(r=>r.json()).then(s=>{
     <p>${it.why}</p>
     <p><a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan →</a></p></div>`}).join("");
 }).catch(()=>{document.getElementById("sellList").innerHTML="<p>Kunde inte ladda säljlistan.</p>"});
+
+/* ---------- Luckor ---------- */
+let GAPS=[],gapState={},gapFilter="open";
+async function loadGaps(){
+  GAPS=await fetch("data/gaps.json").then(r=>r.json());
+  if(sbUser||true){const {data:rows}=await sb.from("gap_status").select("*");
+    if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note});}
+  updateGapCount();renderGaps();
+}
+function gapStateOf(id){return (gapState[id]&&gapState[id].state)||"open"}
+function updateGapCount(){
+  const open=GAPS.filter(g=>gapStateOf(g.id)==="open").length;
+  const el=document.getElementById("gapCount");if(el)el.textContent="("+open+")";
+  const rem=document.getElementById("gapReminder");
+  if(rem){if(open){rem.style.display="";rem.textContent=`🔍 ${open} luckor kvar att fylla i katalogen →`}else rem.style.display="none"}
+}
+function renderGaps(){
+  const list=GAPS.filter(g=>gapStateOf(g.id)===gapFilter);
+  document.getElementById("gapIntro").textContent=
+    `${GAPS.length} partier i hyllfotona gick inte att läsa av. Varje lucka rymmer ofta 3–10 böcker.`;
+  document.getElementById("gapList").innerHTML=list.length?list.map(g=>{
+    const st=gapStateOf(g.id),ph=gapState[g.id]&&gapState[g.id].photo;
+    return `<div class="gap-card">
+      <img src="${ph||g.crop}" alt="Lucka" onclick="window.open('${ph||g.full}','_blank')">
+      <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR PÅ CLAUDE":"KLAR"}</span>`:""}</div>
+      <div class="gap-actions">
+        <button onclick="gapWrite('${g.id}')">✏️ Skriv in böckerna</button>
+        <label class="ghost">📷 Fota närmare<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
+        ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klarmarkera</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna igen</button>`}
+      </div>
+      <div class="gap-form" id="form-${g.id}" style="display:none">
+        <textarea id="ta-${g.id}" placeholder="En titel per rad, t.ex.&#10;Sociologins teorier&#10;Att förstå vardagen"></textarea>
+        <div class="gap-actions" style="margin-top:.4rem"><button onclick="gapSave('${g.id}')">Spara till katalogen</button></div>
+      </div></div>`}).join(""):"<p style='color:var(--muted)'>Inga luckor i den här vyn.</p>";
+}
+function gapWrite(id){const f=document.getElementById("form-"+id);f.style.display=f.style.display==="none"?"":"none"}
+async function gapSet(id,state,photo){
+  if(!sbUser){alert("Logga in för att ändra luckor.");return}
+  gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo))};
+  await sb.from("gap_status").upsert({gap_id:id,state,photo_path:gapState[id].photo||null,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+  updateGapCount();renderGaps();
+}
+async function gapUpload(id,input){
+  if(!sbUser){alert("Logga in för att ladda upp foto.");return}
+  const f=input.files[0];if(!f)return;
+  const path=`${id}-${Date.now()}.jpg`;
+  const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
+  if(error){alert("Kunde inte ladda upp: "+error.message);return}
+  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
+  await gapSet(id,"waiting",pub.publicUrl);
+  alert("Foto uppladdat! Luckan är markerad 'väntar på Claude' — säg till i chatten så läser jag av den.");
+}
+async function gapSave(id){
+  if(!sbUser){alert("Logga in för att spara.");return}
+  const g=GAPS.find(x=>x.id===id);
+  const lines=document.getElementById("ta-"+id).value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!lines.length)return;
+  const rows=lines.map(t=>({title:t,author:"",cat:"Okategoriserad",shelf:g.shelf,gap_id:id,created_by:sbUser.id}));
+  const {error}=await sb.from("manual_books").insert(rows);
+  if(error){alert("Kunde inte spara: "+error.message);return}
+  lines.forEach(t=>data.push({id:1e6+data.length,title:t,author:"",cat:"Okategoriserad",shelf:g.shelf,status:"hylla",lentTo:"",ts:null}));
+  render();await gapSet(id,"done");
+  alert(lines.length+" böcker tillagda!");
+}
+async function loadManualBooks(){
+  const {data:rows}=await sb.from("manual_books").select("*");
+  if(rows)rows.forEach(r=>data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null}));
+}
+function openGapView(o){
+  document.getElementById("gapView").classList.toggle("open",o);
+  ["sok","salj","install"].forEach(k=>{if(o)document.getElementById("tab-"+k).style.display="none"});
+  if(!o)document.querySelector('.tabbar .tab[data-tab="install"]').click();
+  scrollTo({top:0})}
+document.getElementById("openGaps").addEventListener("click",()=>openGapView(true));
+document.getElementById("gapReminder").addEventListener("click",()=>openGapView(true));
+document.getElementById("gapBack").addEventListener("click",()=>openGapView(false));
+document.querySelectorAll(".gap-filter .quick").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".gap-filter .quick").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  gapFilter=b.dataset.g;renderGaps()}));
+document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>document.getElementById("gapView").classList.remove("open")));
+window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;
+await loadManualBooks();
+await loadGaps();
 window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();

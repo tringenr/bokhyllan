@@ -23,6 +23,7 @@
     <span class="hero-txt">🖼 Hyllorna<small>Bläddra bland alla hyllor och foton</small></span>
   </button>
 
+  <button class="gap-reminder" id="gapReminder" style="display:none"></button>
   <div class="search-row">
     <input id="q" type="search" placeholder="Sök titel eller författare…">
   </div>
@@ -71,10 +72,21 @@
   <h3 class="ins-h">Hyllornas namn</h3>
   <p class="photo-intro">Klicka för att byta namn. Namnen delas med familjen när du är inloggad.</p>
   <div id="bcEditorIns"></div>
+  <h3 class="ins-h">Luckor i katalogen</h3>
+  <p class="photo-intro">Ryggar jag inte kunde läsa. Fyll i för hand eller fota närmare.</p>
+  <button class="list-toggle" id="openGaps">🔍 Öppna luckor <span id="gapCount"></span></button>
+
   <h3 class="ins-h">Om appen</h3>
   <div class="note">Detta är en prototyp med böckerna från ett foto (två sektioner av vardagsrumshyllan, ca 150 av titlarna gick att läsa av). Statusändringar sparas lokalt i din webbläsare. Nästa steg: fler foton, rättning av feltolkade titlar, och ev. en riktig databas så status kan delas mellan enheter.<br><br><b>Backlogg:</b> exakta bokmarkeringar på fotona (koordinater per bokrygg istället för "ungefär här") · soffan och resten av sovrummet · kökets nedersta hylla · de rödmarkerade svårlästa partierna.</div>
 </div><!-- /tab-install -->
 
+
+<div id="gapView" class="gap-view">
+  <div class="gap-head"><button class="chip" id="gapBack">← Tillbaka</button><h2 class="salj-h">🔍 Luckor</h2></div>
+  <p class="photo-intro" id="gapIntro"></p>
+  <div class="gap-filter"><button class="quick on" data-g="open">Kvar</button><button class="quick" data-g="waiting">Väntar på Claude</button><button class="quick" data-g="done">Klara</button></div>
+  <div id="gapList"></div>
+</div>
 </main>
 
 <nav class="tabbar">
