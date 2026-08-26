@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=202608261710";
+const DV="?v=202608261713";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -399,7 +399,7 @@ let GAPS=[],gapState={},gapFilter="open";
 async function loadGaps(){
   GAPS=await fetch("data/gaps.json"+DV).then(r=>r.json());
   if(sbUser||true){const {data:rows}=await sb.from("gap_status").select("*");
-    if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note});}
+    if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note,claude:r.claude_note});}
   updateGapCount();renderGaps();
 }
 function gapStateOf(id){
@@ -425,6 +425,7 @@ function renderGaps(){
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
           <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"FOTO SKICKAT – VÄNTAR PÅ CLAUDE":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
+            ${(gapState[g.id]&&gapState[g.id].claude)?`<br><span class="gap-claude">🤖 ${gapState[g.id].claude}</span>`:""}
             ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].map(x=>x.title).join(", ")}</span>`:""}</div>
           <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
@@ -519,6 +520,21 @@ async function gapSet(id,state,photo){
   await sb.from("gap_status").upsert({gap_id:id,state,photo_path:gapState[id].photo||null,updated_at:new Date().toISOString(),updated_by:sbUser.id});
   updateGapCount();renderGaps();
 }
+function shrinkToDataURL(file,maxW,quality){
+  return new Promise((res,rej)=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const r=Math.min(1,maxW/img.width);
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg",quality));
+    };
+    img.onerror=e=>{URL.revokeObjectURL(url);rej(e)};
+    img.src=url;
+  });
+}
 async function gapUpload(id,input){
   if(!sbUser){alert("Logga in för att ladda upp foto.");return}
   const f=input.files[0];if(!f)return;
@@ -526,10 +542,14 @@ async function gapUpload(id,input){
   const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
   if(error){alert("Kunde inte ladda upp: "+error.message);return}
   const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
-  await gapSet(id,"waiting",pub.publicUrl);
-  alert("Foto uppladdat! Luckan står kvar i listan tills du själv klarmarkerar den.\n\nSäg till i chatten så läser jag av bilden och fyller i böckerna — sedan kan du kontrollera dem och trycka ✓ Klar.");
+  let dataUrl=null;
+  try{dataUrl=await shrinkToDataURL(f,1100,0.62)}catch(e){console.warn("kunde inte skala ner",e)}
+  gapState[id]={state:"waiting",photo:pub.publicUrl};
+  await sb.from("gap_status").upsert({gap_id:id,state:"waiting",photo_path:pub.publicUrl,
+    photo_data:dataUrl,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+  updateGapCount();renderGaps();
+  alert("Foto skickat! Luckan står kvar i listan.\n\nJag läser av bilden och fyller i böckerna – sedan kontrollerar du dem och trycker ✓ Klar.");
 }
-let saving={};
 async function gapSave(id){
   if(!sbUser){alert("Logga in för att spara.");return}
   if(saving[id])return; saving[id]=true;
