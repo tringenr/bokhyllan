@@ -286,3 +286,13 @@ body{padding:0}
 .ns-item-acts button{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:.35rem .6rem;font-size:.76rem;cursor:pointer}
 .ns-item-acts .ghost{background:var(--tag);color:var(--ink)}
 .ns-note{font-size:.75rem;color:var(--accent);margin-top:.15rem}
+
+/* Potentialsummering överst i säljlistan */
+.sell-summary{background:var(--card);border:1px solid var(--accent);border-radius:12px;
+  padding:.9rem 1rem;margin-bottom:.9rem}
+.sell-sum-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:.5rem}
+.sell-sum-kr{font-family:Georgia,serif;font-size:1.7rem;font-weight:700;color:var(--accent);line-height:1.1}
+.sell-sum-lbl{font-size:.78rem;color:var(--muted)}
+.sell-sum-row{display:flex;gap:1.1rem;flex-wrap:wrap;margin:.55rem 0 .15rem;font-size:.85rem;color:var(--muted)}
+.sell-sum-row b{color:var(--ink);font-size:.95rem}
+.sell-sum-note{margin:.4rem 0 0;font-size:.78rem;line-height:1.45;color:var(--muted)}

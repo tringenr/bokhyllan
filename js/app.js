@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260826181952";
+const DV="?v=20260826182951";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -385,7 +385,17 @@ qr.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>{
 /* ---------- Sälj ---------- */
 fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{
   document.getElementById("sellNote").textContent=s.note+" Uppdaterad "+s.updated+".";
-  document.getElementById("sellList").innerHTML=s.items.map(it=>{
+  const sum=s.summary;
+  const summaryHtml=sum?`<div class="sell-summary">
+    <div class="sell-sum-top"><span class="sell-sum-kr">~${sum.summa.toLocaleString("sv-SE")} kr</span>
+    <span class="sell-sum-lbl">försiktig uppskattning · ${sum.antal_i_summan} titlar</span></div>
+    <div class="sell-sum-row">
+      <span><b>${sum.poster}</b> kandidater</span>
+      <span><b>${sum.heta}</b> heta</span>
+      <span><b>${sum.kvar_att_kolla}</b> kvar att kolla</span>
+    </div>
+    <p class="sell-sum-note">${sum.kommentar}</p></div>`:"";
+  document.getElementById("sellList").innerHTML=summaryHtml+s.items.map(it=>{
     const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
     const loc=d?locLabel(d.shelf):"";
     return `<div class="sell-item"><h4>${it.title}<span class="heat heat-${it.heat}">${({het:"HET",medel:"MEDEL",lag:"LÅGT VÄRDE"})[it.heat]||"KOLLA"}</span></h4>

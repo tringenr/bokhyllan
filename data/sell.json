@@ -9,7 +9,8 @@
    "heat": "het",
    "why": "Standardverk på psykolog-, socionom- och sjuksköterskeprogram. 4,7 i betyg (24 rec), säljs aktivt just nu. Terminsstart = bästa läget.",
    "url": "https://www.studentapan.se/kurslitteratur/klinisk-barnpsykologi-utveckling-pa-avvagar-9789127135888",
-   "checked": true
+   "checked": true,
+   "low": 439
   },
   {
    "title": "Utvecklingspsykologi (uppl 3)",
@@ -18,7 +19,8 @@
    "heat": "het",
    "why": "'Standardverk och återkommande kurslitteratur' enligt köparrecension 19 dagar gammal. 4,8 (40 rec).",
    "url": "https://www.studentapan.se/kurslitteratur/utvecklingspsykologi-9789147093380",
-   "checked": true
+   "checked": true,
+   "low": 205
   },
   {
    "title": "Motiverande samtal (uppl 3)",
@@ -27,7 +29,8 @@
    "heat": "medel",
    "why": "Stor efterfrågan i många yrkesutbildningar, men upplaga 4 (2024) finns nu — priset på uppl 3 pressas gradvis. Sälj hellre förr än senare.",
    "url": "https://www.studentapan.se/kurslitteratur/motiverande-samtal-att-hjalpa-manniskor-till-forandring-9789127135390",
-   "checked": true
+   "checked": true,
+   "low": 189
   },
   {
    "title": "Dynamisk psykiatri",
@@ -36,7 +39,8 @@
    "heat": "lag",
    "why": "Cullbergs klassiker finns i massor på Tradera för 30–50 kr — utbudet är stort och äldre upplagor har tappat kursstatus. Behåll eller skänk hellre.",
    "url": "https://www.tradera.com/search?q=dynamisk+psykiatri+cullberg",
-   "checked": true
+   "checked": true,
+   "low": 30
   },
   {
    "title": "Beteendets ABC",
@@ -45,7 +49,8 @@
    "heat": "medel",
    "why": "Uppl 3 (2020) säljs ny för 489 kr på Studentapan. Du har två exemplar (bokhylla 2 + bokskåpet) — sälj det ena.",
    "url": "https://www.studentapan.se/kurslitteratur/beteendets-abc-en-introduktion-till-behavioristisk-psykoterapi-9789144136639",
-   "checked": true
+   "checked": true,
+   "low": 150
   },
   {
    "title": "Kompetensbaserad rekrytering, intervjuteknik och testning",
@@ -54,7 +59,8 @@
    "heat": "medel",
    "why": "Uppl 1 (2003) ligger på 239 kr begagnat. Uppl 3 kom 2025 under nytt namn (Kompetensbaserad rekrytering och personalstrategi) — den pressar din upplaga gradvis. Sälj hellre nu än om två år.",
    "url": "https://www.studentapan.se/sok?q=kompetensbaserad%20rekrytering",
-   "checked": true
+   "checked": true,
+   "low": 239
   },
   {
    "title": "Hur moderna organisationer fungerar",
@@ -63,7 +69,8 @@
    "heat": "het",
    "why": "Jacobsen & Thorsvik — bred org-kursbok i hela Norden. Uppl 5 (2021) ger 359 kr, uppl 4 (2014) 175 kr.",
    "url": "https://www.studentapan.se/kurslitteratur/hur-moderna-organisationer-fungerar-9789144150956",
-   "checked": true
+   "checked": true,
+   "low": 175
   },
   {
    "title": "Organisationer, ledning och processer",
@@ -72,7 +79,8 @@
    "heat": "kolla-upplaga",
    "why": "Uppl 3 (2019) går för 285–299 kr. Uppl 1 (2007) och 2 (2012) ligger runt 117–170 kr. Kolla ryggen innan du bestämmer — skillnaden är över 150 kr.",
    "url": "https://www.studentapan.se/sok?q=organisationer%20ledning%20och%20processer",
-   "checked": true
+   "checked": true,
+   "low": 120
   },
   {
    "title": "Clinical Handbook of Psychological Disorders",
@@ -81,7 +89,8 @@
    "heat": "het",
    "why": "Barlow uppl 6: begagnade exemplar är slutsålda medan nypriset är 1 491 kr — högt tryck, inget utbud. Kolla vilken upplaga du har; uppl 6 (2021) är den gångbara.",
    "url": "https://www.studentapan.se/kurslitteratur/clinical-handbook-of-psychological-disorders-9781462547043",
-   "checked": true
+   "checked": true,
+   "low": null
   },
   {
    "title": "Handbok i missbrukspsykologi",
@@ -90,7 +99,8 @@
    "heat": "het",
    "why": "299 kr begagnat, ingen nyare upplaga sedan 2012. Listad på ett femtontal kurskoder (socionom, psykolog, sjuksköterska) — bred och stabil efterfrågan.",
    "url": "https://www.studentapan.se/sok?q=handbok%20i%20missbrukspsykologi",
-   "checked": true
+   "checked": true,
+   "low": 299
   },
   {
    "title": "Klinisk neuropsykologi (Nyman & Bartfai)",
@@ -99,7 +109,8 @@
    "heat": "kolla-upplaga",
    "checked": true,
    "why": "Uppl 3 (2023) är het: 435–489 kr. Uppl 1 (2000) går för runt 119 kr på Tradera. Du har två exemplar (2:V5 och 2:V1) — kolla vilka upplagor de är.",
-   "url": "https://www.studentapan.se/kurslitteratur/klinisk-neuropsykologi-9789144149066"
+   "url": "https://www.studentapan.se/kurslitteratur/klinisk-neuropsykologi-9789144149066",
+   "low": 120
   },
   {
    "title": "Återfallsprevention utifrån KBT och MI",
@@ -108,7 +119,8 @@
    "heat": "het",
    "checked": true,
    "why": "Uppl 2 (2022) ligger på 309 kr. Står på Karolinskas kurslista för Återfallsprevention — återkommande efterfrågan. Uppl 1 (2017) ger bara 149 kr.",
-   "url": "https://www.studentapan.se/kurslitteratur/aterfallsprevention-utifran-kbt-och-mi-vid-problem-med-alkohol-och-narkotika-9789144153124"
+   "url": "https://www.studentapan.se/kurslitteratur/aterfallsprevention-utifran-kbt-och-mi-vid-problem-med-alkohol-och-narkotika-9789144153124",
+   "low": 149
   },
   {
    "title": "Emotionsfokuserad terapi",
@@ -117,7 +129,8 @@
    "heat": "het",
    "checked": true,
    "why": "379 kr begagnat mot 437 nypris — liten rabatt, vilket betyder stark efterfrågan. Används på EFT-specialistkurser för psykologer. Bland de bästa i samlingen.",
-   "url": "https://www.studentapan.se/kurslitteratur/emotionsfokuserad-terapi-att-forsta-och-forandra-kanslor-9789144111803"
+   "url": "https://www.studentapan.se/kurslitteratur/emotionsfokuserad-terapi-att-forsta-och-forandra-kanslor-9789144111803",
+   "low": 379
   },
   {
    "title": "Implementeringsboken",
@@ -126,7 +139,8 @@
    "heat": "het",
    "checked": true,
    "why": "309 kr men just nu inga begagnade säljare alls — samma läge som Barlow: efterfrågan utan utbud. Ny (2023) och används på implementeringskurser. Lägg upp den snart.",
-   "url": "https://www.studentapan.se/kurslitteratur/implementeringsboken-sa-infor-du-nytt-som-gor-nytta-9789127461147"
+   "url": "https://www.studentapan.se/kurslitteratur/implementeringsboken-sa-infor-du-nytt-som-gor-nytta-9789127461147",
+   "low": 309
   },
   {
    "title": "Tillämpad beteendeanalys (Eikeseth & Svartdal)",
@@ -135,7 +149,8 @@
    "heat": "kolla",
    "checked": false,
    "why": "Redaktörer är Eikeseth & Svartdal (inte Kåver — min tidigare notering var fel). Nypris ~540 kr, kurslitteratur på SU:s TBA-masterprogram. Begagnatpriset syns inte i sökresultaten trots flera försök — kolla direkt på sajten.",
-   "url": "https://www.studentapan.se/kurslitteratur/tillampad-beteendeanalys-teori-och-praktik-9789144081724"
+   "url": "https://www.studentapan.se/kurslitteratur/tillampad-beteendeanalys-teori-och-praktik-9789144081724",
+   "low": null
   },
   {
    "title": "Grupphandledning",
@@ -144,7 +159,8 @@
    "heat": "het",
    "checked": true,
    "why": "245–305 kr beroende på skick (nypris 413–478). Aktiv kurslitteratur i sex universitetskurser, bl.a. GU:s PC2156 och PZ2117. Priset varierar mycket mellan säljare — sätt dig i övre delen om exemplaret är fint.",
-   "url": "https://www.studentapan.se/kurslitteratur/grupphandledning-forskning-och-erfarenheter-fran-olika-verksamhetsomraden-9789144060699"
+   "url": "https://www.studentapan.se/kurslitteratur/grupphandledning-forskning-och-erfarenheter-fran-olika-verksamhetsomraden-9789144060699",
+   "low": 245
   },
   {
    "title": "Forensisk KBT",
@@ -153,7 +169,8 @@
    "heat": "het",
    "checked": true,
    "why": "334–357 kr mot 351 nypris — begagnat går i praktiken till nypris, vilket betyder att utbudet är tunt. Nischad men efterfrågad (kriminalvård, forensiska verksamheter). En av de bättre i samlingen.",
-   "url": "https://www.studentapan.se/kurslitteratur/forensisk-kbt-behandling-for-brottsdomda-9789144123271"
+   "url": "https://www.studentapan.se/kurslitteratur/forensisk-kbt-behandling-for-brottsdomda-9789144123271",
+   "low": 334
   },
   {
    "title": "Yrkesmässig handledning (Tveiten)",
@@ -162,7 +179,8 @@
    "heat": "medel",
    "checked": true,
    "why": "179 kr. Uppl 6 kom 2025, så äldre upplagor tappar värde nu. Sälj snart eller skänk — den här står inte still.",
-   "url": "https://www.studentapan.se/kurslitteratur/yrkesmassig-handledning-mer-an-ord-9789144136271"
+   "url": "https://www.studentapan.se/kurslitteratur/yrkesmassig-handledning-mer-an-ord-9789144136271",
+   "low": 179
   },
   {
    "title": "Organisationspsykologi (Haslam m.fl.)",
@@ -171,7 +189,8 @@
    "heat": "kolla",
    "checked": false,
    "why": "Finns på Studentapan (ISBN 9789144092287) och riktar sig till master- och forskarnivå, men priset gick inte att läsa av. Näslund & Jerns bok med samma titel ligger på 179 kr — kolla vilken du har.",
-   "url": "https://www.studentapan.se/kurslitteratur/organisationspsykologi-9789144092287"
+   "url": "https://www.studentapan.se/kurslitteratur/organisationspsykologi-9789144092287",
+   "low": null
   },
   {
    "title": "0–20 år (Mangs & Martell)",
@@ -180,7 +199,8 @@
    "heat": "lag",
    "checked": true,
    "why": "Gav inga träffar på Studentapan. Boken är från 90-talet och har tappat kursstatus — behåll eller skänk.",
-   "url": ""
+   "url": "",
+   "low": 0
   },
   {
    "title": "OBM – Ledarskapets psykologi",
@@ -189,7 +209,8 @@
    "heat": "het",
    "checked": true,
    "why": "275 kr begagnat. Andersson & Klintrot, Sanoma. Stabil på OBM- och HRM-kurser. Rakt igenom en bra säljare.",
-   "url": "https://www.studentapan.se/kurslitteratur/obm-ledarskapets-psykologi-9789152321782"
+   "url": "https://www.studentapan.se/kurslitteratur/obm-ledarskapets-psykologi-9789152321782",
+   "low": 275
   },
   {
    "title": "Stress- och utmattningsproblem",
@@ -198,7 +219,8 @@
    "heat": "kolla-upplaga",
    "checked": true,
    "why": "Störst spann i hela samlingen. Uppl 2 (2017, Almén & Gjertsson) går för 419–505 kr och har få säljare. Uppl 1 (2007, bara Almén) ger 179 kr. Kolla om Gjertsson står på omslaget — det skiljer över 300 kr.",
-   "url": "https://www.studentapan.se/kurslitteratur/stress-och-utmattningsproblem-kognitiva-och-beteendeterapeutiska-metoder-9789144083674"
+   "url": "https://www.studentapan.se/kurslitteratur/stress-och-utmattningsproblem-kognitiva-och-beteendeterapeutiska-metoder-9789144083674",
+   "low": 179
   },
   {
    "title": "Objektrelationer och psykoterapi (Igra)",
@@ -207,7 +229,8 @@
    "heat": "het",
    "checked": true,
    "why": "Priset varierar kraftigt mellan säljare (125–345 kr sedda). Står på GU:s psykoterapeutprogram PM2616, så efterfrågan finns. Sätt dig högt om exemplaret är fint — spannet är brett nog att det lönar sig.",
-   "url": "https://www.studentapan.se/kurslitteratur/objektrelationer-och-psykoterapi-9789127068452"
+   "url": "https://www.studentapan.se/kurslitteratur/objektrelationer-och-psykoterapi-9789127068452",
+   "low": 189
   },
   {
    "title": "Förändring som tillstånd (Ahrenfelt)",
@@ -216,7 +239,8 @@
    "heat": "kolla-upplaga",
    "checked": true,
    "why": "Uppl 3 (2013) ligger kring 240 kr. Uppl 2 (2001) går för 119 kr och har 5+ säljare — mättad marknad. Bara uppl 3 är värd besväret.",
-   "url": "https://www.studentapan.se/kurslitteratur/forandring-som-tillstand-att-leda-forandrings-och-utvecklingsarbete-i-foretag-och-organisationer-9789144086606"
+   "url": "https://www.studentapan.se/kurslitteratur/forandring-som-tillstand-att-leda-forandrings-och-utvecklingsarbete-i-foretag-och-organisationer-9789144086606",
+   "low": 119
   },
   {
    "title": "Att leva ett liv, inte vinna ett krig (Kåver)",
@@ -225,7 +249,77 @@
    "heat": "medel",
    "checked": true,
    "why": "Nypris 252 kr, begagnat kring 200. Tunn bok (126 s) och mer självhjälp än kurslitteratur, men Kåver säljer stadigt. Tradera ligger runt 150 kr — Studentapan är bättre.",
-   "url": "https://www.studentapan.se/kurslitteratur/att-leva-ett-liv-inte-vinna-ett-krig-om-acceptans-9789127026827"
+   "url": "https://www.studentapan.se/kurslitteratur/att-leva-ett-liv-inte-vinna-ett-krig-om-acceptans-9789127026827",
+   "low": 200
+  },
+  {
+   "title": "Diakoni – tolkning, historik, praktik",
+   "match": "Diakoni – tolkning, historik, praktik",
+   "price": "249 kr (2008) / 119 kr (2019)",
+   "heat": "medel",
+   "checked": true,
+   "why": "Ovanligt: den ÄLDRE utgåvan (2008, Blennberger & Hansson) går för 249 kr medan 2019 års ligger på 119 kr. Grundbok på diakonutbildningarna. Kolla årtalet på din.",
+   "url": "https://www.studentapan.se/kurslitteratur/diakoni-tolkning-historik-praktik-9789152638071",
+   "low": 119
+  },
+  {
+   "title": "Religionshistoria – ritualer, mytologi, ikonografi",
+   "match": "Religionshistoria",
+   "price": "125–195 kr",
+   "heat": "medel",
+   "checked": true,
+   "why": "Jensen m.fl. Ligger mellan 125 och 195 kr beroende på säljare. Stabil grundkursbok i religionsvetenskap, men prisnivån är teologins snarare än psykologins.",
+   "url": "https://www.studentapan.se/kurslitteratur/evangeliesynops-evangelierna-i-jamforande-sammanstallning-9789185774241",
+   "low": 125
+  },
+  {
+   "title": "En bok om Nya Testamentet",
+   "match": "En bok om Nya Testamentet",
+   "price": "lågt värde",
+   "heat": "lag",
+   "checked": true,
+   "why": "Gerhardsson & Hartman, uppl 5 från 1989. Bara 1 säljare på Studentapan och ingen prisnivå att tala om — kursen har gått vidare till Mitternacht & Runesson. Skänk hellre.",
+   "url": "",
+   "low": 0
+  },
+  {
+   "title": "En bok om Gamla Testamentet",
+   "match": "En bok om Gamla Testamentet",
+   "price": "lågt värde",
+   "heat": "lag",
+   "checked": true,
+   "why": "Samma bild som NT-volymen: föråldrad kurslitteratur utan marknad. Skänk.",
+   "url": "",
+   "low": 0
+  },
+  {
+   "title": "Handbok för diakoni",
+   "match": "Handbok för diakoni",
+   "price": "ej fastställt (~150 kr)",
+   "heat": "kolla",
+   "checked": false,
+   "why": "Diakonilitteratur ligger generellt på 120–250 kr. Den här specifika titeln gick inte att prisbestämma — kolla på sajten om du ändå är där.",
+   "url": "",
+   "low": null
+  },
+  {
+   "title": "Diakonins kyrka (Ohlin)",
+   "match": "Diakonins kyrka",
+   "price": "lågt värde",
+   "heat": "lag",
+   "checked": true,
+   "why": "Äldre diakonilitteratur utan kursstatus. Bokbörsen tar den för under 100 kr. Inte värt frakten.",
+   "url": "",
+   "low": 0
   }
- ]
+ ],
+ "summary": {
+  "poster": 31,
+  "prisverifierade": 28,
+  "kvar_att_kolla": 3,
+  "heta": 12,
+  "summa": 4767,
+  "antal_i_summan": 23,
+  "kommentar": "Försiktig uppskattning: lägsta noterade pris per titel. Barlow är utelämnad (begagnat slut — går inte att prissätta) liksom de tre som ännu inte är verifierade. Har du de nyare upplagorna av Stress- och utmattningsproblem, Klinisk neuropsykologi och Ahrenfelt blir utfallet flera tusen högre."
+ }
 }
