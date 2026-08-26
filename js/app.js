@@ -1,4 +1,9 @@
 (async()=>{
+const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
+const SB_KEY="sb_publishable_u-v5m6eOpJlxBF3r-QV1JA_ImYKF6W3";
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+let sbUser=null;
+
 const [booksRaw,photos,BOOK_INFO]=await Promise.all(
   ["data/books.json","data/photos.json","data/bookinfo.json"].map(u=>fetch(u).then(r=>r.json())));
 const BOOKS=booksRaw.map(b=>[b.title,b.author,b.cat,b.shelf]);
@@ -10,13 +15,19 @@ photos.forEach(p=>{
 });
 const DEFAULT_BC={1:"Bokhylla 1 – vardagsrummet",2:"Bokhylla 2",3:"Bokskåpet",4:"Köket",5:"Sovrummet – vid sängen",6:"Sovrummet – gröna skåpet",7:"Sovrummet – fönsterbrädan",8:"Soffan"};
 let bcNames={...DEFAULT_BC};
-try{Object.assign(bcNames,JSON.parse(localStorage.getItem("bokhyllan-bcnames")||"{}"))}catch(e){}
+async function loadBcNames(){const {data:rows}=await sb.from("bc_names").select("*");if(rows)rows.forEach(r=>bcNames[r.bc]=r.name)}
 const SEC={V:"vänster",H:"höger",S:"hylla",K:"hylla"};
 function locLabel(shelf){const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
   if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
   return (sec==="S"||sec==="K")?`${bcNames[bc]} · hylla ${plan}`:`${bcNames[bc]} · ${SEC[sec]} · plan ${plan}`}
 let data=BOOKS.map((b,i)=>({id:i,title:b[0],author:b[1],cat:b[2],shelf:b[3],status:"hylla",lentTo:""}));
-try{const saved=JSON.parse(localStorage.getItem("bokhyllan-status")||"{}");data.forEach(d=>{if(saved[d.id]){d.status=saved[d.id].s;d.lentTo=saved[d.id].l||"";d.ts=saved[d.id].t||null}})}catch(e){}
+async function loadStatuses(){
+  const {data:rows,error}=await sb.from("book_status").select("*");
+  if(error||!rows)return;
+  const map={};rows.forEach(r=>map[r.book_id]=r);
+  data.forEach(d=>{const r=map[d.id];if(r){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null}else{d.status="hylla";d.lentTo="";d.ts=null}});
+  render();
+}
 const $=s=>document.querySelector(s);
 let fs="",fShelf="",fCat="",q="";
 function buildShelfOptions(){
@@ -33,13 +44,17 @@ function buildShelfOptions(){
 buildShelfOptions();
 [...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv")).forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("#fCat").appendChild(o)});
 const STATUS={hylla:["På plats","s-hylla"],utlanad:["Utlånad","s-utlanad"],flyter:["Flyter runt","s-flyter"]};
-function save(){try{const o={};data.forEach(d=>{if(d.status!=="hylla"||d.lentTo||d.ts)o[d.id]={s:d.status,l:d.lentTo,t:d.ts}});localStorage.setItem("bokhyllan-status",JSON.stringify(o))}catch(e){}}
-function cycle(id){const d=data.find(x=>x.id===id);const order=["hylla","utlanad","flyter"];d.status=order[(order.indexOf(d.status)+1)%3];
+async function saveBook(d){
+  if(!sbUser)return;
+  await sb.from("book_status").upsert({book_id:d.id,status:d.status,lent_to:d.lentTo||"",seen_date:d.ts,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+}
+function save(){}
+function cycle(id){if(!sbUser){alert("Logga in för att ändra status.");return}const d=data.find(x=>x.id===id);const order=["hylla","utlanad","flyter"];d.status=order[(order.indexOf(d.status)+1)%3];
 d.ts=new Date().toISOString().slice(0,10);
 if(d.status!=="utlanad")d.lentTo="";
-save();render();
+saveBook(d);render();
 if(d.status==="utlanad"){const inp=document.querySelector(`input[data-lent="${id}"]`);if(inp)inp.focus()}}
-function setLent(id,val){const d=data.find(x=>x.id===id);d.lentTo=val.trim();save();
+function setLent(id,val){if(!sbUser)return;const d=data.find(x=>x.id===id);d.lentTo=val.trim();saveBook(d);
 const btn=document.querySelector(`button[data-sbtn="${id}"]`);if(btn)btn.textContent="Utlånad"+(d.lentTo?" → "+d.lentTo:"")}
 function render(){
   const norm=s=>s.toLowerCase();
@@ -74,7 +89,7 @@ function renderBcEditor(){
     const inp=document.createElement("input");inp.type="text";inp.value=bcNames[bc];inp.className="bc-input";
     b.replaceWith(inp);inp.focus();inp.select();
     const commit=()=>{const n=inp.value.trim();
-      if(n){bcNames[bc]=n;try{localStorage.setItem("bokhyllan-bcnames",JSON.stringify(bcNames))}catch(e){}}
+      if(n){bcNames[bc]=n;if(sbUser)sb.from("bc_names").upsert({bc,name:n}).then(()=>{})}
       buildShelfOptions();render();renderPhotoTabs()};
     inp.addEventListener("keydown",e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){buildShelfOptions();render()}});
     inp.addEventListener("blur",commit)}))
@@ -228,5 +243,25 @@ document.body.appendChild(toTop);
 toTop.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
 addEventListener("scroll",()=>toTop.classList.toggle("show",scrollY>600),{passive:true});
 
+
+function renderAuth(){
+  const el=document.getElementById("authBar");if(!el)return;
+  if(sbUser){el.innerHTML=`<span class="who">Inloggad: ${sbUser.email}</span> <button id="btnOut">Logga ut</button>`;
+    el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();sbUser=null;renderAuth();render()};}
+  else{el.innerHTML=`<input id="aEmail" type="email" placeholder="e-post"><input id="aPass" type="password" placeholder="lösenord"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
+    el.querySelector("#btnIn").onclick=async()=>{
+      const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
+      if(error){el.querySelector("#aErr").textContent="Fel e-post eller lösenord";return}
+      sbUser=res.user;renderAuth();loadStatuses();};}
+}
+const {data:sess}=await sb.auth.getSession();
+if(sess&&sess.session)sbUser=sess.session.user;
+renderAuth();
+await loadBcNames();buildShelfOptions();
+await loadStatuses();
+sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
+  const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
+  if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
+}).subscribe();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();
