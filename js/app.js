@@ -436,6 +436,7 @@ await loadManualBooks();
 await loadGaps();
 await loadCatEdits();
 await loadCoverOverrides();
+await loadNewShelves();
 
 /* ---------- Kategoriredigering ---------- */
 let catRenames={};
@@ -518,6 +519,62 @@ async function uploadCover(id,input){
 }
 window.uploadCover=uploadCover;
 
+
+/* ---------- Ny hylla / uppdatera foto ---------- */
+async function loadNewShelves(){
+  const {data:rows}=await sb.from("new_shelves").select("*").order("created_at",{ascending:false});
+  const el=document.getElementById("nsList");if(!el)return;
+  el.innerHTML=(rows||[]).map(r=>
+    `<div class="ns-item"><span>${r.state==="done"?"✅":"⏳"} ${r.name}</span>
+     <a href="${r.photo_url}" target="_blank" rel="noopener" style="font-size:.8rem">Visa foto</a></div>`).join("");
+}
+const nsFile=document.getElementById("nsFile");
+if(nsFile)nsFile.addEventListener("change",async e=>{
+  if(!sbUser){alert("Logga in för att lägga till hylla.");return}
+  const name=(document.getElementById("nsName").value||"").trim();
+  if(!name){alert("Skriv först vad hyllan heter.");e.target.value="";return}
+  const f=e.target.files[0];if(!f)return;
+  const path=`shelf-${Date.now()}.jpg`;
+  const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
+  if(error){alert("Kunde inte ladda upp: "+error.message);return}
+  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
+  await sb.from("new_shelves").insert({name,photo_url:pub.publicUrl,created_by:sbUser.id});
+  document.getElementById("nsName").value="";e.target.value="";
+  await loadNewShelves();
+  alert("Tack! Hyllan ligger i kö — säg till i chatten så läser jag av bilden.");
+});
+
+/* ---------- Dela ---------- */
+const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
+shareSheet.innerHTML=`<div class="share-box"><h3>🔗 Dela bokhyllan</h3>
+  <textarea id="shareTxt"></textarea>
+  <div class="share-acts">
+    <button id="shareNative">Dela…</button>
+    <button class="ghost" id="shareCopy">Kopiera text</button>
+    <button class="ghost" id="shareClose">Stäng</button>
+  </div></div>`;
+document.body.appendChild(shareSheet);
+shareSheet.addEventListener("click",e=>{if(e.target===shareSheet)shareSheet.classList.remove("open")});
+document.getElementById("shareClose")&&0;
+shareSheet.querySelector("#shareClose").onclick=()=>shareSheet.classList.remove("open");
+shareSheet.querySelector("#shareCopy").onclick=()=>{
+  navigator.clipboard.writeText(shareSheet.querySelector("#shareTxt").value)
+    .then(()=>alert("Kopierat!"),()=>alert("Kunde inte kopiera"))};
+shareSheet.querySelector("#shareNative").onclick=async()=>{
+  const text=shareSheet.querySelector("#shareTxt").value;
+  if(navigator.share){try{await navigator.share({title:"Min bokhylla",text,url:location.href})}catch(e){}}
+  else shareSheet.querySelector("#shareCopy").click();
+};
+document.getElementById("shareBtn").addEventListener("click",()=>{
+  const n=data.length, cats=[...new Set(data.map(d=>d.cat))].length;
+  shareSheet.querySelector("#shareTxt").value=
+`📚 Titta i min bokhylla! ${n} böcker i ${cats} kategorier — allt från buddhism och terapi till kokböcker och fantasy.
+
+Vill du låna någon? Eller bara prata om en? Hör av dig.
+
+${location.href}`;
+  shareSheet.classList.add("open");
+});
 window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();

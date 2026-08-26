@@ -225,3 +225,17 @@ body{padding:0}
 .ib-ph span{font-size:.62rem;text-align:center;line-height:1.2;padding:0 .3rem}
 .ib-head{flex:1;min-width:0}
 .info-box h3{margin:0 0 .2rem}
+
+.bar-btns{display:flex;gap:.4rem}
+.newshelf{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem}
+.newshelf input{flex:1 1 12rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:.6rem .8rem;font-size:.9rem}
+.ns-btn{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:.6rem 1rem;font-size:.85rem;cursor:pointer;white-space:nowrap;display:flex;align-items:center}
+.ns-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.55rem .8rem;margin-bottom:.4rem;font-size:.85rem;display:flex;justify-content:space-between;gap:.5rem;align-items:center}
+.share-sheet{position:fixed;inset:0;background:rgba(10,8,6,.6);z-index:130;display:none;align-items:flex-end;justify-content:center}
+.share-sheet.open{display:flex}
+.share-box{background:var(--card);border-radius:16px 16px 0 0;width:100%;max-width:34rem;padding:1.2rem 1.3rem calc(1.5rem + env(safe-area-inset-bottom))}
+.share-box h3{font-family:Georgia,serif;margin:0 0 .5rem}
+.share-box textarea{width:100%;min-height:6rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:.6rem;font-size:.9rem;font-family:inherit}
+.share-acts{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+.share-acts button{border:none;background:var(--accent);color:#fff;border-radius:9px;padding:.55rem .9rem;font-size:.85rem;cursor:pointer}
+.share-acts .ghost{background:var(--tag);color:var(--ink)}
