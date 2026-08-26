@@ -1,7 +1,7 @@
 (async()=>{
-const DV="?v=202608261624";
+const DV="?v=202608261634";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
-const SB_KEY="sb_publishable_u-v5m6eOpJlxBF3r-QV1JA_ImYKF6W3";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
 let sbUser=null;
 
@@ -286,7 +286,7 @@ function renderAuth(){
   else{el.innerHTML=`<input id="aEmail" type="email" placeholder="e-post"><input id="aPass" type="password" placeholder="lösenord"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
     el.querySelector("#btnIn").onclick=async()=>{
       const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
-      if(error){el.querySelector("#aErr").textContent="Fel e-post eller lösenord";return}
+      if(error){el.querySelector("#aErr").textContent=error.message||"Inloggning misslyckades";console.warn("login",error);return}
       sbUser=res.user;renderAuth();loadStatuses();};}
 }
 
