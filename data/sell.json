@@ -129,12 +129,12 @@
    "url": "https://www.studentapan.se/kurslitteratur/implementeringsboken-sa-infor-du-nytt-som-gor-nytta-9789127461147"
   },
   {
-   "title": "Tillämpad beteendeanalys",
+   "title": "Tillämpad beteendeanalys (Eikeseth & Svartdal)",
    "match": "Tillämpad beteendeanalys",
    "price": "ej fastställt (nypris ~540 kr)",
    "heat": "kolla",
    "checked": false,
-   "why": "Nypris ~540 kr och står som kurslitteratur på SU:s masterprogram i TBA. Begagnatpriset gick inte att läsa av i sökningen — behöver kollas direkt på Studentapan.",
+   "why": "Redaktörer är Eikeseth & Svartdal (inte Kåver — min tidigare notering var fel). Nypris ~540 kr, kurslitteratur på SU:s TBA-masterprogram. Begagnatpriset syns inte i sökresultaten trots flera försök — kolla direkt på sajten.",
    "url": "https://www.studentapan.se/kurslitteratur/tillampad-beteendeanalys-teori-och-praktik-9789144081724"
   },
   {
@@ -181,6 +181,51 @@
    "checked": true,
    "why": "Gav inga träffar på Studentapan. Boken är från 90-talet och har tappat kursstatus — behåll eller skänk.",
    "url": ""
+  },
+  {
+   "title": "OBM – Ledarskapets psykologi",
+   "match": "OBM",
+   "price": "275 kr",
+   "heat": "het",
+   "checked": true,
+   "why": "275 kr begagnat. Andersson & Klintrot, Sanoma. Stabil på OBM- och HRM-kurser. Rakt igenom en bra säljare.",
+   "url": "https://www.studentapan.se/kurslitteratur/obm-ledarskapets-psykologi-9789152321782"
+  },
+  {
+   "title": "Stress- och utmattningsproblem",
+   "match": "Stress- och utmattningsproblem",
+   "price": "419–505 kr (uppl 2) / 179 kr (uppl 1)",
+   "heat": "kolla-upplaga",
+   "checked": true,
+   "why": "Störst spann i hela samlingen. Uppl 2 (2017, Almén & Gjertsson) går för 419–505 kr och har få säljare. Uppl 1 (2007, bara Almén) ger 179 kr. Kolla om Gjertsson står på omslaget — det skiljer över 300 kr.",
+   "url": "https://www.studentapan.se/kurslitteratur/stress-och-utmattningsproblem-kognitiva-och-beteendeterapeutiska-metoder-9789144083674"
+  },
+  {
+   "title": "Objektrelationer och psykoterapi (Igra)",
+   "match": "Objektrelationer och psykoterapi",
+   "price": "189–345 kr",
+   "heat": "het",
+   "checked": true,
+   "why": "Priset varierar kraftigt mellan säljare (125–345 kr sedda). Står på GU:s psykoterapeutprogram PM2616, så efterfrågan finns. Sätt dig högt om exemplaret är fint — spannet är brett nog att det lönar sig.",
+   "url": "https://www.studentapan.se/kurslitteratur/objektrelationer-och-psykoterapi-9789127068452"
+  },
+  {
+   "title": "Förändring som tillstånd (Ahrenfelt)",
+   "match": "Förändring som tillstånd",
+   "price": "~240 kr (uppl 3) / 119 kr (uppl 2)",
+   "heat": "kolla-upplaga",
+   "checked": true,
+   "why": "Uppl 3 (2013) ligger kring 240 kr. Uppl 2 (2001) går för 119 kr och har 5+ säljare — mättad marknad. Bara uppl 3 är värd besväret.",
+   "url": "https://www.studentapan.se/kurslitteratur/forandring-som-tillstand-att-leda-forandrings-och-utvecklingsarbete-i-foretag-och-organisationer-9789144086606"
+  },
+  {
+   "title": "Att leva ett liv, inte vinna ett krig (Kåver)",
+   "match": "Att leva ett liv",
+   "price": "~200 kr",
+   "heat": "medel",
+   "checked": true,
+   "why": "Nypris 252 kr, begagnat kring 200. Tunn bok (126 s) och mer självhjälp än kurslitteratur, men Kåver säljer stadigt. Tradera ligger runt 150 kr — Studentapan är bättre.",
+   "url": "https://www.studentapan.se/kurslitteratur/att-leva-ett-liv-inte-vinna-ett-krig-om-acceptans-9789127026827"
   }
  ]
 }
