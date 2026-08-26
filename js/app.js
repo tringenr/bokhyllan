@@ -315,7 +315,11 @@ async function loadGaps(){
     if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note});}
   updateGapCount();renderGaps();
 }
-function gapStateOf(id){return (gapState[id]&&gapState[id].state)||"open"}
+function gapStateOf(id){
+  if(gapState[id]&&gapState[id].state)return gapState[id].state;
+  const g=GAPS.find(x=>x.id===id);
+  return (g&&g.auto)||"open";
+}
 function updateGapCount(){
   const open=GAPS.filter(g=>gapStateOf(g.id)==="open").length;
   const el=document.getElementById("gapCount");if(el)el.textContent="("+open+")";
@@ -332,7 +336,7 @@ function renderGaps(){
       <div class="gap-row">
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
-          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}</div>
+          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}</div>
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in</button>
             <label class="ghost">📷 Fota<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gapUpload('${g.id}',this)"></label>

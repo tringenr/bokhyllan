@@ -5045,5 +5045,117 @@
   "author": "Anil Seth (red.)",
   "cat": "Hjärna & neurovetenskap",
   "shelf": "4:K3"
+ },
+ {
+  "id": 721,
+  "title": "Mötesplatser och utmaningar i grupphandledning",
+  "author": "",
+  "cat": "Terapi",
+  "shelf": "1:V6"
+ },
+ {
+  "id": 722,
+  "title": "Det hettar till (serie, 5 vol)",
+  "author": "",
+  "cat": "Fakta",
+  "shelf": "1:V6"
+ },
+ {
+  "id": 723,
+  "title": "Les Musulmans d'Occident et l'avenir de l'Islam",
+  "author": "Tariq Ramadan",
+  "cat": "Samhälle",
+  "shelf": "1:H6"
+ },
+ {
+  "id": 724,
+  "title": "Quelqu'un d'autre",
+  "author": "Tonino Benacquista",
+  "cat": "Skönlitteratur",
+  "shelf": "1:V3"
+ },
+ {
+  "id": 725,
+  "title": "Le Petit Prince",
+  "author": "Antoine de Saint-Exupéry",
+  "cat": "Skönlitteratur",
+  "shelf": "1:H3"
+ },
+ {
+  "id": 726,
+  "title": "Barnens bibel",
+  "author": "",
+  "cat": "Religion",
+  "shelf": "1:V2"
+ },
+ {
+  "id": 727,
+  "title": "Religion and Development",
+  "author": "Jeffrey Haynes",
+  "cat": "Samhälle",
+  "shelf": "2:V6"
+ },
+ {
+  "id": 728,
+  "title": "Att framkalla och förstärka ordningen",
+  "author": "",
+  "cat": "Psykologi",
+  "shelf": "2:V5"
+ },
+ {
+  "id": 729,
+  "title": "Bullet Journal",
+  "author": "",
+  "cat": "Självhjälp",
+  "shelf": "2:V5"
+ },
+ {
+  "id": 730,
+  "title": "Peace Begins Here",
+  "author": "Thich Nhat Hanh",
+  "cat": "Buddhism",
+  "shelf": "2:H5"
+ },
+ {
+  "id": 731,
+  "title": "Clés pour le zen",
+  "author": "Thich Nhat Hanh",
+  "cat": "Buddhism",
+  "shelf": "2:H2"
+ },
+ {
+  "id": 732,
+  "title": "Mandelträdet i din trädgård",
+  "author": "Thich Nhat Hanh",
+  "cat": "Buddhism",
+  "shelf": "2:H2"
+ },
+ {
+  "id": 733,
+  "title": "Språk för en vuxen tro",
+  "author": "Ylva Eggehorn",
+  "cat": "Religion",
+  "shelf": "2:H2"
+ },
+ {
+  "id": 734,
+  "title": "Le nid de Barbapapa",
+  "author": "Annette Tison & Talus Taylor",
+  "cat": "Barnböcker",
+  "shelf": "3:S2"
+ },
+ {
+  "id": 735,
+  "title": "Att skriva vetenskapliga uppsatser",
+  "author": "Karin Widerberg",
+  "cat": "Vetenskap",
+  "shelf": "3:S2"
+ },
+ {
+  "id": 736,
+  "title": "Hospicing Modernity",
+  "author": "Vanessa Machado de Oliveira",
+  "cat": "Filosofi",
+  "shelf": "3:S2"
  }
 ]
