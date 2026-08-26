@@ -6,10 +6,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f5f1">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=202608261713">
+<link rel="stylesheet" href="css/style.css?v=20260826173535">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
+<script id="verGuard">
+(function(){
+  var MY="20260826173535";
+  try{
+    fetch("data/version.json?t="+Date.now(),{cache:"no-store"})
+      .then(function(r){return r.json()})
+      .then(function(j){
+        if(j&&j.v&&j.v!==MY){
+          if(sessionStorage.getItem("verReload")===j.v)return;  // undvik loop
+          sessionStorage.setItem("verReload",j.v);
+          location.replace(location.pathname+"?r="+j.v);
+        }
+      }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+
 <div id="errBanner" style="display:none;position:fixed;left:0;right:0;top:0;z-index:999;background:#c0392b;color:#fff;
  padding:.7rem .9rem;font:12px/1.4 monospace;white-space:pre-wrap;max-height:45vh;overflow:auto"></div>
 <script>
@@ -133,6 +150,6 @@
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=202608261713"></script>
+<script src="js/app.js?v=20260826173535"></script>
 </body>
 </html>

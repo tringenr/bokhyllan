@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=202608261713";
+const DV="?v=20260826173535";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -543,7 +543,13 @@ async function gapUpload(id,input){
   if(error){alert("Kunde inte ladda upp: "+error.message);return}
   const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
   let dataUrl=null;
-  try{dataUrl=await shrinkToDataURL(f,1100,0.62)}catch(e){console.warn("kunde inte skala ner",e)}
+  try{dataUrl=await shrinkToDataURL(f,1100,0.62)}
+  catch(e){
+    console.warn("nedskalning misslyckades, sparar original",e);
+    try{dataUrl=await new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=rej;rd.readAsDataURL(f)})}
+    catch(e2){console.warn("kunde inte läsa filen",e2)}
+  }
+  if(!dataUrl){alert("Varning: bilden kunde inte förberedas för avläsning. Prova igen eller välj bild ur biblioteket.");}
   gapState[id]={state:"waiting",photo:pub.publicUrl};
   await sb.from("gap_status").upsert({gap_id:id,state:"waiting",photo_path:pub.publicUrl,
     photo_data:dataUrl,updated_at:new Date().toISOString(),updated_by:sbUser.id});
