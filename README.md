@@ -2,6 +2,10 @@
 
 Familjens bokkatalog — ca 720 böcker på 8 platser, med hyllfoton, sök, status (på plats/utlånad/flyter runt) och bokbeskrivningar.
 
+## Dokumentation
+- [`docs/SAMMANFATTNING.md`](docs/SAMMANFATTNING.md) — projektsammanfattning: vad som byggts, teknik, säljbevakning, kvarvarande arbete
+- [`docs/OVERLAMNING.md`](docs/OVERLAMNING.md) — överlämningsprompt att klistra in i en ny chattråd
+
 ## Struktur
 - `index.html`, `css/`, `js/` — statisk webapp (ingen byggkedja)
 - `data/books.json` — bokkatalogen (id, titel, författare, kategori, hyllkod)
