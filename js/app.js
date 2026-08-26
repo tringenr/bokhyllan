@@ -1,8 +1,24 @@
 (async()=>{
-const DV="?v=202608261634";
+const DV="?v=202608261637";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
-const sb=window.supabase.createClient(SB_URL,SB_KEY);
+let sbOnline=true;
+function dummyQuery(){const q={select(){return q},order(){return q},eq(){return q},
+  upsert:async()=>({error:{message:"offline"}}),insert:async()=>({error:{message:"offline"}}),
+  then(res){return Promise.resolve({data:[],error:null}).then(res)}};return q}
+const sbFallback={from:dummyQuery,
+  auth:{getSession:async()=>({data:{}}),signOut:async()=>({}),
+        signInWithPassword:async()=>({error:{message:"Kan inte nå inloggningstjänsten just nu."}})},
+  channel:()=>({on(){return this},subscribe(){}}),
+  storage:{from:()=>({upload:async()=>({error:{message:"offline"}}),getPublicUrl:()=>({data:{publicUrl:""}})})}};
+let sb;
+try{
+  if(!window.supabase||!window.supabase.createClient)throw new Error("supabase-js laddades inte");
+  sb=window.supabase.createClient(SB_URL,SB_KEY);
+}catch(e){
+  console.warn("Supabase otillgängligt – appen körs i läsläge:",e.message);
+  sb=sbFallback;sbOnline=false;
+}
 let sbUser=null;
 
 const [booksRaw,photos,BOOK_INFO]=await Promise.all(
@@ -283,6 +299,7 @@ function renderAuth(){
   const el=document.getElementById("authBar");if(!el)return;
   if(sbUser){el.innerHTML=`<span class="who">Inloggad: ${sbUser.email}</span> <button id="btnOut">Logga ut</button>`;
     el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();sbUser=null;renderAuth();render()};}
+  else if(!sbOnline){el.innerHTML='<span class="who">Inloggning otillgänglig – kunde inte nå servern. Ladda om sidan.</span>'}
   else{el.innerHTML=`<input id="aEmail" type="email" placeholder="e-post"><input id="aPass" type="password" placeholder="lösenord"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
     el.querySelector("#btnIn").onclick=async()=>{
       const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
