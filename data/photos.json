@@ -1,0 +1,364 @@
+[
+ {
+  "bc": "1",
+  "label": "plan 6",
+  "cap": "Vänster sektion · plan 6",
+  "shelves": [
+   "1:V6"
+  ],
+  "src": "img/g00_0.jpg",
+  "thumb": "img/g00_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 6",
+  "cap": "Höger sektion · plan 6",
+  "shelves": [
+   "1:H6"
+  ],
+  "src": "img/g00_1.jpg",
+  "thumb": "img/g00_1_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 5",
+  "cap": "Vänster sektion · plan 5",
+  "shelves": [
+   "1:V5"
+  ],
+  "src": "img/g01_0.jpg",
+  "thumb": "img/g01_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 5",
+  "cap": "Höger sektion · plan 5",
+  "shelves": [
+   "1:H5"
+  ],
+  "src": "img/g01_1.jpg",
+  "thumb": "img/g01_1_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 4",
+  "cap": "Vänster sektion · plan 4",
+  "shelves": [
+   "1:V4"
+  ],
+  "src": "img/g02_0.jpg",
+  "thumb": "img/g02_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 4",
+  "cap": "Höger sektion · plan 4",
+  "shelves": [
+   "1:H4"
+  ],
+  "src": "img/g02_1.jpg",
+  "thumb": "img/g02_1_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 3",
+  "cap": "Vänster sektion · plan 3",
+  "shelves": [
+   "1:V3"
+  ],
+  "src": "img/g03_0.jpg",
+  "thumb": "img/g03_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 3",
+  "cap": "Höger sektion · plan 3",
+  "shelves": [
+   "1:H3"
+  ],
+  "src": "img/g03_1.jpg",
+  "thumb": "img/g03_1_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 2",
+  "cap": "Vänster sektion · plan 2",
+  "shelves": [
+   "1:V2"
+  ],
+  "src": "img/g04_0.jpg",
+  "thumb": "img/g04_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 2",
+  "cap": "Höger sektion · plan 2",
+  "shelves": [
+   "1:H2"
+  ],
+  "src": "img/g04_1.jpg",
+  "thumb": "img/g04_1_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 1",
+  "cap": "Vänster sektion · plan 1",
+  "shelves": [
+   "1:V1"
+  ],
+  "src": "img/g05_0.jpg",
+  "thumb": "img/g05_0_thumb.jpg"
+ },
+ {
+  "bc": "1",
+  "label": "plan 1",
+  "cap": "Höger sektion · plan 1",
+  "shelves": [
+   "1:H1"
+  ],
+  "src": "img/g05_1.jpg",
+  "thumb": "img/g05_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 6",
+  "cap": "Vänster sektion · plan 6",
+  "shelves": [
+   "2:V6"
+  ],
+  "src": "img/g06_0.jpg",
+  "thumb": "img/g06_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 6",
+  "cap": "Höger sektion · plan 6",
+  "shelves": [
+   "2:H6"
+  ],
+  "src": "img/g06_1.jpg",
+  "thumb": "img/g06_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 5",
+  "cap": "Vänster sektion · plan 5",
+  "shelves": [
+   "2:V5"
+  ],
+  "src": "img/g07_0.jpg",
+  "thumb": "img/g07_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 5",
+  "cap": "Höger sektion · plan 5",
+  "shelves": [
+   "2:H5"
+  ],
+  "src": "img/g07_1.jpg",
+  "thumb": "img/g07_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 4",
+  "cap": "Vänster sektion · plan 4",
+  "shelves": [
+   "2:V4"
+  ],
+  "src": "img/g08_0.jpg",
+  "thumb": "img/g08_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 4",
+  "cap": "Höger sektion · plan 4",
+  "shelves": [
+   "2:H4"
+  ],
+  "src": "img/g08_1.jpg",
+  "thumb": "img/g08_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 3",
+  "cap": "Vänster sektion · plan 3",
+  "shelves": [
+   "2:V3"
+  ],
+  "src": "img/g09_0.jpg",
+  "thumb": "img/g09_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 3",
+  "cap": "Höger sektion · plan 3",
+  "shelves": [
+   "2:H3"
+  ],
+  "src": "img/g09_1.jpg",
+  "thumb": "img/g09_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 2",
+  "cap": "Vänster sektion · plan 2",
+  "shelves": [
+   "2:V2"
+  ],
+  "src": "img/g10_0.jpg",
+  "thumb": "img/g10_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 2",
+  "cap": "Höger sektion · plan 2",
+  "shelves": [
+   "2:H2"
+  ],
+  "src": "img/g10_1.jpg",
+  "thumb": "img/g10_1_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 1",
+  "cap": "Vänster sektion · plan 1",
+  "shelves": [
+   "2:V1"
+  ],
+  "src": "img/g11_0.jpg",
+  "thumb": "img/g11_0_thumb.jpg"
+ },
+ {
+  "bc": "2",
+  "label": "plan 1",
+  "cap": "Höger sektion · plan 1",
+  "shelves": [
+   "2:H1"
+  ],
+  "src": "img/g11_1.jpg",
+  "thumb": "img/g11_1_thumb.jpg"
+ },
+ {
+  "bc": "4",
+  "label": "kokbokshyllan",
+  "cap": "Hylla 2 (överst: album, trädgård, dryck) och hylla 1 (kokböcker)",
+  "shelves": [
+   "4:K2",
+   "4:K1"
+  ],
+  "src": "img/g12_0.jpg",
+  "thumb": "img/g12_0_thumb.jpg"
+ },
+ {
+  "bc": "4",
+  "label": "kokbokshyllan",
+  "cap": "Gaveln – 500 sallader, Enhörningsparty + tidskrifter",
+  "shelves": [
+   "4:K1"
+  ],
+  "src": "img/g12_1.jpg",
+  "thumb": "img/g12_1_thumb.jpg"
+ },
+ {
+  "bc": "5",
+  "label": "vid sängen",
+  "cap": "Högen vid sängen",
+  "shelves": [
+   "5:S1"
+  ],
+  "src": "img/g13_0.jpg",
+  "thumb": "img/g13_0_thumb.jpg"
+ },
+ {
+  "bc": "6",
+  "label": "gröna skåpet",
+  "cap": "Gröna skåpet – hylla 2 (överst) och hylla 1",
+  "shelves": [
+   "6:S2",
+   "6:S1"
+  ],
+  "src": "img/g14_0.jpg",
+  "thumb": "img/g14_0_thumb.jpg"
+ },
+ {
+  "bc": "3",
+  "label": "hylla 4",
+  "cap": "Bokskåpet · hylla 4",
+  "shelves": [
+   "3:S4"
+  ],
+  "src": "img/g15_0.jpg",
+  "thumb": "img/g15_0_thumb.jpg"
+ },
+ {
+  "bc": "3",
+  "label": "hylla 3",
+  "cap": "Bokskåpet · hylla 3",
+  "shelves": [
+   "3:S3"
+  ],
+  "src": "img/g16_0.jpg",
+  "thumb": "img/g16_0_thumb.jpg"
+ },
+ {
+  "bc": "3",
+  "label": "hylla 2",
+  "cap": "Bokskåpet · hylla 2",
+  "shelves": [
+   "3:S2"
+  ],
+  "src": "img/g17_0.jpg",
+  "thumb": "img/g17_0_thumb.jpg"
+ },
+ {
+  "bc": "3",
+  "label": "hylla 1",
+  "cap": "Bokskåpet · hylla 1",
+  "shelves": [
+   "3:S1"
+  ],
+  "src": "img/g18_0.jpg",
+  "thumb": "img/g18_0_thumb.jpg"
+ },
+ {
+  "bc": "7",
+  "label": "fönsterbrädan",
+  "cap": "Fönsterbrädan i sovrummet",
+  "shelves": [
+   "7:S1"
+  ],
+  "src": "img/g19_0.jpg",
+  "thumb": "img/g19_0_thumb.jpg"
+ },
+ {
+  "bc": "8",
+  "label": "soffan",
+  "cap": "Bokstapeln vid soffan",
+  "shelves": [
+   "8:S1"
+  ],
+  "src": "img/g20_0.jpg",
+  "thumb": "img/g20_0_thumb.jpg"
+ },
+ {
+  "bc": "4",
+  "label": "löst i köket",
+  "cap": "30-Second Brain (i korgen)",
+  "shelves": [
+   "4:K3"
+  ],
+  "src": "img/g21_0.jpg",
+  "thumb": "img/g21_0_thumb.jpg"
+ },
+ {
+  "bc": "4",
+  "label": "löst i köket",
+  "cap": "Makten och det heliga",
+  "shelves": [
+   "4:K3"
+  ],
+  "src": "img/g21_1.jpg",
+  "thumb": "img/g21_1_thumb.jpg"
+ }
+]
