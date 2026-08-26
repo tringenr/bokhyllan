@@ -271,11 +271,19 @@ function renderAuth(){
       if(error){el.querySelector("#aErr").textContent="Fel e-post eller lösenord";return}
       sbUser=res.user;renderAuth();loadStatuses();};}
 }
+
+/* exportera klickhanterare tidigt så UI aldrig dör av ett misslyckat DB-anrop */
+window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
+window.showInfo=showInfo;window.openShelfView=openShelfView;
+window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;
+window.setBookCat=setBookCat;window.uploadCover=uploadCover;
+
 const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
 renderAuth();
-await loadBcNames();buildShelfOptions();
-await loadStatuses();
+try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
+buildShelfOptions();
+try{await loadStatuses()}catch(e){console.warn("statuses",e)}
 sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
   const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
   if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
@@ -431,12 +439,6 @@ document.querySelectorAll(".gap-filter .quick").forEach(b=>b.addEventListener("c
   gapFilter=b.dataset.g;renderGaps()}));
 document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>document.getElementById("gapView").classList.remove("open")));
 window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidden";lbImg.src=src;lbCap.textContent="Lucka – nyp för att zooma";markFrac=null;resetT()};
-window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;
-await loadManualBooks();
-await loadGaps();
-await loadCatEdits();
-await loadCoverOverrides();
-await loadNewShelves();
 
 /* ---------- Kategoriredigering ---------- */
 let catRenames={};
@@ -480,7 +482,6 @@ async function setBookCat(id,cat){
   await sb.from("book_cat").upsert({book_id:id,cat,updated_at:new Date().toISOString()});
   rebuildCatFilter();render();renderCatEditor();
 }
-window.setBookCat=setBookCat;
 
 /* ---------- Bokomslag ---------- */
 let coverCache={};
@@ -517,7 +518,6 @@ async function uploadCover(id,input){
   const slot=document.getElementById("ibCover");
   if(slot)slot.innerHTML=`<img src="${pub.publicUrl}" alt="Omslag">`;
 }
-window.uploadCover=uploadCover;
 
 
 /* ---------- Ny hylla / uppdatera foto ---------- */
@@ -576,5 +576,8 @@ ${location.href}`;
   shareSheet.classList.add("open");
 });
 window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
-window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
+
+for(const [name,fn] of [["manualBooks",loadManualBooks],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
+  try{await fn()}catch(e){console.warn(name+" misslyckades:",e)}
+}
 })();
