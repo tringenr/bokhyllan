@@ -128,7 +128,7 @@ renderBcEditor();
 
 /* ---------- Bokinfo ---------- */
 const infoModal=document.createElement("div");infoModal.className="info-modal";
-infoModal.innerHTML='<div class="info-box"><button class="info-close">✕</button><h3 id="ibTitle"></h3><div class="ib-auth" id="ibAuth"></div><div id="ibBody"></div><div class="ib-src" id="ibSrc"></div></div>';
+infoModal.innerHTML='<div class="info-box"><button class="info-close">✕</button><div class="ib-top"><div id="ibCover" class="ib-cover"></div><div class="ib-head"><h3 id="ibTitle"></h3><div class="ib-auth" id="ibAuth"></div></div></div><div id="ibBody"></div><div class="ib-src" id="ibSrc"></div></div>';
 document.body.appendChild(infoModal);
 infoModal.addEventListener("click",e=>{if(e.target===infoModal||e.target.classList.contains("info-close"))infoModal.classList.remove("open")});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")infoModal.classList.remove("open")});
@@ -145,8 +145,20 @@ function showInfo(id){
     `<div class="info-cat"><label style="font-size:.8rem;color:var(--muted)">Kategori:</label>
      <select onchange="setBookCat(${id},this.value)">${cats.map(c=>`<option${c===d.cat?" selected":""}>${c}</option>`).join("")}</select></div>`);
   document.getElementById("ibSrc").textContent=info?"Sammanfattning skriven av Claude – kan innehålla fel.":"";
+  const slot=document.getElementById("ibCover");
+  slot.innerHTML='<div class="ib-ph">…</div>';
+  findCover(d).then(url=>{
+    slot.innerHTML = url
+      ? `<img src="${url}" alt="Omslag" onerror="this.parentNode.innerHTML=coverUploadHtml(${d.id})">`
+      : coverUploadHtml(d.id);
+  });
   infoModal.classList.add("open");
 }
+function coverUploadHtml(id){
+  return `<label class="ib-ph up">📷<span>Lägg till omslag</span>
+    <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadCover(${id},this)"></label>`;
+}
+window.coverUploadHtml=coverUploadHtml;
 /* ---------- Lightbox ---------- */
 const lb=document.createElement("div");lb.className="lb";lb.innerHTML=
  `<div class="lb-stage"><img id="lbImg" alt=""></div>
@@ -423,6 +435,7 @@ window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.
 await loadManualBooks();
 await loadGaps();
 await loadCatEdits();
+await loadCoverOverrides();
 
 /* ---------- Kategoriredigering ---------- */
 let catRenames={};
@@ -467,6 +480,44 @@ async function setBookCat(id,cat){
   rebuildCatFilter();render();renderCatEditor();
 }
 window.setBookCat=setBookCat;
+
+/* ---------- Bokomslag ---------- */
+let coverCache={};
+try{coverCache=JSON.parse(localStorage.getItem("bokhyllan-covers")||"{}")}catch(e){}
+let coverOverrides={};
+async function loadCoverOverrides(){
+  const {data:rows}=await sb.from("book_cover").select("*");
+  if(rows)rows.forEach(r=>coverOverrides[r.book_id]=r.url);
+}
+async function findCover(d){
+  if(coverOverrides[d.id])return coverOverrides[d.id];
+  const key=d.title+"|"+(d.author||"");
+  if(key in coverCache)return coverCache[key];
+  try{
+    const q=encodeURIComponent(d.title+(d.author?" "+d.author:""));
+    const r=await fetch(`https://openlibrary.org/search.json?q=${q}&limit=1&fields=cover_i`);
+    const js=await r.json();
+    const ci=js.docs&&js.docs[0]&&js.docs[0].cover_i;
+    const url=ci?`https://covers.openlibrary.org/b/id/${ci}-M.jpg`:null;
+    coverCache[key]=url;
+    try{localStorage.setItem("bokhyllan-covers",JSON.stringify(coverCache))}catch(e){}
+    return url;
+  }catch(e){return null}
+}
+async function uploadCover(id,input){
+  if(!sbUser){alert("Logga in för att ladda upp omslag.");return}
+  const f=input.files[0];if(!f)return;
+  const path=`cover-${id}-${Date.now()}.jpg`;
+  const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
+  if(error){alert("Kunde inte ladda upp: "+error.message);return}
+  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
+  coverOverrides[id]=pub.publicUrl;
+  await sb.from("book_cover").upsert({book_id:id,url:pub.publicUrl});
+  const slot=document.getElementById("ibCover");
+  if(slot)slot.innerHTML=`<img src="${pub.publicUrl}" alt="Omslag">`;
+}
+window.uploadCover=uploadCover;
+
 window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;window.showInfo=showInfo;window.openShelfView=openShelfView;
 })();
