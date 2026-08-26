@@ -250,3 +250,6 @@ body{padding:0}
 
 .gap-added{font-size:.75rem;color:var(--home)}
 .gap-saved{font-size:.78rem;color:var(--home);min-height:1rem;margin:.2rem 0}
+
+.gap-brow.saved input,.gap-brow.saved select{background:var(--home-bg);border-color:var(--home)}
+.gap-brow.saved .gb-del{color:var(--lent)}

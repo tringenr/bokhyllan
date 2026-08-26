@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=202608261651";
+const DV="?v=202608261700";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -424,7 +424,7 @@ function renderGaps(){
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
           <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"VÄNTAR":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
-            ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].join(", ")}</span>`:""}</div>
+            ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].map(x=>x.title).join(", ")}</span>`:""}</div>
           <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
@@ -446,31 +446,55 @@ function catOptions(sel){
   const cats=[...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
   return `<option value="">Kategori…</option>`+cats.map(c=>`<option${c===sel?" selected":""}>${c}</option>`).join("")+`<option value="__new">➕ Ny kategori…</option>`;
 }
-function gapAddRow(id,inherit){
+function gapAddRow(id,inherit,saved){
   const wrap=document.getElementById("rows-"+id);if(!wrap)return;
   const prev=wrap.querySelector(".gap-brow:last-child select");
-  const cat=inherit||(prev?prev.value:"");
-  const div=document.createElement("div");div.className="gap-brow";
-  div.innerHTML=`<input class="gb-title" placeholder="Titel">
-    <input class="gb-auth" placeholder="Författare (valfritt)">
+  const cat=inherit||(saved&&saved.cat)||(prev?prev.value:"");
+  const div=document.createElement("div");div.className="gap-brow"+(saved?" saved":"");
+  if(saved)div.dataset.rowid=saved.id;
+  div.innerHTML=`<input class="gb-title" placeholder="Titel" value="${saved?(saved.title||"").replace(/"/g,'&quot;'):""}">
+    <input class="gb-auth" placeholder="Författare (valfritt)" value="${saved?(saved.author||"").replace(/"/g,'&quot;'):""}">
     <select class="gb-cat">${catOptions(cat)}</select>
     <input class="gb-newcat" placeholder="Ny kategoris namn" style="display:none">
-    <button class="gb-del" title="Ta bort rad">✕</button>`;
+    <button class="gb-del" title="${saved?"Ta bort boken":"Ta bort rad"}">✕</button>`;
   wrap.appendChild(div);
   const sel=div.querySelector(".gb-cat"),nc=div.querySelector(".gb-newcat");
-  sel.addEventListener("change",()=>{nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus()});
-  div.querySelector(".gb-del").addEventListener("click",()=>{div.remove();gapCount(id)});
-  div.querySelector(".gb-title").addEventListener("input",()=>gapCount(id));
-  const nextRow=()=>{
-    const rows=[...wrap.querySelectorAll(".gap-brow")];
-    const i=rows.indexOf(div);
-    const nxt=rows[i+1]||gapAddRow(id);
-    nxt.querySelector(".gb-title").focus();
-  };
-  div.querySelectorAll(".gb-title,.gb-auth,.gb-newcat").forEach(inp=>
-    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();nextRow()}}));
+  sel.addEventListener("change",()=>{nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus();
+    if(saved)saveRowEdit(id,div)});
+  div.querySelector(".gb-del").addEventListener("click",async()=>{
+    if(saved){
+      if(!confirm("Ta bort \""+saved.title+"\" ur katalogen?"))return;
+      await sb.from("manual_books").delete().eq("id",saved.id);
+      gapAdded[id]=(gapAdded[id]||[]).filter(x=>x.id!==saved.id);
+      const k=data.findIndex(d=>d.title===saved.title&&d.shelf===GAPS.find(g=>g.id===id).shelf);
+      if(k>=0)data.splice(k,1);
+      render();
+    }
+    div.remove();gapCount(id);
+  });
+  const nextRow=()=>{const rows=[...wrap.querySelectorAll(".gap-brow")];const i=rows.indexOf(div);
+    const nxt=rows[i+1]||gapAddRow(id);nxt.querySelector(".gb-title").focus()};
+  div.querySelectorAll(".gb-title,.gb-auth,.gb-newcat").forEach(inp=>{
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();nextRow()}});
+    inp.addEventListener("input",()=>gapCount(id));
+    if(saved)inp.addEventListener("blur",()=>saveRowEdit(id,div));
+  });
   gapCount(id);
   return div;
+}
+async function saveRowEdit(id,div){
+  const rid=div.dataset.rowid;if(!rid||!sbUser)return;
+  let cat=div.querySelector(".gb-cat").value;
+  if(cat==="__new")cat=(div.querySelector(".gb-newcat").value||"").trim();
+  const rec={title:div.querySelector(".gb-title").value.trim(),
+             author:div.querySelector(".gb-auth").value.trim(),
+             cat:cat||"Okategoriserad"};
+  if(!rec.title)return;
+  await sb.from("manual_books").update(rec).eq("id",rid);
+  const e=(gapAdded[id]||[]).find(x=>String(x.id)===String(rid));
+  if(e){const old=e.title;Object.assign(e,rec);
+    const d=data.find(d=>d.title===old);if(d)Object.assign(d,{title:rec.title,author:rec.author,cat:rec.cat});}
+  rebuildCatFilter();render();
 }
 function gapCount(id){
   const n=[...document.querySelectorAll(`#rows-${id} .gb-title`)].filter(i=>i.value.trim()).length;
@@ -479,7 +503,13 @@ function gapCount(id){
 function gapWrite(id){
   const f=document.getElementById("form-"+id);
   const open=f.style.display==="none";f.style.display=open?"":"none";
-  if(open&&!document.querySelector(`#rows-${id} .gap-brow`)){gapAddRow(id);gapAddRow(id);gapAddRow(id)}
+  if(open&&!document.querySelector(`#rows-${id} .gap-brow`))fillRows(id);
+}
+function fillRows(id){
+  const wrap=document.getElementById("rows-"+id);if(!wrap)return;
+  wrap.innerHTML="";
+  (gapAdded[id]||[]).forEach(s=>gapAddRow(id,null,s));
+  gapAddRow(id);gapAddRow(id);
 }
 window.gapAddRow=gapAddRow;
 async function gapSet(id,state,photo){
@@ -498,37 +528,55 @@ async function gapUpload(id,input){
   await gapSet(id,"waiting",pub.publicUrl);
   alert("Foto uppladdat! Luckan är markerad 'väntar på Claude' — säg till i chatten så läser jag av den.");
 }
+let saving={};
 async function gapSave(id){
   if(!sbUser){alert("Logga in för att spara.");return}
-  const g=GAPS.find(x=>x.id===id);
-  const rows=[...document.querySelectorAll(`#rows-${id} .gap-brow`)].map(r=>{
-    let cat=r.querySelector(".gb-cat").value;
-    if(cat==="__new")cat=(r.querySelector(".gb-newcat").value||"").trim();
-    return {title:r.querySelector(".gb-title").value.trim(),
-            author:r.querySelector(".gb-auth").value.trim(),
-            cat:cat||"Okategoriserad"}}).filter(r=>r.title);
-  if(!rows.length){alert("Skriv in minst en titel först.");return}
-  const {error}=await sb.from("manual_books").insert(
-    rows.map(r=>({...r,shelf:g.shelf,gap_id:id,created_by:sbUser.id})));
-  if(error){alert("Kunde inte spara: "+error.message);return}
-  rows.forEach(r=>{
-    data.push({id:1e6+data.length,title:r.title,author:r.author,cat:r.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null});
-    (gapAdded[id]=gapAdded[id]||[]).push(r.title);
-  });
-  buildShelfOptions();rebuildCatFilter();render();
-  renderGaps();                       // luckan stannar kvar
-  const f=document.getElementById("form-"+id);
-  if(f){f.style.display="";gapAddRow(id);gapAddRow(id)}   // färska tomma rader
-  const t=document.getElementById("saved-"+id);
-  if(t){t.textContent=`✓ ${rows.length} tillagd${rows.length>1?"a":""} – fortsätt eller tryck "✓ Klar" när luckan är avbetad.`;
-        setTimeout(()=>{if(t)t.textContent=""},6000)}
+  if(saving[id])return; saving[id]=true;
+  const btn=document.querySelector(`#form-${id} .gap-actions button:last-child`);
+  if(btn){btn.disabled=true;btn.style.opacity=".6"}
+  try{
+    const g=GAPS.find(x=>x.id===id);
+    const existing=new Set((gapAdded[id]||[]).map(x=>x.title.toLowerCase()));
+    const rows=[...document.querySelectorAll(`#rows-${id} .gap-brow:not(.saved)`)].map(r=>{
+      let cat=r.querySelector(".gb-cat").value;
+      if(cat==="__new")cat=(r.querySelector(".gb-newcat").value||"").trim();
+      return {title:r.querySelector(".gb-title").value.trim(),
+              author:r.querySelector(".gb-auth").value.trim(),
+              cat:cat||"Okategoriserad"}}).filter(r=>r.title);
+    const seen=new Set(),fresh=[],dupes=[];
+    rows.forEach(r=>{const k=r.title.toLowerCase();
+      if(existing.has(k)||seen.has(k)){dupes.push(r.title);return}
+      seen.add(k);fresh.push(r)});
+    if(!fresh.length){
+      alert(dupes.length?("Redan inskriven: "+dupes.join(", ")):"Skriv in minst en ny titel först.");
+      return;
+    }
+    const {data:ins,error}=await sb.from("manual_books")
+      .insert(fresh.map(r=>({...r,shelf:g.shelf,gap_id:id,created_by:sbUser.id}))).select();
+    if(error){alert("Kunde inte spara: "+error.message);return}
+    (ins||fresh).forEach((r,i)=>{
+      const rec={id:r.id||Date.now()+i,title:fresh[i].title,author:fresh[i].author,cat:fresh[i].cat};
+      data.push({id:1e6+data.length,title:rec.title,author:rec.author,cat:rec.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null});
+      (gapAdded[id]=gapAdded[id]||[]).push(rec);
+    });
+    buildShelfOptions();rebuildCatFilter();render();renderGaps();
+    const f=document.getElementById("form-"+id);
+    if(f){f.style.display="";fillRows(id)}
+    const t=document.getElementById("saved-"+id);
+    if(t){t.textContent=`✓ ${fresh.length} tillagd${fresh.length>1?"a":""}`+(dupes.length?` (hoppade över dubbletter: ${dupes.join(", ")})`:"")+` – tryck "✓ Klar" när luckan är avbetad.`;
+          setTimeout(()=>{if(t)t.textContent=""},7000)}
+  } finally {
+    saving[id]=false;
+    const b2=document.querySelector(`#form-${id} .gap-actions button:last-child`);
+    if(b2){b2.disabled=false;b2.style.opacity=""}
+  }
 }
 let gapAdded={};
 async function loadManualBooks(){
   const {data:rows}=await sb.from("manual_books").select("*");
   if(rows)rows.forEach(r=>{
     data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
-    if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push(r.title)}
+    if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
   });
 }
 function openGapView(o){
