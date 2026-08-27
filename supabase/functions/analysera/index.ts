@@ -29,20 +29,54 @@ const PROMPT = `Du tittar pa ett foto av en bokhylla eller en lucka i en bokhyll
 Fotot kan vara roterat 90 grader - mobilkameror sparar ofta liggande bilder sa.
 Lat texten pa bokryggarna avgora vad som ar upp: om ryggtexten lutar 90 grader
 ar hela bilden vriden, och bocker som ser ut att ligga i en stapel star i sjalva
-verket upp sida vid sida. Sag i ditt svar hur du bedomer att bilden ar orienterad.
+verket upp sida vid sida.
 
 Las av bokryggarna och lista bockerna i deras verkliga fysiska ordning, efter att
-du raknat bort rotationen:
-- staende bocker listas fran vanster till hoger
-- en akta liggande stapel listas fran oversta boken till den nedersta
+du raknat bort rotationen: staende bocker fran vanster till hoger, en akta
+liggande stapel fran oversta boken till den nedersta.
 
-Ange forfattare - titel nar bada gar att lasa, annars bara det som syns.
-Gissa aldrig en titel du inte kan lasa: skriv "olaslig rygg" i stallet.
+For varje bok:
+- title: titeln sa som den star pa ryggen. Utelamna undertitel om ryggen ar trang.
+- author: forfattaren om den gar att lasa, annars tom strang.
+- cat: valj EN kategori ur listan du far. Valj den narmaste - hitta inte pa nya.
+- description: tva till tre meningar om vad boken handlar om och varfor den ar
+  kand. Skriv ur din bokkunskap. Ar du osaker pa vilken bok det ar, lamna tomt.
+- uncertain: true om du inte kunde lasa ryggen sakert, om titeln ar gissad, eller
+  om du inte ar saker pa att det ar en bok.
+
 Rakna varje bok en gang - tunna ryggar och skuggor mellan bocker ar inte egna bocker.
-Namn ocksa foremal som inte ar bocker (kortlekar, anteckningsbocker, prydnader).
-Om delar av bilden ar skymd eller avskuren, sag det till sist.
+Ta med foremal som inte ar bocker (kortlekar, anteckningsbocker, spelboxar,
+prydnader) men markera dem med uncertain: true och skriv i description vad det ar.
+Gissa aldrig en titel du inte kan lasa - satt title till det du ser och uncertain: true.
 
-Svara med en enda loptext, poster separerade med | . Ingen inledning, inga punktlistor.`;
+Skriv i note en kort kommentar om bilden: hur den var orienterad, och om nagot var
+skymt eller avskuret.`;
+
+const TOOL = {
+  name: "bocker",
+  description: "Rapportera bockerna pa fotot.",
+  input_schema: {
+    type: "object",
+    properties: {
+      note: { type: "string", description: "Kort kommentar om bilden." },
+      books: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            title:       { type: "string" },
+            author:      { type: "string" },
+            cat:         { type: "string" },
+            description: { type: "string" },
+            uncertain:   { type: "boolean" },
+          },
+          required: ["title", "author", "cat", "description", "uncertain"],
+        },
+      },
+    },
+    required: ["note", "books"],
+  },
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -69,7 +103,7 @@ Deno.serve(async (req) => {
   }
 
   // --- Indata -------------------------------------------------------------
-  let body: { kind?: string; id?: string };
+  let body: { kind?: string; id?: string; cats?: string[] };
   try {
     body = await req.json();
   } catch {
@@ -77,6 +111,7 @@ Deno.serve(async (req) => {
   }
   const kind = body.kind;
   const id = body.id;
+  const cats: string[] = Array.isArray(body.cats) ? body.cats.slice(0, 200) : [];
   if ((kind !== "gap" && kind !== "shelf") || !id) {
     return json({ error: 'Ange kind ("gap" eller "shelf") och id.' }, 400);
   }
@@ -116,12 +151,19 @@ Deno.serve(async (req) => {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 2000,
+      max_tokens: 8000,
+      tools: [TOOL],
+      tool_choice: { type: "tool", name: TOOL.name },
       messages: [{
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
-          { type: "text", text: PROMPT },
+          {
+            type: "text",
+            text: PROMPT + (cats.length
+              ? `\n\nKategorier att valja bland: ${cats.join(", ")}.`
+              : ""),
+          },
         ],
       }],
     }),
@@ -134,13 +176,22 @@ Deno.serve(async (req) => {
   }
 
   const out = await res.json();
-  const note = (out.content ?? [])
-    .filter((c: { type: string }) => c.type === "text")
-    .map((c: { text: string }) => c.text)
-    .join("\n")
-    .trim();
+  const call = (out.content ?? []).find(
+    (c: { type: string; name?: string }) => c.type === "tool_use" && c.name === TOOL.name,
+  );
+  const books = (call?.input?.books ?? []).filter(
+    (b: { title?: string }) => b && typeof b.title === "string" && b.title.trim(),
+  );
+  if (!books.length) return json({ error: "Analysen hittade inga bocker." }, 502);
 
-  if (!note) return json({ error: "Analysen gav inget svar." }, 502);
+  // Sammanfattningen som visas i kortet: en rad per bok, osakra markerade.
+  const note = [
+    call?.input?.note?.trim(),
+    books
+      .map((b: { title: string; author?: string; uncertain?: boolean }) =>
+        (b.uncertain ? "? " : "") + b.title + (b.author ? " – " + b.author : ""))
+      .join(" | "),
+  ].filter(Boolean).join("\n");
 
   const { error: upErr } = await admin
     .from(table)
@@ -154,6 +205,6 @@ Deno.serve(async (req) => {
 
   if (upErr) return json({ error: upErr.message }, 500);
 
-  console.log(`analysera: ${kind}/${id} av ${user.id}, ${note.length} tecken`);
-  return json({ ok: true, kind, id, note });
+  console.log(`analysera: ${kind}/${id} av ${user.id}, ${books.length} bocker`);
+  return json({ ok: true, kind, id, note, books });
 });
