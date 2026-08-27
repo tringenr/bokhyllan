@@ -26,12 +26,15 @@ const json = (body: unknown, status = 200) =>
 
 const PROMPT = `Du tittar pa ett foto av en bokhylla eller en lucka i en bokhylla.
 
-Avgor forst hur bockerna ar placerade: staende sida vid sida, eller liggande i en
-plan stapel. Sag vilket det ar forst i ditt svar.
+Fotot kan vara roterat 90 grader - mobilkameror sparar ofta liggande bilder sa.
+Lat texten pa bokryggarna avgora vad som ar upp: om ryggtexten lutar 90 grader
+ar hela bilden vriden, och bocker som ser ut att ligga i en stapel star i sjalva
+verket upp sida vid sida. Sag i ditt svar hur du bedomer att bilden ar orienterad.
 
-Las sedan av bokryggarna och lista bockerna i den fysiska ordning de ligger:
+Las av bokryggarna och lista bockerna i deras verkliga fysiska ordning, efter att
+du raknat bort rotationen:
 - staende bocker listas fran vanster till hoger
-- liggande stapel listas fran oversta boken till den nedersta
+- en akta liggande stapel listas fran oversta boken till den nedersta
 
 Ange forfattare - titel nar bada gar att lasa, annars bara det som syns.
 Gissa aldrig en titel du inte kan lasa: skriv "olaslig rygg" i stallet.
@@ -39,7 +42,6 @@ Rakna varje bok en gang - tunna ryggar och skuggor mellan bocker ar inte egna bo
 Namn ocksa foremal som inte ar bocker (kortlekar, anteckningsbocker, prydnader).
 Om delar av bilden ar skymd eller avskuren, sag det till sist.
 
-Beskriv aldrig placeringen pa ett satt du inte ser i bilden.
 Svara med en enda loptext, poster separerade med | . Ingen inledning, inga punktlistor.`;
 
 Deno.serve(async (req) => {
