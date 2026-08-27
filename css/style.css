@@ -301,3 +301,16 @@ body{padding:0}
 .note-ta{width:100%;min-height:8rem;font:inherit;font-size:.8rem;line-height:1.45;
   padding:.5rem;border:1px solid var(--tag);border-radius:8px;background:#fff;color:var(--ink);resize:vertical}
 .gap-state.review{background:var(--accent);color:#fff}
+
+/* ---- Granskning av avlästa böcker ---- */
+.analys-box{margin-top:.5rem;padding:.6rem;background:var(--tag);border-radius:10px}
+.ab-place{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.5rem}
+.ab-place label{font-size:.72rem;color:var(--muted);display:flex;flex-direction:column;gap:.15rem}
+.ab-place input{border:1px solid #0002;border-radius:7px;padding:.3rem .45rem;font-size:.82rem;min-width:9rem}
+.ab-rows{display:flex;flex-direction:column;gap:.35rem}
+.ab-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:.3rem;align-items:center}
+.ab-row.unsure input.ab-t{border-color:var(--accent);background:#fff8e6}
+.ab-row input,.ab-row select{border:1px solid #0002;border-radius:7px;padding:.3rem .45rem;font-size:.82rem;min-width:0}
+.ab-x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.9rem;padding:.2rem .3rem}
+.ab-x:hover{color:#c0392b}
+@media(max-width:560px){.ab-row{grid-template-columns:1fr auto}.ab-row .ab-a,.ab-row .ab-c{grid-column:1/2}}
