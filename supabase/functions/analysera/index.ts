@@ -25,11 +25,21 @@ const json = (body: unknown, status = 200) =>
   });
 
 const PROMPT = `Du tittar pa ett foto av en bokhylla eller en lucka i en bokhylla.
-Las av bokryggarna och lista bockerna i den ordning de star, uppifran och ner.
+
+Avgor forst hur bockerna ar placerade: staende sida vid sida, eller liggande i en
+plan stapel. Sag vilket det ar forst i ditt svar.
+
+Las sedan av bokryggarna och lista bockerna i den fysiska ordning de ligger:
+- staende bocker listas fran vanster till hoger
+- liggande stapel listas fran oversta boken till den nedersta
+
 Ange forfattare - titel nar bada gar att lasa, annars bara det som syns.
-Gissa aldrig en titel du inte kan lasa: skriv "oläslig rygg" i stallet.
+Gissa aldrig en titel du inte kan lasa: skriv "olaslig rygg" i stallet.
+Rakna varje bok en gang - tunna ryggar och skuggor mellan bocker ar inte egna bocker.
 Namn ocksa foremal som inte ar bocker (kortlekar, anteckningsbocker, prydnader).
 Om delar av bilden ar skymd eller avskuren, sag det till sist.
+
+Beskriv aldrig placeringen pa ett satt du inte ser i bilden.
 Svara med en enda loptext, poster separerade med | . Ingen inledning, inga punktlistor.`;
 
 Deno.serve(async (req) => {
