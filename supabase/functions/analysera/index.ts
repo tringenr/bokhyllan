@@ -144,10 +144,11 @@ Deno.serve(async (req) => {
 
   const { error: upErr } = await admin
     .from(table)
+    // Analysen klarmarkerar INTE raden. Resultatet ar ett forslag som
+    // anvandaren ska granska, rata och sjalv klarmarkera i granssnittet.
     .update({
       claude_note: note,
       claude_done_at: new Date().toISOString(),
-      state: "done",
     })
     .eq(keyCol, keyVal);
 

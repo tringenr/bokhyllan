@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260827114922";
+const DV="?v=20260827125002";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -338,7 +338,7 @@ function lbShelf(shelf,bookId){
 /* exportera klickhanterare tidigt så UI aldrig dör av ett misslyckat DB-anrop */
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
 window.showInfo=showInfo;window.openShelfView=openShelfView;
-window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;
+window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;window.toggleNote=toggleNote;window.saveNote=saveNote;
 window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
 const {data:sess}=await sb.auth.getSession();
@@ -434,14 +434,21 @@ function renderGaps(){
       <div class="gap-row">
         <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
         <div class="gap-body">
-          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}">${st==="waiting"?"FOTO SKICKAT – VÄNTAR PÅ CLAUDE":"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
+          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}${(st==="waiting"&&gapState[g.id]&&gapState[g.id].claude)?" review":""}">${st==="waiting"?((gapState[g.id]&&gapState[g.id].claude)?"AVLÄST – KONTROLLERA":"FOTO SKICKAT – VÄNTAR PÅ CLAUDE"):"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
             ${(gapState[g.id]&&gapState[g.id].claude)?`<br><span class="gap-claude">🤖 ${gapState[g.id].claude}</span>`:""}
+            ${(gapState[g.id]&&gapState[g.id].claude)?`<div class="note-edit" id="ne-gap-${g.id}" style="display:none">
+              <textarea class="note-ta" id="nt-gap-${g.id}">${(gapState[g.id].claude||"").replace(/</g,"&lt;")}</textarea>
+              <div class="gap-actions" style="margin-top:.4rem">
+                <button onclick="saveNote('gap','${g.id}',this)">💾 Spara ändringar</button>
+                <button class="ghost" onclick="toggleNote('gap','${g.id}')">Avbryt</button>
+              </div></div>`:""}
             ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].map(x=>x.title).join(", ")}</span>`:""}</div>
           <div class="gap-saved" id="saved-${g.id}"></div>
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
             <label class="ghost">📷 Fota<input type="file" accept="image/*" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
             ${ph?`<button class="ghost" onclick="runAnalys('gap','${g.id}',this)">🤖 Analysera</button>`:""}
+            ${(gapState[g.id]&&gapState[g.id].claude)?`<button class="ghost" onclick="toggleNote('gap','${g.id}')">✏️ Rätta avläsningen</button>`:""}
             ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klar</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna</button>`}
           </div>
           <div class="gap-form" id="form-${g.id}" style="display:none">
@@ -527,7 +534,8 @@ function fillRows(id){
 window.gapAddRow=gapAddRow;
 async function gapSet(id,state,photo){
   if(!sbUser){alert("Logga in för att ändra luckor.");return}
-  gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo))};
+  gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo)),
+                claude:(gapState[id]&&gapState[id].claude)};
   await sb.from("gap_status").upsert({gap_id:id,state,photo_path:gapState[id].photo||null,updated_at:new Date().toISOString(),updated_by:sbUser.id});
   updateGapCount();renderGaps();
 }
@@ -582,13 +590,42 @@ async function runAnalys(kind,id,btn){
     const out=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(out.error||("Analysen misslyckades ("+res.status+")"));
     if(kind==="gap"){
-      gapState[id]={state:"done",photo:(gapState[id]&&gapState[id].photo),claude:out.note};
+      /* Analysen klarmarkerar inte luckan - den stannar kvar tills du
+         granskat forslaget och sjalv trycker Klar. */
+      gapState[id]={state:"waiting",photo:(gapState[id]&&gapState[id].photo),claude:out.note};
       updateGapCount();renderGaps();
     }else{
       await loadNewShelves();
     }
   }catch(e){
     alert("Kunde inte analysera: "+(e.message||e));
+    if(btn){btn.disabled=false;btn.textContent=label}
+  }
+}
+function toggleNote(kind,id){
+  const box=document.getElementById("ne-"+kind+"-"+id);if(!box)return;
+  box.style.display = box.style.display==="none" ? "" : "none";
+}
+async function saveNote(kind,id,btn){
+  if(!sbUser){alert("Logga in för att spara.");return}
+  const ta=document.getElementById("nt-"+kind+"-"+id);if(!ta)return;
+  const text=ta.value.trim();
+  const label=btn?btn.textContent:null;
+  if(btn){btn.disabled=true;btn.textContent="Sparar…"}
+  try{
+    if(kind==="gap"){
+      const {error}=await sb.from("gap_status")
+        .upsert({gap_id:id,claude_note:text,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+      if(error)throw error;
+      gapState[id]=Object.assign({},gapState[id],{claude:text});
+      renderGaps();
+    }else{
+      const {error}=await sb.from("new_shelves").update({claude_note:text}).eq("id",Number(id));
+      if(error)throw error;
+      await loadNewShelves();
+    }
+  }catch(e){
+    alert("Kunde inte spara: "+(e.message||e));
     if(btn){btn.disabled=false;btn.textContent=label}
   }
 }
@@ -893,10 +930,17 @@ async function loadNewShelves(){
     return `<div class="ns-item">
       <div><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
         ${r.claude_note?`<div class="ns-note">🤖 ${r.claude_note}</div>`:
-          (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}</div>
+          (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}
+        ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
+          <textarea class="note-ta" id="nt-shelf-${r.id}">${(r.claude_note||"").replace(/</g,"&lt;")}</textarea>
+          <div class="ns-item-acts" style="margin-top:.4rem">
+            <button onclick="saveNote('shelf',${r.id},this)">💾 Spara ändringar</button>
+            <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
+          </div></div>`:""}</div>
       <div class="ns-item-acts">
         ${r.photo_data||r.photo_url?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
         ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">🤖 Analysera</button>`:""}
+        ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">✏️ Rätta</button>`:""}
         ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
       </div></div>`}).join("");
   window.__nsRows=rows;
