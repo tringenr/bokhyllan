@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260826182951";
+const DV="?v=20260827114922";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -338,7 +338,7 @@ function lbShelf(shelf,bookId){
 /* exportera klickhanterare tidigt så UI aldrig dör av ett misslyckat DB-anrop */
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
 window.showInfo=showInfo;window.openShelfView=openShelfView;
-window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;
+window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;
 window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
 const {data:sess}=await sb.auth.getSession();
@@ -441,6 +441,7 @@ function renderGaps(){
           <div class="gap-actions">
             <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
             <label class="ghost">📷 Fota<input type="file" accept="image/*" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
+            ${ph?`<button class="ghost" onclick="runAnalys('gap','${g.id}',this)">🤖 Analysera</button>`:""}
             ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klar</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna</button>`}
           </div>
           <div class="gap-form" id="form-${g.id}" style="display:none">
@@ -565,6 +566,31 @@ async function gapUpload(id,input){
     photo_data:dataUrl,updated_at:new Date().toISOString(),updated_by:sbUser.id});
   updateGapCount();renderGaps();
   alert("Foto skickat! Luckan står kvar i listan.\n\nJag läser av bilden och fyller i böckerna – sedan kontrollerar du dem och trycker ✓ Klar.");
+}
+/* ---------- Analysera foto med Claude (edge function) ---------- */
+const ANALYS_URL=SB_URL.replace(".supabase.co",".functions.supabase.co")+"/analysera";
+async function runAnalys(kind,id,btn){
+  if(!sbUser){alert("Logga in för att analysera.");return}
+  const label=btn?btn.textContent:null;
+  if(btn){btn.disabled=true;btn.textContent="🤖 Läser av…"}
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session)throw new Error("Sessionen har gått ut – logga in igen.");
+    const res=await fetch(ANALYS_URL,{method:"POST",
+      headers:{Authorization:"Bearer "+session.access_token,"content-type":"application/json"},
+      body:JSON.stringify({kind,id:String(id)})});
+    const out=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(out.error||("Analysen misslyckades ("+res.status+")"));
+    if(kind==="gap"){
+      gapState[id]={state:"done",photo:(gapState[id]&&gapState[id].photo),claude:out.note};
+      updateGapCount();renderGaps();
+    }else{
+      await loadNewShelves();
+    }
+  }catch(e){
+    alert("Kunde inte analysera: "+(e.message||e));
+    if(btn){btn.disabled=false;btn.textContent=label}
+  }
 }
 async function gapSave(id){
   if(!sbUser){alert("Logga in för att spara.");return}
@@ -870,6 +896,7 @@ async function loadNewShelves(){
           (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}</div>
       <div class="ns-item-acts">
         ${r.photo_data||r.photo_url?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
+        ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">🤖 Analysera</button>`:""}
         ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
       </div></div>`}).join("");
   window.__nsRows=rows;
