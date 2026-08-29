@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829154433";
+const DV="?v=20260829162510";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -602,10 +602,19 @@ function guessShelfCode(bc,label){
   if(/^\d+$/.test(t))return bc+":S"+num;
   return null;
 }
-function nextSpotCode(bc){
+/* Los plats: aterbruka koden om platsen redan har en. Utan det far
+   skrivbordet en ny kod vid varje avlasning, och bockerna sprids ut. */
+function spotCodeFor(bc,label){
+  const lbl=(label||"").trim().toLowerCase();
+  if(lbl){
+    const known=Object.keys(spotNames).find(c=>
+      c.startsWith(bc+":L")&&(spotNames[c]||"").trim().toLowerCase()===lbl);
+    if(known)return known;
+  }
   let n=1;while(spotNames[bc+":L"+n])n++;
   return bc+":L"+n;
 }
+function nextSpotCode(bc){return spotCodeFor(bc,"")}
 
 /* ---------- Granska avlasta bocker ---------- */
 /* Ar boken redan katalogiserad? Jamfor normaliserat pa titel + forfattare.
@@ -613,10 +622,19 @@ function nextSpotCode(bc){
    ligger i `data` vid det har laget. Databasens unik-regel skyddar daremot
    bara manual_books - filens bocker ar oskyddade tills Fas 2 ar klar. */
 function normTitle(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ")}
+/* Huvudtiteln utan undertitel: "Kommunikation i praktiken - relationer, ..."
+   och "Kommunikation i praktiken" ar samma bok. Avlasningen tar ibland med
+   undertiteln, ibland inte, beroende pa hur trang ryggen ar. */
+function baseTitle(s){
+  const t=normTitle(s);
+  const cut=t.split(/\s[–—-]\s|:\s/)[0].trim();
+  return cut.length>=4?cut:t;
+}
 function knownBook(title,author,shelf){
   const t=normTitle(title);
   if(!t)return null;
-  const hit=data.find(d=>normTitle(d.title)===t&&
+  const bt=baseTitle(title);
+  const hit=data.find(d=>(normTitle(d.title)===t||baseTitle(d.title)===bt)&&
     (!author||!d.author||normTitle(d.author)===normTitle(author)));
   if(!hit)return null;
   return {sameShelf:hit.shelf===shelf, where:locLabel(hit.shelf)};
@@ -754,7 +772,10 @@ async function runAnalys(kind,id,btn){
       const bc=g&&g.shelf?g.shelf.split(":")[0]:(row?row.bc:null);
       let shelf=g&&g.shelf?g.shelf:(row?(guessShelfCode(row.bc,row.shelf_code||row.label)):null);
       let spotLabel="";
-      if(!shelf&&bc){shelf=nextSpotCode(bc);spotLabel=(row&&row.label)||""}
+      if(!shelf&&bc){
+        spotLabel=(row&&row.label)||"";
+        shelf=spotCodeFor(bc,spotLabel);
+      }
       /* Bocker som redan star i katalogen valjs bort direkt - du far bocka i
          dem sjalv om du verkligen vill ha en till. */
       out.books.forEach(b=>{b.skip=!!knownBook(b.title,b.author,shelf||"")});
@@ -1103,10 +1124,19 @@ async function loadNewShelves(){
   if(!rows||!rows.length){el.innerHTML="";return}
   el.innerHTML=`<h4 class="ns-listh">Inskickade hyllfoton</h4>`+rows.map(r=>{
     const done=r.state==="done";
+    /* Miniatyr och en rad status. Hela avlasningstexten gjorde listan
+       olasbar - den finns kvar bakom Visa och Ratta. */
+    const thumb=r.photo_data||r.photo_url;
+    const code=shelfCodeForRow(r);
+    const antal=code?data.filter(d=>d.shelf===code).length:0;
+    const status=antal?`${antal} böcker i katalogen`
+      :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
     return `<div class="ns-item">
-      <div><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
-        ${r.claude_note?`<div class="ns-note">🤖 ${r.claude_note}</div>`:
-          (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}
+      <div class="ns-head-row">
+        ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
+        <div class="ns-titles"><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
+          <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
+        </div>
         ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
           <textarea class="note-ta" id="nt-shelf-${r.id}">${(r.claude_note||"").replace(/</g,"&lt;")}</textarea>
           <div class="ns-item-acts" style="margin-top:.4rem">
@@ -1122,14 +1152,49 @@ async function loadNewShelves(){
       </div></div>`}).join("");
   window.__nsRows=rows;
 }
+/* Vilken hyllkod hor det har fotot till? Forst den gissade koden ur
+   etiketten, annars en los plats vars namn matchar etiketten. */
+function shelfCodeForRow(r){
+  const guess=guessShelfCode(r.bc,r.shelf_code||r.label);
+  if(guess)return guess;
+  const lbl=(r.label||"").trim().toLowerCase();
+  const hit=Object.keys(spotNames).find(c=>
+    c.startsWith(r.bc+":L")&&(spotNames[c]||"").trim().toLowerCase()===lbl);
+  return hit||null;
+}
+
+/* Visa: fotot och bockerna som star dar, bredvid varandra. Att bara oppna
+   bilden racker inte - man vill jamfora den mot listan. */
+let nsViewOpen={};
 function nsView(id){
   const r=(window.__nsRows||[]).find(x=>x.id===id);if(!r)return;
   const src=r.photo_data||r.photo_url;if(!src)return;
-  lb.classList.add("open");document.body.style.overflow="hidden";
-  markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";
-  lbImg.src=src;lbCap.textContent=r.name+(r.label?" · "+r.label:"");
-  lbImg.onload=()=>{measureBase();applyT()};
+  const wrap=document.getElementById("ab-shelf-"+id);if(!wrap)return;
+  if(nsViewOpen[id]){nsViewOpen[id]=false;wrap.style.display="none";wrap.innerHTML="";return}
+  /* En pagaende granskning far inte skrivas over. */
+  if(analysBooks[analysKey("shelf",id)]){renderAnalys("shelf",id);return}
+  nsViewOpen[id]=true;
+  const code=shelfCodeForRow(r);
+  const list=code?data.filter(d=>d.shelf===code):[];
+  nsRot[id]=nsRot[id]||0;
+  wrap.innerHTML=`<div class="ab-photo">
+      <img src="${src}" alt="${r.name}" style="transform:rotate(${nsRot[id]}deg)"
+           onclick="lbGap('${src}')" title="Klicka för att zooma">
+      <button class="ghost ab-rot" onclick="nsViewRotate(${id})">↻ Vrid</button>
+    </div>
+    <div class="ab-list">
+      <p class="gap-help">${code?`${locLabel(code)} — <b>${list.length} böcker</b> i katalogen.`
+        :"Den här platsen har ingen hyllkod ännu. Läs av fotot så får den en."}</p>
+      ${list.length?`<ul class="ns-booklist">${list.map(d=>
+        `<li><a class="var-link" onclick="showInfo(${d.id})">${d.title.replace(/'/g,"’")}</a>
+         <span class="bk-cat">${d.cat}</span></li>`).join("")}</ul>`
+        :(code?`<p class="gap-help">Inga böcker inlagda här ännu. Tryck Analysera.</p>`:"")}
+      <div class="gap-actions"><button class="ghost" onclick="nsView(${id})">Stäng</button></div>
+    </div>`;
+  wrap.style.display="";
 }
+let nsRot={};
+function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
 async function nsDone(id){
   if(!sbUser){alert("Logga in först.");return}
   await sb.from("new_shelves").update({state:"done"}).eq("id",id);
@@ -1140,7 +1205,7 @@ if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
-window.nsFinish=nsFinish;window.nsView=nsView;window.nsDone=nsDone;
+window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
