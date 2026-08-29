@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829162510";
+const DV="?v=20260829175505";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -622,20 +622,56 @@ function nextSpotCode(bc){return spotCodeFor(bc,"")}
    ligger i `data` vid det har laget. Databasens unik-regel skyddar daremot
    bara manual_books - filens bocker ar oskyddade tills Fas 2 ar klar. */
 function normTitle(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ")}
-/* Huvudtiteln utan undertitel: "Kommunikation i praktiken - relationer, ..."
-   och "Kommunikation i praktiken" ar samma bok. Avlasningen tar ibland med
-   undertiteln, ibland inte, beroende pa hur trang ryggen ar. */
+/* Kort namn utan undertitlar och parenteser. Anvands for att jamfora bocker
+   som star med undertiteln i ena avlasningen men inte den andra, och for att
+   samma bok inte ska rakans som olika bara for att en parentes lagts till.
+   Bade "Kommunikation i praktiken" och "Kommunikation i praktiken – ..."
+   krymper till samma strang, och "En Garde!" krymper likadant som
+   "Avancerat rollspel ... – En Garde!" om vi tittar pa bada halvorna. */
 function baseTitle(s){
-  const t=normTitle(s);
+  let t=normTitle(s).replace(/\s*\([^)]*\)\s*/g," ").replace(/\s+/g," ").trim();
   const cut=t.split(/\s[–—-]\s|:\s/)[0].trim();
   return cut.length>=4?cut:t;
+}
+/* Halvorna kring ett tankstreck, i normaliserad form. "En Garde! – Avancerat
+   rollspel" ger ["en garde!","avancerat rollspel"]. En bok raknas som kand om
+   nagon halva matchar en befintlig titel. */
+function titleParts(s){
+  const t=normTitle(s).replace(/\s*\([^)]*\)\s*/g," ").replace(/\s+/g," ").trim();
+  return t.split(/\s[–—-]\s|:\s/).map(x=>x.trim()).filter(x=>x.length>=4);
+}
+/* Efternamnet ur ett forfattarnamn - "Johan Egerkrans" -> "egerkrans".
+   Anvands for att tolerera att avlasningen ibland tappar sista bokstaverna
+   ("Johan Egerk") eller bara ger efternamnet. */
+function authorKey(s){
+  const t=normTitle(s).replace(/[.,]/g,"").trim();
+  if(!t)return "";
+  const parts=t.split(/\s+/);
+  return parts[parts.length-1];
+}
+/* Ar tva forfattarnamn "samma nog"? Bagge tomma -> ja (kan inte saga emot).
+   En prefix pa den andra pa minst tre tecken -> ja ("egerk" mot "egerkrans").
+   Annars: samma efternamn ger ja. */
+function authorMatch(a,b){
+  const x=normTitle(a),y=normTitle(b);
+  if(!x||!y)return true;
+  if(x===y)return true;
+  const short=x.length<y.length?x:y, long=x.length<y.length?y:x;
+  if(short.length>=3&&long.startsWith(short))return true;
+  const ka=authorKey(a), kb=authorKey(b);
+  return ka&&kb&&ka===kb;
 }
 function knownBook(title,author,shelf){
   const t=normTitle(title);
   if(!t)return null;
-  const bt=baseTitle(title);
-  const hit=data.find(d=>(normTitle(d.title)===t||baseTitle(d.title)===bt)&&
-    (!author||!d.author||normTitle(d.author)===normTitle(author)));
+  const parts=titleParts(title);
+  const hit=data.find(d=>{
+    if(!authorMatch(d.author,author))return false;
+    if(normTitle(d.title)===t)return true;
+    /* Nagon del av den nya titeln ska matcha nagon del av den gamla. */
+    const dp=titleParts(d.title);
+    return parts.some(p=>dp.includes(p));
+  });
   if(!hit)return null;
   return {sameShelf:hit.shelf===shelf, where:locLabel(hit.shelf)};
 }
