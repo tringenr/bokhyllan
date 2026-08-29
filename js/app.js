@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829154433";
+const DV="?v=20260829162128";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1122,14 +1122,49 @@ async function loadNewShelves(){
       </div></div>`}).join("");
   window.__nsRows=rows;
 }
+/* Vilken hyllkod hor det har fotot till? Forst den gissade koden ur
+   etiketten, annars en los plats vars namn matchar etiketten. */
+function shelfCodeForRow(r){
+  const guess=guessShelfCode(r.bc,r.shelf_code||r.label);
+  if(guess)return guess;
+  const lbl=(r.label||"").trim().toLowerCase();
+  const hit=Object.keys(spotNames).find(c=>
+    c.startsWith(r.bc+":L")&&(spotNames[c]||"").trim().toLowerCase()===lbl);
+  return hit||null;
+}
+
+/* Visa: fotot och bockerna som star dar, bredvid varandra. Att bara oppna
+   bilden racker inte - man vill jamfora den mot listan. */
+let nsViewOpen={};
 function nsView(id){
   const r=(window.__nsRows||[]).find(x=>x.id===id);if(!r)return;
   const src=r.photo_data||r.photo_url;if(!src)return;
-  lb.classList.add("open");document.body.style.overflow="hidden";
-  markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";
-  lbImg.src=src;lbCap.textContent=r.name+(r.label?" · "+r.label:"");
-  lbImg.onload=()=>{measureBase();applyT()};
+  const wrap=document.getElementById("ab-shelf-"+id);if(!wrap)return;
+  if(nsViewOpen[id]){nsViewOpen[id]=false;wrap.style.display="none";wrap.innerHTML="";return}
+  /* En pagaende granskning far inte skrivas over. */
+  if(analysBooks[analysKey("shelf",id)]){renderAnalys("shelf",id);return}
+  nsViewOpen[id]=true;
+  const code=shelfCodeForRow(r);
+  const list=code?data.filter(d=>d.shelf===code):[];
+  nsRot[id]=nsRot[id]||0;
+  wrap.innerHTML=`<div class="ab-photo">
+      <img src="${src}" alt="${r.name}" style="transform:rotate(${nsRot[id]}deg)"
+           onclick="lbGap('${src}')" title="Klicka för att zooma">
+      <button class="ghost ab-rot" onclick="nsViewRotate(${id})">↻ Vrid</button>
+    </div>
+    <div class="ab-list">
+      <p class="gap-help">${code?`${locLabel(code)} — <b>${list.length} böcker</b> i katalogen.`
+        :"Den här platsen har ingen hyllkod ännu. Läs av fotot så får den en."}</p>
+      ${list.length?`<ul class="ns-booklist">${list.map(d=>
+        `<li><a class="var-link" onclick="showInfo(${d.id})">${d.title.replace(/'/g,"’")}</a>
+         <span class="bk-cat">${d.cat}</span></li>`).join("")}</ul>`
+        :(code?`<p class="gap-help">Inga böcker inlagda här ännu. Tryck Analysera.</p>`:"")}
+      <div class="gap-actions"><button class="ghost" onclick="nsView(${id})">Stäng</button></div>
+    </div>`;
+  wrap.style.display="";
 }
+let nsRot={};
+function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
 async function nsDone(id){
   if(!sbUser){alert("Logga in först.");return}
   await sb.from("new_shelves").update({state:"done"}).eq("id",id);
@@ -1140,7 +1175,7 @@ if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
-window.nsFinish=nsFinish;window.nsView=nsView;window.nsDone=nsDone;
+window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
