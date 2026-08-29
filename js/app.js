@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829162128";
+const DV="?v=20260829162510";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -602,10 +602,19 @@ function guessShelfCode(bc,label){
   if(/^\d+$/.test(t))return bc+":S"+num;
   return null;
 }
-function nextSpotCode(bc){
+/* Los plats: aterbruka koden om platsen redan har en. Utan det far
+   skrivbordet en ny kod vid varje avlasning, och bockerna sprids ut. */
+function spotCodeFor(bc,label){
+  const lbl=(label||"").trim().toLowerCase();
+  if(lbl){
+    const known=Object.keys(spotNames).find(c=>
+      c.startsWith(bc+":L")&&(spotNames[c]||"").trim().toLowerCase()===lbl);
+    if(known)return known;
+  }
   let n=1;while(spotNames[bc+":L"+n])n++;
   return bc+":L"+n;
 }
+function nextSpotCode(bc){return spotCodeFor(bc,"")}
 
 /* ---------- Granska avlasta bocker ---------- */
 /* Ar boken redan katalogiserad? Jamfor normaliserat pa titel + forfattare.
@@ -613,10 +622,19 @@ function nextSpotCode(bc){
    ligger i `data` vid det har laget. Databasens unik-regel skyddar daremot
    bara manual_books - filens bocker ar oskyddade tills Fas 2 ar klar. */
 function normTitle(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ")}
+/* Huvudtiteln utan undertitel: "Kommunikation i praktiken - relationer, ..."
+   och "Kommunikation i praktiken" ar samma bok. Avlasningen tar ibland med
+   undertiteln, ibland inte, beroende pa hur trang ryggen ar. */
+function baseTitle(s){
+  const t=normTitle(s);
+  const cut=t.split(/\s[–—-]\s|:\s/)[0].trim();
+  return cut.length>=4?cut:t;
+}
 function knownBook(title,author,shelf){
   const t=normTitle(title);
   if(!t)return null;
-  const hit=data.find(d=>normTitle(d.title)===t&&
+  const bt=baseTitle(title);
+  const hit=data.find(d=>(normTitle(d.title)===t||baseTitle(d.title)===bt)&&
     (!author||!d.author||normTitle(d.author)===normTitle(author)));
   if(!hit)return null;
   return {sameShelf:hit.shelf===shelf, where:locLabel(hit.shelf)};
@@ -754,7 +772,10 @@ async function runAnalys(kind,id,btn){
       const bc=g&&g.shelf?g.shelf.split(":")[0]:(row?row.bc:null);
       let shelf=g&&g.shelf?g.shelf:(row?(guessShelfCode(row.bc,row.shelf_code||row.label)):null);
       let spotLabel="";
-      if(!shelf&&bc){shelf=nextSpotCode(bc);spotLabel=(row&&row.label)||""}
+      if(!shelf&&bc){
+        spotLabel=(row&&row.label)||"";
+        shelf=spotCodeFor(bc,spotLabel);
+      }
       /* Bocker som redan star i katalogen valjs bort direkt - du far bocka i
          dem sjalv om du verkligen vill ha en till. */
       out.books.forEach(b=>{b.skip=!!knownBook(b.title,b.author,shelf||"")});
@@ -1103,10 +1124,19 @@ async function loadNewShelves(){
   if(!rows||!rows.length){el.innerHTML="";return}
   el.innerHTML=`<h4 class="ns-listh">Inskickade hyllfoton</h4>`+rows.map(r=>{
     const done=r.state==="done";
+    /* Miniatyr och en rad status. Hela avlasningstexten gjorde listan
+       olasbar - den finns kvar bakom Visa och Ratta. */
+    const thumb=r.photo_data||r.photo_url;
+    const code=shelfCodeForRow(r);
+    const antal=code?data.filter(d=>d.shelf===code).length:0;
+    const status=antal?`${antal} böcker i katalogen`
+      :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
     return `<div class="ns-item">
-      <div><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
-        ${r.claude_note?`<div class="ns-note">🤖 ${r.claude_note}</div>`:
-          (done?"":`<div class="ns-note">Väntar på avläsning</div>`)}
+      <div class="ns-head-row">
+        ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
+        <div class="ns-titles"><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
+          <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
+        </div>
         ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
           <textarea class="note-ta" id="nt-shelf-${r.id}">${(r.claude_note||"").replace(/</g,"&lt;")}</textarea>
           <div class="ns-item-acts" style="margin-top:.4rem">

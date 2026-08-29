@@ -358,3 +358,10 @@ body{padding:0}
 .ns-booklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.28rem;font-size:.85rem}
 .ns-booklist li{display:flex;justify-content:space-between;gap:.5rem;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:.28rem}
 .ns-booklist li:last-child{border-bottom:none}
+
+/* Hyllistan: miniatyr och en rad status i stället för hela avläsningstexten */
+.ns-head-row{display:flex;gap:.6rem;align-items:center;flex:1 1 12rem;min-width:0}
+.ns-thumb-img{width:54px;height:54px;object-fit:cover;border-radius:7px;cursor:pointer;flex:0 0 auto;background:var(--bg)}
+.ns-titles{min-width:0}
+.ns-titles > span{display:block;font-weight:600}
+.ns-item .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
