@@ -314,3 +314,44 @@ body{padding:0}
 .ab-x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.9rem;padding:.2rem .3rem}
 .ab-x:hover{color:#c0392b}
 @media(max-width:560px){.ab-row{grid-template-columns:1fr auto}.ab-row .ab-a,.ab-row .ab-c{grid-column:1/2}}
+
+/* ---- Granskning: kända böcker och val ---- */
+.ab-row{grid-template-columns:auto 1fr 1fr auto auto}
+.ab-keep{display:flex;align-items:center;cursor:pointer;padding:0 .1rem}
+.ab-keep input{width:1.05rem;height:1.05rem;accent-color:var(--accent);cursor:pointer}
+.ab-row.known input,.ab-row.known select{opacity:.55}
+.ab-known{grid-column:2/-1;font-size:.72rem;color:var(--muted);margin-top:-.15rem}
+@media(max-width:560px){
+  /* En bok per kort, sa det syns var en rad slutar och nasta borjar.
+     Titel och strykknapp pa forsta raden, resten under. */
+  .ab-rows{gap:.6rem}
+  .ab-row{grid-template-columns:auto 1fr auto;row-gap:.3rem;
+          background:var(--bg);border-radius:8px;padding:.45rem .5rem}
+  .ab-row .ab-t{grid-column:2;grid-row:1}
+  .ab-row .ab-x{grid-column:3;grid-row:1;align-self:center}
+  .ab-row .ab-a,.ab-row .ab-c{grid-column:2/-1}
+  .ab-known{grid-column:2/-1;margin-top:0}
+}
+
+/* Granskningsrutan i hyllistan: ns-item är en flexrad, så rutan måste
+   brytas ned på egen rad i full bredd — annars kläms fälten ihop till remsor. */
+.ns-item{flex-wrap:wrap}
+.ns-item > div:first-child{flex:1 1 12rem;min-width:0}
+.ns-item .ns-item-acts{order:1}
+.ns-item .analys-box{order:2;flex:1 0 100%;width:100%}
+
+/* ---- Granskning: foto bredvid listan ---- */
+.analys-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:1rem;align-items:start}
+.ab-photo{position:sticky;top:.5rem;display:flex;flex-direction:column;gap:.4rem}
+.ab-photo img{width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:8px;cursor:zoom-in;background:var(--bg)}
+.ab-rot{align-self:flex-start;border:none;background:var(--tag);color:var(--ink);border-radius:8px;padding:.3rem .6rem;font-size:.76rem;cursor:pointer}
+.ab-list{display:flex;flex-direction:column;gap:.5rem;min-width:0}
+@media(max-width:760px){
+  /* En spalt, men bilden foljer med nar du scrollar i listan - annars gar
+     raderna inte att kontrollera mot fotot. */
+  .analys-box{grid-template-columns:1fr;gap:.5rem}
+  .ab-photo{position:sticky;top:0;z-index:2;background:var(--card);
+            padding:.3rem 0;flex-direction:row;align-items:flex-start;gap:.5rem}
+  .ab-photo img{max-height:30vh;flex:1 1 auto;min-width:0}
+  .ab-rot{flex:0 0 auto}
+}
