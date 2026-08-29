@@ -322,7 +322,20 @@ body{padding:0}
 .ab-row.known input,.ab-row.known select{opacity:.55}
 .ab-known{grid-column:2/-1;font-size:.72rem;color:var(--muted);margin-top:-.15rem}
 @media(max-width:560px){
-  .ab-row{grid-template-columns:auto 1fr auto}
+  /* En bok per kort, sa det syns var en rad slutar och nasta borjar.
+     Titel och strykknapp pa forsta raden, resten under. */
+  .ab-rows{gap:.6rem}
+  .ab-row{grid-template-columns:auto 1fr auto;row-gap:.3rem;
+          background:var(--bg);border-radius:8px;padding:.45rem .5rem}
+  .ab-row .ab-t{grid-column:2;grid-row:1}
+  .ab-row .ab-x{grid-column:3;grid-row:1;align-self:center}
   .ab-row .ab-a,.ab-row .ab-c{grid-column:2/-1}
-  .ab-known{grid-column:1/-1}
+  .ab-known{grid-column:2/-1;margin-top:0}
 }
+
+/* Granskningsrutan i hyllistan: ns-item är en flexrad, så rutan måste
+   brytas ned på egen rad i full bredd — annars kläms fälten ihop till remsor. */
+.ns-item{flex-wrap:wrap}
+.ns-item > div:first-child{flex:1 1 12rem;min-width:0}
+.ns-item .ns-item-acts{order:1}
+.ns-item .analys-box{order:2;flex:1 0 100%;width:100%}
