@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829153926";
+const DV="?v=20260829154433";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -346,7 +346,7 @@ function lbShelf(shelf,bookId){
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
 window.showInfo=showInfo;window.openShelfView=openShelfView;
 window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;window.toggleNote=toggleNote;window.saveNote=saveNote;
-window.analysEdit=analysEdit;window.analysKeep=analysKeep;window.analysDrop=analysDrop;window.analysSetCode=analysSetCode;
+window.analysEdit=analysEdit;window.analysKeep=analysKeep;window.analysRotate=analysRotate;window.analysDrop=analysDrop;window.analysSetCode=analysSetCode;
 window.analysSetSpot=analysSetSpot;window.analysClose=analysClose;window.analysSave=analysSave;
 window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
@@ -632,7 +632,11 @@ function renderAnalys(kind,id){
   if(!wrap||!st)return;
   const isSpot=/:L\d+$/.test(st.shelf||"");
   const kanda=st.books.filter(b=>knownBook(b.title,b.author,st.shelf)).length;
-  wrap.innerHTML=`<p class="gap-help">${st.books.length} böcker avlästa. Rätta det som blivit fel, stryk det som inte är en bok, och spara. Gulmarkerade rader var osäkra.${kanda?` <b>${kanda} finns redan i katalogen</b> och är förvalt bortvalda.`:""}</p>
+  wrap.innerHTML=`${st.src?`<div class="ab-photo">
+      <img src="${st.src}" alt="Fotot som lästes av" style="transform:rotate(${st.rot||0}deg)"
+           onclick="lbGap('${st.src}')" title="Klicka för att zooma">
+      <button class="ghost ab-rot" onclick="analysRotate('${kind}','${id}')">↻ Vrid</button>
+    </div>`:""}<div class="ab-list"><p class="gap-help">${st.books.length} böcker avlästa. Rätta det som blivit fel, stryk det som inte är en bok, och spara. Gulmarkerade rader var osäkra.${kanda?` <b>${kanda} finns redan i katalogen</b> och är förvalt bortvalda.`:""}</p>
     <div class="ab-place">
       <label>Hyllkod <input class="ab-code" value="${(st.shelf||"").replace(/"/g,'&quot;')}" onchange="analysSetCode('${kind}','${id}',this.value)"></label>
       ${isSpot?`<label>Platsens namn <input class="ab-spot" value="${(st.spotLabel||"").replace(/"/g,'&quot;')}" onchange="analysSetSpot('${kind}','${id}',this.value)" placeholder="T.ex. Skrivbordet"></label>`:""}
@@ -651,7 +655,7 @@ function renderAnalys(kind,id){
     <div class="gap-actions" style="margin-top:.5rem">
       <button onclick="analysSave('${kind}','${id}',this)">💾 Lägg in ${st.books.filter(b=>!b.skip&&(b.title||"").trim()).length} böcker</button>
       <button class="ghost" onclick="analysClose('${kind}','${id}')">Avbryt</button>
-    </div>`;
+    </div></div>`;
   wrap.style.display="";
 }
 function analysEdit(kind,id,i,field,v){
@@ -663,6 +667,10 @@ function analysEdit(kind,id,i,field,v){
     st.books[i].skip=!!knownBook(st.books[i].title,st.books[i].author,st.shelf);
     renderAnalys(kind,id);
   }
+}
+function analysRotate(kind,id){
+  const st=analysBooks[analysKey(kind,id)];if(!st)return;
+  st.rot=((st.rot||0)+90)%360;renderAnalys(kind,id);
 }
 function analysKeep(kind,id,i,checked){
   const st=analysBooks[analysKey(kind,id)];if(!st)return;
@@ -750,7 +758,12 @@ async function runAnalys(kind,id,btn){
       /* Bocker som redan star i katalogen valjs bort direkt - du far bocka i
          dem sjalv om du verkligen vill ha en till. */
       out.books.forEach(b=>{b.skip=!!knownBook(b.title,b.author,shelf||"")});
-      analysBooks[analysKey(kind,id)]={books:out.books,shelf:shelf||"",spotLabel,kind,id};
+      /* Fotot foljer med sa att granskningen kan visa bild och lista bredvid
+         varandra - utan bilden gar listan inte att kontrollera. */
+      const src=(kind==="gap")
+        ? ((gapState[id]&&gapState[id].photo)||(g&&(g.full||g.crop))||null)
+        : (row?(row.photo_data||row.photo_url):null);
+      analysBooks[analysKey(kind,id)]={books:out.books,shelf:shelf||"",spotLabel,kind,id,src,rot:0};
     }
     if(kind==="gap"){
       gapState[id]={state:"waiting",photo:(gapState[id]&&gapState[id].photo),claude:out.note};

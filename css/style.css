@@ -339,3 +339,19 @@ body{padding:0}
 .ns-item > div:first-child{flex:1 1 12rem;min-width:0}
 .ns-item .ns-item-acts{order:1}
 .ns-item .analys-box{order:2;flex:1 0 100%;width:100%}
+
+/* ---- Granskning: foto bredvid listan ---- */
+.analys-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:1rem;align-items:start}
+.ab-photo{position:sticky;top:.5rem;display:flex;flex-direction:column;gap:.4rem}
+.ab-photo img{width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:8px;cursor:zoom-in;background:var(--bg)}
+.ab-rot{align-self:flex-start;border:none;background:var(--tag);color:var(--ink);border-radius:8px;padding:.3rem .6rem;font-size:.76rem;cursor:pointer}
+.ab-list{display:flex;flex-direction:column;gap:.5rem;min-width:0}
+@media(max-width:760px){
+  /* En spalt, men bilden foljer med nar du scrollar i listan - annars gar
+     raderna inte att kontrollera mot fotot. */
+  .analys-box{grid-template-columns:1fr;gap:.5rem}
+  .ab-photo{position:sticky;top:0;z-index:2;background:var(--card);
+            padding:.3rem 0;flex-direction:row;align-items:flex-start;gap:.5rem}
+  .ab-photo img{max-height:30vh;flex:1 1 auto;min-width:0}
+  .ab-rot{flex:0 0 auto}
+}
