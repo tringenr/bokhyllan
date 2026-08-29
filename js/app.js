@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260827150614";
+const DV="?v=20260829145040";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -346,7 +346,7 @@ function lbShelf(shelf,bookId){
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
 window.showInfo=showInfo;window.openShelfView=openShelfView;
 window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;window.toggleNote=toggleNote;window.saveNote=saveNote;
-window.analysEdit=analysEdit;window.analysDrop=analysDrop;window.analysSetCode=analysSetCode;
+window.analysEdit=analysEdit;window.analysKeep=analysKeep;window.analysDrop=analysDrop;window.analysSetCode=analysSetCode;
 window.analysSetSpot=analysSetSpot;window.analysClose=analysClose;window.analysSave=analysSave;
 window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
@@ -608,6 +608,19 @@ function nextSpotCode(bc){
 }
 
 /* ---------- Granska avlasta bocker ---------- */
+/* Ar boken redan katalogiserad? Jamfor normaliserat pa titel + forfattare.
+   OBS: taeker bade de 737 ur filen och raderna ur databasen, eftersom bada
+   ligger i `data` vid det har laget. Databasens unik-regel skyddar daremot
+   bara manual_books - filens bocker ar oskyddade tills Fas 2 ar klar. */
+function normTitle(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ")}
+function knownBook(title,author,shelf){
+  const t=normTitle(title);
+  if(!t)return null;
+  const hit=data.find(d=>normTitle(d.title)===t&&
+    (!author||!d.author||normTitle(d.author)===normTitle(author)));
+  if(!hit)return null;
+  return {sameShelf:hit.shelf===shelf, where:locLabel(hit.shelf)};
+}
 let analysBooks={};   /* key -> {books, shelf, spotLabel, kind, id} */
 
 function analysKey(kind,id){return kind+"-"+id}
@@ -618,20 +631,25 @@ function renderAnalys(kind,id){
   const st=analysBooks[key];
   if(!wrap||!st)return;
   const isSpot=/:L\d+$/.test(st.shelf||"");
-  wrap.innerHTML=`<p class="gap-help">${st.books.length} böcker avlästa. Rätta det som blivit fel, stryk det som inte är en bok, och spara. Rader med ? var osäkra.</p>
+  const kanda=st.books.filter(b=>knownBook(b.title,b.author,st.shelf)).length;
+  wrap.innerHTML=`<p class="gap-help">${st.books.length} böcker avlästa. Rätta det som blivit fel, stryk det som inte är en bok, och spara. Gulmarkerade rader var osäkra.${kanda?` <b>${kanda} finns redan i katalogen</b> och är förvalt bortvalda.`:""}</p>
     <div class="ab-place">
       <label>Hyllkod <input class="ab-code" value="${(st.shelf||"").replace(/"/g,'&quot;')}" onchange="analysSetCode('${kind}','${id}',this.value)"></label>
       ${isSpot?`<label>Platsens namn <input class="ab-spot" value="${(st.spotLabel||"").replace(/"/g,'&quot;')}" onchange="analysSetSpot('${kind}','${id}',this.value)" placeholder="T.ex. Skrivbordet"></label>`:""}
     </div>
-    <div class="ab-rows">${st.books.map((b,i)=>`
-      <div class="ab-row${b.uncertain?" unsure":""}">
+    <div class="ab-rows">${st.books.map((b,i)=>{
+      const known=knownBook(b.title,b.author,st.shelf);
+      return `<div class="ab-row${b.uncertain?" unsure":""}${known?" known":""}">
+        <label class="ab-keep" title="${b.skip?"Sparas inte":"Sparas"}">
+          <input type="checkbox" ${b.skip?"":"checked"} onchange="analysKeep('${kind}','${id}',${i},this.checked)"></label>
         <input class="ab-t" value="${(b.title||"").replace(/"/g,'&quot;')}" placeholder="Titel" onchange="analysEdit('${kind}','${id}',${i},'title',this.value)">
         <input class="ab-a" value="${(b.author||"").replace(/"/g,'&quot;')}" placeholder="Författare" onchange="analysEdit('${kind}','${id}',${i},'author',this.value)">
         <select class="ab-c" onchange="analysEdit('${kind}','${id}',${i},'cat',this.value)">${catOptions(b.cat)}</select>
-        <button class="ab-x" title="Stryk raden" onclick="analysDrop('${kind}','${id}',${i})">✕</button>
-      </div>`).join("")}</div>
+        <button class="ab-x" title="Stryk raden helt" onclick="analysDrop('${kind}','${id}',${i})">✕</button>
+        ${known?`<span class="ab-known">Finns redan${known.sameShelf?" här":" – "+known.where}</span>`:""}
+      </div>`}).join("")}</div>
     <div class="gap-actions" style="margin-top:.5rem">
-      <button onclick="analysSave('${kind}','${id}',this)">💾 Lägg in ${st.books.length} böcker</button>
+      <button onclick="analysSave('${kind}','${id}',this)">💾 Lägg in ${st.books.filter(b=>!b.skip&&(b.title||"").trim()).length} böcker</button>
       <button class="ghost" onclick="analysClose('${kind}','${id}')">Avbryt</button>
     </div>`;
   wrap.style.display="";
@@ -639,7 +657,16 @@ function renderAnalys(kind,id){
 function analysEdit(kind,id,i,field,v){
   const st=analysBooks[analysKey(kind,id)];if(!st)return;
   st.books[i][field]=v;
-  if(field==="title"||field==="author")st.books[i].uncertain=false;
+  if(field==="title"||field==="author"){
+    st.books[i].uncertain=false;
+    /* En rattad titel kan gora en okand bok kand, eller tvartom. */
+    st.books[i].skip=!!knownBook(st.books[i].title,st.books[i].author,st.shelf);
+    renderAnalys(kind,id);
+  }
+}
+function analysKeep(kind,id,i,checked){
+  const st=analysBooks[analysKey(kind,id)];if(!st)return;
+  st.books[i].skip=!checked;renderAnalys(kind,id);
 }
 function analysDrop(kind,id,i){
   const st=analysBooks[analysKey(kind,id)];if(!st)return;
@@ -665,8 +692,8 @@ async function analysSave(kind,id,btn){
   if(!/^\d+:[VHSKL]\d+$/.test(shelf)){
     alert("Hyllkoden ser inte rätt ut. Den ska se ut som 10:S3, 1:V2 eller 10:L1.");return;
   }
-  const rows=st.books.filter(b=>(b.title||"").trim());
-  if(!rows.length){alert("Inga böcker kvar att spara.");return}
+  const rows=st.books.filter(b=>!b.skip&&(b.title||"").trim());
+  if(!rows.length){alert("Inga böcker är valda att läggas in.");return}
   const label=btn?btn.textContent:null;
   if(btn){btn.disabled=true;btn.textContent="Sparar…"}
   try{
@@ -720,6 +747,9 @@ async function runAnalys(kind,id,btn){
       let shelf=g&&g.shelf?g.shelf:(row?(guessShelfCode(row.bc,row.shelf_code||row.label)):null);
       let spotLabel="";
       if(!shelf&&bc){shelf=nextSpotCode(bc);spotLabel=(row&&row.label)||""}
+      /* Bocker som redan star i katalogen valjs bort direkt - du far bocka i
+         dem sjalv om du verkligen vill ha en till. */
+      out.books.forEach(b=>{b.skip=!!knownBook(b.title,b.author,shelf||"")});
       analysBooks[analysKey(kind,id)]={books:out.books,shelf:shelf||"",spotLabel,kind,id};
     }
     if(kind==="gap"){

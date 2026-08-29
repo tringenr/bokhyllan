@@ -314,3 +314,15 @@ body{padding:0}
 .ab-x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.9rem;padding:.2rem .3rem}
 .ab-x:hover{color:#c0392b}
 @media(max-width:560px){.ab-row{grid-template-columns:1fr auto}.ab-row .ab-a,.ab-row .ab-c{grid-column:1/2}}
+
+/* ---- Granskning: kända böcker och val ---- */
+.ab-row{grid-template-columns:auto 1fr 1fr auto auto}
+.ab-keep{display:flex;align-items:center;cursor:pointer;padding:0 .1rem}
+.ab-keep input{width:1.05rem;height:1.05rem;accent-color:var(--accent);cursor:pointer}
+.ab-row.known input,.ab-row.known select{opacity:.55}
+.ab-known{grid-column:2/-1;font-size:.72rem;color:var(--muted);margin-top:-.15rem}
+@media(max-width:560px){
+  .ab-row{grid-template-columns:auto 1fr auto}
+  .ab-row .ab-a,.ab-row .ab-c{grid-column:2/-1}
+  .ab-known{grid-column:1/-1}
+}
