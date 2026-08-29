@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829175505";
+const DV="?v=20260829190740";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -41,7 +41,9 @@ async function loadSpotNames(){
   if(rows)rows.forEach(r=>spotNames[r.code]=r.name);
 }
 const SEC={V:"vänster",H:"höger",S:"hylla",K:"hylla"};
-function locLabel(shelf){const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
+function locLabel(shelf){
+  if(!shelf)return "plats dold – logga in för att se";
+  const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
   if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
   if(sec==="L")return `${bcNames[bc]} · ${spotNames[shelf]||"löst"}`;
   return (sec==="S"||sec==="K")?`${bcNames[bc]} · hylla ${plan}`:`${bcNames[bc]} · ${SEC[sec]} · plan ${plan}`}
@@ -57,7 +59,7 @@ const $=s=>document.querySelector(s);
 let fs="",fShelf="",fCat="",q="";
 function buildShelfOptions(){
   const sel=$("#fShelf");sel.innerHTML='<option value="">Alla platser</option>';
-  const shelves=[...new Set(data.map(d=>d.shelf))].sort();
+  const shelves=[...new Set(data.map(d=>d.shelf).filter(Boolean))].sort();
   let lastBc="";
   let grp=null;
   shelves.forEach(s=>{const bc=s.split(":")[0];
@@ -96,9 +98,9 @@ function render(){
     const lent=d.status==="utlanad"&&d.lentTo?` → ${d.lentTo}`:"";
     const lentInp=d.status==="utlanad"?`<input class="lent-input" data-lent="${d.id}" placeholder="Utlånad till…" value="${(d.lentTo||"").replace(/"/g,'&quot;')}" onchange="setLent(${d.id},this.value)">`:"";
     return `<div class="book"><h3 onclick="showInfo(${d.id})" title="Visa beskrivning">${d.title}</h3><div class="auth">${d.author||"&nbsp;"}</div>
-    <div class="row"><span class="loc">${locLabel(d.shelf)}</span>
+    <div class="row"><span class="loc${d.shelf?"":" loc-dold"}">${locLabel(d.shelf)}</span>
     <button class="status ${cls}" data-sbtn="${d.id}" onclick="cycle(${d.id})">${label}${lent}</button></div>
-    ${lentInp}<div class="cat">${d.cat} · <a class="var-link" onclick="lbShelf('${d.shelf}',${d.id})">📍 sågs senast${d.ts?" "+d.ts:""}</a></div></div>`}).join("");
+    ${lentInp}<div class="cat">${d.cat}${d.shelf?` · <a class="var-link" onclick="lbShelf('${d.shelf}',${d.id})">📍 sågs senast${d.ts?" "+d.ts:""}</a>`:""}</div></div>`}).join("");
   renderBcEditor();
 }
 $("#q").addEventListener("input",e=>{q=e.target.value;render();if(q)setList(true)});
@@ -904,13 +906,25 @@ async function gapSave(id){
   }
 }
 let gapAdded={};
+/* Utloggade laser via vyn books_public - bara titel, forfattare, kategori,
+   beskrivning och kalla. Inloggade laser hela manual_books med hyllplats,
+   lucksignal och skaparinfo. Vyn ar oppen for anon, tabellen ar det inte. */
 async function loadManualBooks(){
-  const {data:rows}=await sb.from("manual_books").select("*");
-  if(rows)rows.forEach(r=>{
-    data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
-    if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
-    if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
-  });
+  if(sbUser){
+    const {data:rows}=await sb.from("manual_books").select("*");
+    if(rows)rows.forEach(r=>{
+      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+      if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
+      if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
+    });
+  }else{
+    const {data:rows}=await sb.from("books_public").select("*");
+    if(rows)rows.forEach(r=>{
+      /* Ingen hyllplats - utloggade ska inte veta var bocker star. */
+      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
+      if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
+    });
+  }
 }
 function openGapView(o){
   document.getElementById("gapView").classList.toggle("open",o);

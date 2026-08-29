@@ -365,3 +365,6 @@ body{padding:0}
 .ns-titles{min-width:0}
 .ns-titles > span{display:block;font-weight:600}
 .ns-item .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
+
+/* Utloggad ser inte hyllplats — dampa etiketten sa den inte ser ut som en klickbar plats */
+.loc-dold{opacity:.55;font-style:italic}
