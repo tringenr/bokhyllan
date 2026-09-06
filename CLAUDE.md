@@ -60,6 +60,9 @@ Thomas uttryckliga klartecken.
 Projekt `zuesxdqifsnvhleiukum`. RLS är på för alla tabeller.
 
 `manual_books` har sedan 2026-08-27 en unik regel på titel + författare +
-hyllkod, normaliserad på gemener och trimmad text. **Den skyddar bara rader i
-databasen** — de 737 böckerna i `data/books.json` ligger utanför och är
-oskyddade tills migreringen i Fas 2 är klar.
+hyllkod, normaliserad på gemener och trimmad text.
+
+Sedan Fas 2 (2026-09) bor **hela** katalogen i databasen: `manual_books` (böcker
++ beskrivningar), `gaps` (luckor), `shelves` (hyllregister), `spot_names` (lösa
+platser). De gamla filerna `data/books.json`, `data/gaps.json` och
+`data/bookinfo.json` är flyttade till `archive/` och läses inte av appen.
