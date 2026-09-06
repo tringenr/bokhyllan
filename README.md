@@ -8,10 +8,10 @@ Familjens bokkatalog — ca 720 böcker på 8 platser, med hyllfoton, sök, stat
 
 ## Struktur
 - `index.html`, `css/`, `js/` — statisk webapp (ingen byggkedja)
-- `data/books.json` — bokkatalogen (id, titel, författare, kategori, hyllkod)
-- `data/photos.json` — hyllfoton med koppling till hyllkoder
-- `data/bookinfo.json` — bokbeskrivningar
+- `data/photos.json` — hyllfoton med koppling till hyllkoder (kvarvarande fil; arkiveras i Fas 3a)
 - `img/` — hyllfoton (full + thumb)
+- `supabase/migrations/` — schemamigreringar för bokkatalogen (bor sedan Fas 2 i databasen: `manual_books`, `gaps`, `shelves` m.fl.)
+- `archive/` — filer som var appens katalogsanning innan Fas 2, migrerade in i Supabase
 
 Hyllkoder: `bokhylla:sektion+plan`, t.ex. `1:V3` = bokhylla 1, vänster sektion, plan 3 (räknat nedifrån). `S`=hylla, `K`=köket.
 

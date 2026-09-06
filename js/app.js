@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260829190740";
+const DV="?v=20260906190503";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -22,9 +22,12 @@ try{
 }
 let sbUser=null;
 
-const [booksRaw,photos,BOOK_INFO]=await Promise.all(
-  ["data/books.json"+DV,"data/photos.json"+DV,"data/bookinfo.json"+DV].map(u=>fetch(u).then(r=>r.json())));
-const BOOKS=booksRaw.map(b=>[b.title,b.author,b.cat,b.shelf]);
+/* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books /
+   books_public). Endast photos.json (hyllfotons metadata) laser vi fortfarande
+   fran fil - photos.json arkiveras i Fas 3a. BOOK_INFO fylls nu av
+   loadManualBooks, inte fran fil. */
+const photos=await fetch("data/photos.json"+DV).then(r=>r.json());
+const BOOK_INFO={};
 const SHELF_IMGS=[];
 photos.forEach(p=>{
   let g=SHELF_IMGS.find(x=>x.bc===p.bc&&x.label===p.label);
@@ -47,7 +50,8 @@ function locLabel(shelf){
   if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
   if(sec==="L")return `${bcNames[bc]} · ${spotNames[shelf]||"löst"}`;
   return (sec==="S"||sec==="K")?`${bcNames[bc]} · hylla ${plan}`:`${bcNames[bc]} · ${SEC[sec]} · plan ${plan}`}
-let data=BOOKS.map((b,i)=>({id:i,title:b[0],author:b[1],cat:b[2],shelf:b[3],status:"hylla",lentTo:""}));
+/* Efter Fas 2.6: alla bocker kommer fran databasen via loadManualBooks. */
+let data=[];
 async function loadStatuses(){
   const {data:rows,error}=await sb.from("book_status").select("*");
   if(error||!rows)return;
@@ -419,9 +423,16 @@ fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{
 /* ---------- Luckor ---------- */
 let GAPS=[],gapState={},gapFilter="open";
 async function loadGaps(){
-  GAPS=await fetch("data/gaps.json"+DV).then(r=>r.json());
-  if(sbUser||true){const {data:rows}=await sb.from("gap_status").select("*");
-    if(rows)rows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note,claude:r.claude_note});}
+  /* Efter Fas 2.5/2.6: luckdefinitionerna bor i public.gaps. Fältet
+     heter `full_img` i tabellen; mappa till `full` for att inte behova
+     rora alla lucklasare i UI:t. */
+  const {data:gapsRows}=await sb.from("gaps").select("*");
+  GAPS=(gapsRows||[]).map(g=>({
+    id:g.id, shelf:g.shelf, cap:g.cap, crop:g.crop, full:g.full_img,
+    reviewed:g.reviewed, auto:g.auto, note:g.note
+  }));
+  const {data:statusRows}=await sb.from("gap_status").select("*");
+  if(statusRows)statusRows.forEach(r=>gapState[r.gap_id]={state:r.state,photo:r.photo_path,note:r.note,claude:r.claude_note});
   updateGapCount();renderGaps();
 }
 function gapStateOf(id){
