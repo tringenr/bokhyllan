@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260906190503";
+const DV="?v=20260925230150";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -318,7 +318,14 @@ function renderAuth(){
     el.querySelector("#btnIn").onclick=async()=>{
       const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
       if(error){el.querySelector("#aErr").textContent=error.message||"Inloggning misslyckades";console.warn("login",error);return}
-      sbUser=res.user;renderAuth();loadStatuses();};}
+      sbUser=res.user;renderAuth();
+      /* Efter inloggning behover vi ladda om bockerna sa att shelf-faltet
+         fylls fran manual_books - den utloggade laddningen (books_public) har
+         lamnat shelf tomt, sa "plats dold" visas annars kvar. */
+      data.length=0;
+      await loadManualBooks();await loadStatuses();
+      buildShelfOptions();render();
+      };}
 }
 
 
@@ -924,15 +931,18 @@ async function loadManualBooks(){
   if(sbUser){
     const {data:rows}=await sb.from("manual_books").select("*");
     if(rows)rows.forEach(r=>{
-      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+      /* Efter Fas 2.6: alla bocker kommer fran manual_books, sa d.id === r.id.
+         Den gamla 1e6-offseten (som skilde statiska bocker fran nya) blockerade
+         book_status/book_cat/book_cover-skrivningar under de nya RLS-policies. */
+      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
       if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
       if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
     });
   }else{
     const {data:rows}=await sb.from("books_public").select("*");
     if(rows)rows.forEach(r=>{
-      /* Ingen hyllplats - utloggade ska inte veta var bocker star. */
-      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
+      /* Utloggade far ingen hyllplats. Anvander bookinfo-radens id direkt. */
+      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
       if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
     });
   }
