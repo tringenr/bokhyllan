@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926181133";
+const DV="?v=20260926184132";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1512,40 +1512,49 @@ async function nsFinish(){
     if(b2){b2.disabled=false;b2.style.opacity=""}
   }
 }
+/* Inskickade hyllfoton. Bara de som inte är klarmarkerade syns i listan;
+   klara ligger hopfällda längst ner, så att de ändå går att läsa av igen
+   (t.ex. när en bok saknades) eller öppna på nytt. */
+let nsDoneOpen=false;
+function nsItem(r){
+  const done=r.state==="done";
+  const thumb=r.photo_data||r.photo_url;
+  const code=shelfCodeForRow(r);
+  const antal=code?data.filter(d=>d.shelf===code).length:0;
+  const status=antal?`${antal} böcker i katalogen`
+    :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
+  return `<div class="ns-item">
+    <div class="ns-head-row">
+      ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
+      <div class="ns-titles"><span>${esc(r.name)}${r.label?" · "+esc(r.label.trim()):""}</span>
+        <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
+      </div>
+      ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
+        <textarea class="note-ta" id="nt-shelf-${r.id}">${esc(r.claude_note)}</textarea>
+        <div class="ns-item-acts" style="margin-top:.4rem">
+          <button onclick="saveNote('shelf',${r.id},this)">Spara ändringar</button>
+          <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
+        </div></div>`:""}</div>
+    <div class="analys-box" id="ab-shelf-${r.id}" style="display:none"></div>
+    <div class="ns-item-acts">
+      ${thumb?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
+      ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">Läs av</button>`:""}
+      ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">Rätta</button>`:""}
+      ${done?`<button class="ghost" onclick="nsReopen(${r.id})">Öppna igen</button>`:`<button onclick="nsDone(${r.id})">Klar</button>`}
+    </div></div>`;
+}
 async function loadNewShelves(){
   const {data:rows}=await sb.from("new_shelves").select("*").order("created_at",{ascending:false});
+  window.__nsRows=rows||[];
+  syncShelfPhotos(rows);
   const el=document.getElementById("nsList");if(!el)return;
   if(!rows||!rows.length){el.innerHTML="";return}
-  el.innerHTML=`<h4 class="ns-listh">Inskickade hyllfoton</h4>`+rows.map(r=>{
-    const done=r.state==="done";
-    /* Miniatyr och en rad status. Hela avlasningstexten gjorde listan
-       olasbar - den finns kvar bakom Visa och Ratta. */
-    const thumb=r.photo_data||r.photo_url;
-    const code=shelfCodeForRow(r);
-    const antal=code?data.filter(d=>d.shelf===code).length:0;
-    const status=antal?`${antal} böcker i katalogen`
-      :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
-    return `<div class="ns-item">
-      <div class="ns-head-row">
-        ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
-        <div class="ns-titles"><span>${esc(r.name)}${r.label?" · "+esc(r.label.trim()):""} <span class="badge ${done?"b-success":"b-warning"}">${done?"Klar":"Ej klar"}</span></span>
-          <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
-        </div>
-        ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
-          <textarea class="note-ta" id="nt-shelf-${r.id}">${(r.claude_note||"").replace(/</g,"&lt;")}</textarea>
-          <div class="ns-item-acts" style="margin-top:.4rem">
-            <button onclick="saveNote('shelf',${r.id},this)">💾 Spara ändringar</button>
-            <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
-          </div></div>`:""}</div>
-      <div class="analys-box" id="ab-shelf-${r.id}" style="display:none"></div>
-      <div class="ns-item-acts">
-        ${r.photo_data||r.photo_url?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
-        ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">🤖 Analysera</button>`:""}
-        ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">✏️ Rätta</button>`:""}
-        ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
-      </div></div>`}).join("");
-  window.__nsRows=rows;
-  syncShelfPhotos(rows);
+  const byTime=rows.slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id));
+  const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done");
+  el.innerHTML=(open.length?`<h4 class="ns-listh">Att klarmarkera (${open.length})</h4>`+open.map(nsItem).join("")
+      :`<p class="fine">Alla inskickade hyllfoton är klarmarkerade.</p>`)+
+    (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length})</summary>${done.map(nsItem).join("")}</details>`:"");
+  const det=el.querySelector(".ns-done");if(det)det.addEventListener("toggle",()=>nsDoneOpen=det.open);
 }
 /* Foton som laddats upp via "Ny hylla" bor i databasen, inte i photos.json.
    Lägg in dem i fotolistan så att platsvyn visar dem. Den nedskalade
@@ -1602,17 +1611,23 @@ function nsView(id){
 }
 let nsRot={};
 function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
-async function nsDone(id){
-  if(!sbUser){alert("Logga in först.");return}
-  await sb.from("new_shelves").update({state:"done"}).eq("id",id);
-  await loadNewShelves();
+async function nsSetState(id,state){
+  if(!sbUser){alert("Logga in först.");return false}
+  const {error}=await sb.from("new_shelves").update({state}).eq("id",id);
+  if(error){alert("Kunde inte spara: "+error.message);return false}
+  await loadNewShelves();return true;
 }
+async function nsDone(id){
+  const r=(window.__nsRows||[]).find(x=>x.id===id);
+  if(await nsSetState(id,"done"))toast(`${r?(r.label||r.name).trim():"Hyllan"} är klar – finns under Klarmarkerade`);
+}
+async function nsReopen(id){if(await nsSetState(id,"waiting"))toast("Öppnad igen")}
 const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
-window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;
+window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
