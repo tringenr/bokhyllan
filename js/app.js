@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926175351";
+const DV="?v=20260926175638";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1161,7 +1161,13 @@ async function analysSave(kind,id,btn){
     analysClose(kind,id);
     buildShelfOptions();rebuildCatFilter();render();
     if(kind==="gap")renderGaps();else await loadNewShelves();
-    alert(`${ins.length} ${ins.length===1?"bok":"böcker"} inlagda på ${locLabel(shelf)}.${skippedTxt(skipped)}\n\nKontrollera dem i boklistan och klarmarkera hyllan när du är nöjd.`);
+    /* Uppmana bara till klarmarkering om hyllan inte redan är klar -
+       en klar hylla har ingen Klar-knapp, och då blir uppmaningen förvirrande. */
+    const nsRow=kind==="shelf"?(window.__nsRows||[]).find(x=>String(x.id)===String(id)):null;
+    const tail=kind!=="shelf"?"\n\nKontrollera dem i boklistan."
+      :(nsRow&&nsRow.state==="done")?"\n\nHyllan är redan klarmarkerad, så du behöver inte göra något mer."
+      :"\n\nKontrollera dem i boklistan och tryck Klar på hyllan när du är nöjd.";
+    alert(`${ins.length} ${ins.length===1?"bok":"böcker"} inlagda på ${locLabel(shelf)}.${skippedTxt(skipped)}${tail}`);
   }catch(e){
     alert("Kunde inte spara: "+(e.message||e));
     if(btn){btn.disabled=false;btn.textContent=label}
@@ -1513,7 +1519,7 @@ async function loadNewShelves(){
     return `<div class="ns-item">
       <div class="ns-head-row">
         ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
-        <div class="ns-titles"><span>${done?"✅":"⏳"} ${r.name}${r.label?" · "+r.label:""}</span>
+        <div class="ns-titles"><span>${esc(r.name)}${r.label?" · "+esc(r.label.trim()):""} <span class="badge ${done?"b-success":"b-warning"}">${done?"Klar":"Ej klar"}</span></span>
           <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
         </div>
         ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">

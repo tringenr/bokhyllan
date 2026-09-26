@@ -545,3 +545,4 @@ body.splashing{overflow:hidden}
 .dlg-btns .btn{width:100%;white-space:normal}
 .btn-danger{background:var(--danger-500);color:#fff}
 .btn-danger:hover{background:#C23A35}
+.ns-titles .badge{font-size:11px;padding:2px 8px;margin-left:4px;vertical-align:1px}
