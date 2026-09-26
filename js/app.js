@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926161936";
+const DV="?v=20260926170215";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -84,7 +84,26 @@ function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.len
 /* Alla foton i en platt lista, i samma ordning som helskärmsvyn (FLAT). */
 const PH=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>PH.push({bc:g.bc,cap:im.cap,src:im.src,thumb:im.thumb,shelves:im.shelves||[],fi:PH.length})));
 let curView="hem";
-async function loadBcNames(){const {data:rows}=await sb.from("bc_names").select("*");if(rows)rows.forEach(r=>bcNames[r.bc]=r.name)}
+/* Platser kan grupperas (parent_bc) och tas bort (hidden). En grupperad
+   plats visas som hyllor inuti sin förälder; hyllkoderna ändras aldrig. */
+let bcParent={},bcHidden=new Set();
+let pmMerge=null; /* {sel:Set, name} när du väljer platser att slå ihop */
+async function loadBcNames(){const {data:rows}=await sb.from("bc_names").select("*");
+  if(rows)rows.forEach(r=>{bcNames[r.bc]=r.name;
+    if(r.parent_bc)bcParent[r.bc]=String(r.parent_bc);else delete bcParent[r.bc];
+    if(r.hidden)bcHidden.add(r.bc);else bcHidden.delete(r.bc)})}
+function topBc(bc){let b=String(bc),n=0;while(bcParent[b]&&n++<10)b=bcParent[b];return b}
+/* Platsen själv plus allt som ligger inuti den, utan borttagna. */
+function membersOf(bc){const out=[String(bc)];for(let i=0;i<out.length;i++)
+  Object.keys(bcParent).forEach(k=>{if(bcParent[k]===out[i]&&!out.includes(k))out.push(k)});
+  return out.filter(b=>!bcHidden.has(b))}
+/* "Sovrummet – vid sängen" inuti "Sovrummet" visas som "vid sängen". */
+function shortName(bc){const nm=bcNames[bc]||("Plats "+bc),par=bcParent[bc];
+  if(!par)return nm;const pn=(bcNames[par]||"").trim();
+  const re=new RegExp("^"+pn.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*[–—-]\\s*","i");
+  const t=nm.replace(re,"").trim();return t?t.charAt(0).toUpperCase()+t.slice(1):nm}
+const topPlaces=()=>{const bcs=new Set([...Object.keys(bcNames),...PH.map(p=>p.bc),...data.filter(d=>d.shelf).map(d=>d.shelf.split(":")[0])]);
+  return [...bcs].filter(b=>!bcParent[b]&&!bcHidden.has(b)).sort((a,b)=>Number(a)-Number(b))};
 /* Losa platser: bocker som ligger utanfor ett hyllplan. Kod <bc>:L<n>. */
 let spotNames={};
 async function loadSpotNames(){
@@ -96,8 +115,9 @@ function locLabel(shelf){
   if(!shelf)return "plats dold – logga in för att se";
   const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
   if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
-  if(sec==="L")return `${bcNames[bc]} · ${spotNames[shelf]||"löst"}`;
-  return (sec==="S"||sec==="K")?`${bcNames[bc]} · hylla ${plan}`:`${bcNames[bc]} · ${SEC[sec]} · plan ${plan}`}
+  const place=bcParent[bc]?`${bcNames[topBc(bc)]} · ${shortName(bc)}`:bcNames[bc];
+  if(sec==="L")return `${place} · ${spotNames[shelf]||"löst"}`;
+  return (sec==="S"||sec==="K")?`${place} · hylla ${plan}`:`${place} · ${SEC[sec]} · plan ${plan}`}
 /* Efter Fas 2.6: alla bocker kommer fran databasen via loadManualBooks. */
 let data=[];
 async function loadStatuses(){
@@ -114,11 +134,11 @@ function buildShelfOptions(){
   const shelves=[...new Set(data.map(d=>d.shelf).filter(Boolean))].sort();
   let lastBc="";
   let grp=null;
-  shelves.forEach(s=>{const bc=s.split(":")[0];
-    if(bc!==lastBc){grp=document.createElement("optgroup");grp.label=bcNames[bc];sel.appendChild(grp);lastBc=bc}
+  shelves.forEach(s=>{const bc=s.split(":")[0];if(bcHidden.has(bc))return;
+    if(bc!==lastBc){grp=document.createElement("optgroup");grp.label=bcParent[bc]?bcNames[topBc(bc)]+" · "+shortName(bc):bcNames[bc];sel.appendChild(grp);lastBc=bc}
     const o=document.createElement("option");o.value=s;o.textContent=locLabel(s).split("· ").slice(1).join("· ");grp.appendChild(o)});
   // bookcase-level options
-  Object.keys(bcNames).forEach(bc=>{const o=document.createElement("option");o.value="bc:"+bc;o.textContent="Hela "+bcNames[bc];sel.insertBefore(o,sel.children[1])});
+  topPlaces().reverse().forEach(bc=>{const o=document.createElement("option");o.value="bc:"+bc;o.textContent="Hela "+bcNames[bc];sel.insertBefore(o,sel.children[1])});
 }
 buildShelfOptions();
 [...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv")).forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("#fCat").appendChild(o)});
@@ -161,7 +181,8 @@ function renderSummary(){
 }
 function render(){
   const norm=s=>s.toLowerCase();
-  const shelfOk=d=>!fShelf||(fShelf.startsWith("bc:")?d.shelf.split(":")[0]===fShelf.slice(3):d.shelf===fShelf);
+  const fMembers=fShelf.startsWith("bc:")?membersOf(fShelf.slice(3)):null;
+  const shelfOk=d=>!fShelf||(fMembers?fMembers.includes(d.shelf.split(":")[0]):d.shelf===fShelf);
   const list=data.filter(d=>(!fs||d.status===fs)&&shelfOk(d)&&(!fCat||d.cat===fCat)&&(!q||norm(d.title+" "+d.author).includes(norm(q))));
   $("#stTot").textContent=data.length;
   $("#stHylla").textContent=data.filter(d=>d.status==="hylla").length;
@@ -179,28 +200,171 @@ $("#fShelf").addEventListener("change",e=>{fShelf=e.target.value;render()});
 $("#fCat").addEventListener("change",e=>{fCat=e.target.value;render()});
 document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");fs=c.dataset.s;render()}));
 render();
+/* ---------- Platser: byt namn, slå ihop, dela upp, ta bort ---------- */
+function booksIn(bcs){return data.filter(d=>d.shelf&&bcs.includes(d.shelf.split(":")[0]))}
+function shelvesIn(bcs){return [...new Set(booksIn(bcs).map(d=>d.shelf))]}
 function renderBcEditor(){
-  const el=$("#bcEditorIns")||$("#bcEditor");if(!el)return;
-  el.innerHTML=Object.keys(bcNames).map(bc=>`<button class="bc-name" data-bc="${bc}" title="Tryck för att byta namn">${ic("pencil")}<span>${esc(bcNames[bc])}</span></button>`).join("")
-    ;
+  const el=$("#bcEditorIns");if(!el)return;
+  const tops=topPlaces();
+  if(pmMerge){
+    el.innerHTML=`<div class="card pm-merge"><b>Slå ihop platser</b>
+      <span class="fine">Välj två eller fler. De blir hyllor inuti en ny plats, och böckerna står kvar där de står.</span>
+      ${tops.map(bc=>`<label class="pm-check"><input type="checkbox" data-mbc="${bc}" ${pmMerge.sel.has(bc)?"checked":""}><span>${esc(bcNames[bc])}</span>
+        <small class="mono">${booksIn(membersOf(bc)).length}</small></label>`).join("")}
+      <span class="lbl">Namn på den nya platsen</span>
+      <input class="inp inp-lg" id="pmName" placeholder="T.ex. Sovrummet" value="${esc(pmMerge.name)}">
+      <div class="btn-row"><button class="btn btn-primary" id="pmDoMerge">Slå ihop</button><button class="btn btn-ghost" id="pmCancel">Avbryt</button></div></div>`;
+    el.querySelectorAll("[data-mbc]").forEach(c=>c.addEventListener("change",()=>{
+      c.checked?pmMerge.sel.add(c.dataset.mbc):pmMerge.sel.delete(c.dataset.mbc);
+      if(!pmMerge.touched){pmMerge.name=commonPrefix([...pmMerge.sel].map(b=>bcNames[b]));el.querySelector("#pmName").value=pmMerge.name}}));
+    el.querySelector("#pmName").addEventListener("input",e=>{pmMerge.name=e.target.value;pmMerge.touched=true});
+    el.querySelector("#pmCancel").addEventListener("click",()=>{pmMerge=null;renderBcEditor()});
+    el.querySelector("#pmDoMerge").addEventListener("click",placeMerge);
+    return;
+  }
+  el.innerHTML=`<button class="btn btn-outline" id="pmStartMerge">Slå ihop platser</button>`+tops.map(bc=>{
+    const mem=membersOf(bc),kids=mem.filter(b=>b!==bc),n=booksIn(mem).length;
+    return `<div class="pm-place">
+      <div class="pm-row"><button class="bc-name" data-bc="${bc}">${ic("pencil")}<span>${esc(bcNames[bc])}</span></button><small class="mono">${n}</small></div>
+      ${kids.map(k=>`<div class="pm-row pm-kid"><button class="bc-name" data-bc="${k}">${ic("pencil")}<span>${esc(shortName(k))}</span></button>
+        <small class="mono">${booksIn([k]).length}</small><button class="link-btn" data-out="${k}">Flytta ut</button></div>`).join("")}
+      <div class="pm-acts">${kids.length?`<button class="link-btn" data-split="${bc}">Dela upp</button>`:""}<button class="link-btn pm-del" data-del="${bc}">Ta bort</button></div>
+    </div>`}).join("");
+  el.querySelector("#pmStartMerge").addEventListener("click",()=>{pmMerge={sel:new Set(),name:"",touched:false};renderBcEditor()});
+  el.querySelectorAll("[data-out]").forEach(b=>b.addEventListener("click",()=>placeMoveOut(b.dataset.out)));
+  el.querySelectorAll("[data-split]").forEach(b=>b.addEventListener("click",()=>placeSplit(b.dataset.split)));
+  el.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>placeDelete(b.dataset.del)));
   el.querySelectorAll("button.bc-name").forEach(b=>b.addEventListener("click",()=>{
     const bc=b.dataset.bc;
     const inp=document.createElement("input");inp.type="text";inp.value=bcNames[bc];inp.className="bc-input";
     b.replaceWith(inp);inp.focus();inp.select();
-    const commit=()=>{const n=inp.value.trim();
-      if(n){bcNames[bc]=n;if(sbUser)sb.from("bc_names").upsert({bc,name:n}).then(()=>{})}
-      buildShelfOptions();render();renderPhotoTabs()};
-    inp.addEventListener("keydown",e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){buildShelfOptions();render()}});
-    inp.addEventListener("blur",commit)}))
+    let done=false;
+    const commit=async()=>{if(done)return;done=true;const n=inp.value.trim();
+      if(n&&n!==bcNames[bc]){
+        if(!sbUser){alert("Logga in för att byta namn.");renderBcEditor();return}
+        const ok=await ask({title:"Byta namn?",text:`"${bcNames[bc]}" byter namn till "${n}".`,buttons:[{label:"Byt namn",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+        if(ok&&await placeSave([{bc,name:n}])){bcNames[bc]=n;toast("Namnet är bytt")}
+      }
+      placesChanged()};
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();if(e.key==="Escape"){done=true;renderBcEditor()}});
+    inp.addEventListener("blur",commit)}));
+}
+function commonPrefix(names){
+  if(names.length<2)return names[0]?names[0].split(/\s[–—-]\s/)[0]:"";
+  const parts=names.map(n=>n.split(/\s[–—-]\s/)[0].trim());
+  return parts.every(x=>x.toLowerCase()===parts[0].toLowerCase())?parts[0]:"";
+}
+/* Sparar ändringar i bc_names. Tar alltid med namnet, så att en plats som
+   bara har ett standardnamn i appen också får en rad i databasen. */
+async function placeSave(rows){
+  /* Alla rader i en upsert måste ha samma fält - fyll i det som inte
+     ändras med nuvarande värde. */
+  const full=rows.map(r=>({bc:r.bc,
+    name:("name" in r)?r.name:(bcNames[r.bc]||("Plats "+r.bc)),
+    parent_bc:("parent_bc" in r)?r.parent_bc:(bcParent[r.bc]||null),
+    hidden:("hidden" in r)?r.hidden:bcHidden.has(r.bc)}));
+  const {error}=await sb.from("bc_names").upsert(full);
+  if(error){alert("Kunde inte spara: "+error.message);return false}
+  return true;
+}
+function placesChanged(){buildShelfOptions();render();renderBcEditor();if(curPlace&&!topPlaces().includes(curPlace))curPlace=null}
+function needLogin(){if(sbUser)return false;alert("Logga in för att ändra platser.");return true}
+async function placeMerge(){
+  if(needLogin())return;
+  const sel=[...pmMerge.sel],name=(pmMerge.name||"").trim();
+  if(sel.length<2){alert("Välj minst två platser att slå ihop.");return}
+  if(!name){alert("Skriv ett namn på den nya platsen.");return}
+  const ok=await ask({title:"Slå ihop platser?",
+    text:`${sel.map(b=>bcNames[b]).join(", ")} blir hyllor i den nya platsen "${name}". Böckerna står kvar där de står, och du kan dela upp platsen igen.`,
+    buttons:[{label:"Slå ihop",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+  if(!ok)return;
+  const nb=nextFreeBc();
+  bcNames[nb]=name;
+  if(!await placeSave([{bc:nb,name,parent_bc:null,hidden:false},...sel.map(b=>({bc:b,parent_bc:nb}))])){delete bcNames[nb];return}
+  sel.forEach(b=>bcParent[b]=nb);
+  pmMerge=null;placesChanged();toast(`"${name}" skapad`);
+}
+async function placeSplit(bc){
+  if(needLogin())return;
+  const kids=membersOf(bc).filter(b=>bcParent[b]===bc);
+  const own=booksIn([bc]).length+PH.filter(p=>p.bc===bc).length;
+  const ok=await ask({title:"Dela upp platsen?",
+    text:`${kids.map(k=>bcNames[k]).join(", ")} blir egna platser igen.${own?"":` "${bcNames[bc]}" har inga egna hyllor och försvinner.`}`,
+    buttons:[{label:"Dela upp",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+  if(!ok)return;
+  const rows=kids.map(k=>({bc:k,parent_bc:null}));
+  if(!own)rows.push({bc,hidden:true});
+  if(!await placeSave(rows))return;
+  kids.forEach(k=>delete bcParent[k]);if(!own)bcHidden.add(bc);
+  placesChanged();toast("Platsen är uppdelad");
+}
+async function placeMoveOut(bc){
+  if(needLogin())return;
+  const ok=await ask({title:"Flytta ut?",text:`"${bcNames[bc]}" blir en egen plats igen.`,
+    buttons:[{label:"Flytta ut",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+  if(!ok||!await placeSave([{bc,parent_bc:null}]))return;
+  delete bcParent[bc];placesChanged();toast("Flyttad");
+}
+async function placeDelete(bc){
+  if(needLogin())return;
+  const mem=membersOf(bc),n=booksIn(mem).length,sh=shelvesIn(mem).length,name=bcNames[bc];
+  const others=topPlaces().filter(b=>b!==bc);
+  const choice=await ask({title:`Ta bort "${name}"?`,
+    text:n?`Platsen har ${n} böcker på ${sh} ${sh===1?"hylla":"hyllor"}. Vad ska hända med hyllorna?`:"Platsen har inga böcker.",
+    buttons:(n&&others.length?[{label:"Flytta hyllorna till en annan plats",value:"move",kind:"primary"}]:[])
+      .concat([{label:n?"Ta bort hyllorna med platsen":"Ta bort platsen",value:"delete",kind:n?"danger":"primary"},{label:"Avbryt",value:false}])});
+  if(!choice)return;
+  if(choice==="move"){
+    const target=await ask({title:"Flytta till vilken plats?",text:`Hyllorna i "${name}" hamnar inuti platsen du väljer. Böckerna står kvar där de står.`,
+      select:others.map(b=>({value:b,label:bcNames[b]})),
+      buttons:[{label:"Flytta",value:"__sel",kind:"primary"},{label:"Avbryt",value:false}]});
+    if(!target)return;
+    const ok=await ask({title:"Är du säker?",text:`${n} böcker på ${sh} ${sh===1?"hylla":"hyllor"} flyttas till "${bcNames[target]}", och "${name}" försvinner som egen plats.`,
+      buttons:[{label:"Ja, flytta",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+    if(!ok||!await placeSave([{bc,parent_bc:target}]))return;
+    bcParent[bc]=target;placesChanged();toast(`Flyttat till ${bcNames[target]}`);return;
+  }
+  if(n){
+    const ok=await ask({title:"Är du säker?",text:`${n} böcker tas bort ur katalogen för gott, tillsammans med platsen "${name}". Det går inte att ångra.`,
+      buttons:[{label:"Ja, ta bort",value:true,kind:"danger"},{label:"Avbryt",value:false}]});
+    if(!ok)return;
+    for(const b of mem){
+      const {error}=await sb.from("manual_books").delete().like("shelf",b+":%");
+      if(error){alert("Kunde inte ta bort böckerna: "+error.message);return}
+    }
+    for(let i=data.length-1;i>=0;i--)if(data[i].shelf&&mem.includes(data[i].shelf.split(":")[0]))data.splice(i,1);
+    /* Luckor på platsen går inte längre att fylla - markera dem klara. */
+    const deadGaps=GAPS.filter(g=>g.shelf&&mem.includes(g.shelf.split(":")[0])&&gapStateOf(g.id)!=="done");
+    for(const g of deadGaps){await sb.from("gap_status").upsert({gap_id:g.id,state:"done",updated_at:new Date().toISOString(),updated_by:sbUser.id});gapState[g.id]={state:"done"}}
+    updateGapCount();
+  }
+  if(!await placeSave(mem.map(b=>({bc:b,hidden:true}))))return;
+  mem.forEach(b=>bcHidden.add(b));
+  placesChanged();toast(`"${name}" är borttagen`);
+}
+/* ---------- Dialog: fråga med knappar (och ev. en väljare) ---------- */
+function ask({title,text,buttons,select}){
+  return new Promise(res=>{
+    const wrap=document.createElement("div");wrap.className="dlg-wrap";
+    wrap.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true"><b>${esc(title)}</b>${text?`<p>${esc(text)}</p>`:""}
+      ${select?`<select class="inp dlg-sel">${select.map(o=>`<option value="${esc(o.value)}">${esc(o.label)}</option>`).join("")}</select>`:""}
+      <div class="dlg-btns">${buttons.map((b,i)=>`<button class="btn ${b.kind==="primary"?"btn-primary":b.kind==="danger"?"btn-danger":"btn-ghost"}" data-i="${i}">${esc(b.label)}</button>`).join("")}</div></div>`;
+    document.body.appendChild(wrap);
+    const close=v=>{wrap.remove();res(v)};
+    wrap.querySelectorAll("[data-i]").forEach(b=>b.addEventListener("click",()=>{
+      const v=buttons[+b.dataset.i].value;close(v==="__sel"?wrap.querySelector(".dlg-sel").value:v)}));
+    wrap.addEventListener("click",e=>{if(e.target===wrap)close(false)});
+    const first=wrap.querySelector(".dlg-btns .btn");if(first)first.focus();
+  });
 }
 function renderPhotoTabs(){renderHome();if(curView==="place")renderPlace()}
 function placeList(){
-  const bcs=new Set([...Object.keys(bcNames),...PH.map(p=>p.bc)]);
-  return [...bcs].sort((a,b)=>Number(a)-Number(b)).map(bc=>{
-    const ph=PH.filter(p=>p.bc===bc);
+  return topPlaces().map(bc=>{
+    const mem=membersOf(bc);
+    const ph=PH.filter(p=>mem.includes(p.bc));
     const big=ph.find(p=>p.src);
-    return {bc,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:big?big.src:(ph[0]?ph[0].thumb:""),
-            count:data.filter(d=>d.shelf&&d.shelf.split(":")[0]===bc).length};
+    return {bc,members:mem,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:big?big.src:(ph[0]?ph[0].thumb:""),
+            count:data.filter(d=>d.shelf&&mem.includes(d.shelf.split(":")[0])).length};
   });
 }
 function renderHome(){
@@ -209,21 +373,22 @@ function renderHome(){
   el.innerHTML=placeList().map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
       ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
       <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("");
-  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=placeList().length+" platser · byt namn eller lägg till";
+  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=placeList().length+" platser · byt namn, slå ihop, ta bort";
 }
 let curPlace=null,curPhoto=null;
 function openPlace(bc,fi){
-  curPlace=String(bc);
+  curPlace=topBc(bc);
   const p=placeList().find(x=>x.bc===curPlace);
   curPhoto=(fi!=null)?fi:(p&&p.photos[0]?p.photos[0].fi:null);
   go("place");
 }
+const capOf=ph=>(ph.bc!==curPlace?shortName(ph.bc)+" · ":"")+ph.cap;
 function pickPhoto(fi){curPhoto=fi;renderPlace()}
 function renderPlace(){
   const el=document.getElementById("view-place");if(!el)return;
   const p=placeList().find(x=>x.bc===curPlace);if(!p){el.innerHTML="";return}
   const sel=PH[curPhoto]&&PH[curPhoto].bc===p.bc?PH[curPhoto]:p.photos[0];
-  const inPlace=data.filter(d=>d.shelf&&d.shelf.split(":")[0]===p.bc);
+  const inPlace=data.filter(d=>d.shelf&&p.members.includes(d.shelf.split(":")[0]));
   const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
   const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
   const books=sel?data.filter(d=>sel.shelves.includes(d.shelf)):inPlace;
@@ -232,11 +397,11 @@ function renderPlace(){
       <button class="pill-back" onclick="go('hem')">← Hem</button></div>
     <div class="pl-head"><h1>${esc(p.name)}</h1><span>${loggedOut?"":p.count+" böcker · "}${p.photos.length} foton</span></div>
     ${p.photos.length?`<div class="thumbs">${p.photos.map(ph=>`<button class="th${sel&&ph.fi===sel.fi?" on":""}" onclick="pickPhoto(${ph.fi})">
-        <img src="${ph.thumb}" alt="" loading="lazy"><span>${esc(ph.cap)}</span></button>`).join("")}</div>`:""}
+        <img src="${ph.thumb}" alt="" loading="lazy"><span>${esc(capOf(ph))}</span></button>`).join("")}</div>`:""}
     ${cats.length?`<div class="card pl-cats"><h2>Vad står här</h2>${cats.map(([c,n])=>`<div class="cat-bar"><span>${esc(c)}</span>
         <span class="track"><span style="width:${Math.round(n/cMax*100)}%;background:${catColor(c)}"></span></span><b>${n}</b></div>`).join("")}</div>`:""}
     <div class="pl-books">
-      ${sel?`<div class="pl-sel"><span>${esc(sel.cap)}${books.length?" · tryck på status för att byta":""}</span><button onclick="lbOpen(${sel.fi})">Visa foto</button></div>`:""}
+      ${sel?`<div class="pl-sel"><span>${esc(capOf(sel))}${books.length?" · tryck på status för att byta":""}</span><button onclick="lbOpen(${sel.fi})">Visa foto</button></div>`:""}
       <div class="booklist">${loggedOut?`<p class="pl-empty">Logga in för att se vilka böcker som står här.</p>`
         :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.</p>`)}</div>
     </div>`;
@@ -1200,9 +1365,9 @@ function nsRender(){
         <button onclick="nsSaveName()">Nästa →</button></div>`;
   }
   else if(S.step===2&&S.mode==="update"){
-    const places=Object.keys(bcNames).sort((a,b)=>Number(a)-Number(b));
+    const places=Object.keys(bcNames).filter(b=>!bcHidden.has(b)).sort((a,b)=>Number(a)-Number(b));
     html+=`<p class="ns-q">Vilken hylla gäller det?</p>
-      <select id="nsBcSel" class="ns-inp">${places.map(b=>`<option value="${b}">${bcNames[b]}</option>`).join("")}</select>
+      <select id="nsBcSel" class="ns-inp">${places.map(b=>`<option value="${b}">${bcParent[b]?esc(bcNames[topBc(b)]+" · "+shortName(b)):esc(bcNames[b])}</option>`).join("")}</select>
       <input id="nsCodeInp" class="ns-inp" placeholder="Hyllkod, t.ex. 1:V3 (valfritt)">
       <p class="ns-hint">Plan räknas nedifrån. Lämnar du koden tom listar jag ut den från fotot.</p>
       <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
