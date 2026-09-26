@@ -504,3 +504,16 @@ body.splashing{overflow:hidden}
 .bc-name{display:flex;align-items:center;gap:10px}
 .bc-name svg{width:16px;height:16px;opacity:.55;flex:none}
 .ib-ph svg{width:22px;height:22px;opacity:.6}
+/* Granskningen bor i en smal kolumn (max 520 px) även på datorn: alltid en
+   spalt, en bok per kort. Tidigare styrdes detta av fönsterbredden, och på
+   datorn klämdes titel- och författarfälten ihop till smala remsor. */
+.analys-box{grid-template-columns:1fr;gap:.5rem}
+.ab-photo{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--cream-300);padding:.3rem 0;flex-direction:row;align-items:flex-start;gap:.5rem}
+.ab-photo img{max-height:30vh;flex:1 1 auto;min-width:0}
+.ab-rows{gap:.6rem}
+.ab-row{grid-template-columns:auto 1fr auto;row-gap:.3rem;background:#fff;border-radius:10px;padding:.5rem .6rem}
+.ab-row .ab-t{grid-column:2;grid-row:1}
+.ab-row .ab-x{grid-column:3;grid-row:1;align-self:center}
+.ab-row .ab-a,.ab-row .ab-c{grid-column:2/-1}
+.ab-known{grid-column:2/-1;margin-top:0}
+.ab-row input,.ab-row select{padding:.45rem .55rem;font-size:14px}

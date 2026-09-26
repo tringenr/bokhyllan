@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926154310";
+const DV="?v=20260926161936";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -680,7 +680,9 @@ function parseGapLines(txt){
     return {title:m[0].trim(),author:(m.slice(1).join(" – ")||"").trim()};
   }).filter(r=>r.title);
 }
+let gapSkippedN=0;
 async function gapNext(id,btn){
+  gapSkippedN=0;
   if(!sbUser){alert("Logga in för att spara luckor.");return}
   const g=GAPS.find(x=>x.id===id);if(!g)return;
   let cat=gapCat[id]||"";
@@ -690,17 +692,14 @@ async function gapNext(id,btn){
   if(btn){btn.disabled=true;btn.textContent="Sparar…"}
   try{
     if(rows.length){
-      const {data:ins,error}=await sb.from("manual_books")
-        .insert(rows.map(r=>({title:r.title,author:r.author,cat:cat||"Okategoriserad",shelf:g.shelf,gap_id:id,created_by:sbUser.id}))).select();
-      if(error)throw error;
-      (ins||[]).forEach(r=>{
-        data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
-        (gapAdded[id]=gapAdded[id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""});
-      });
+      const res=await insertBooks(rows.map(r=>({title:r.title,author:r.author,cat:cat||"Okategoriserad",shelf:g.shelf,gap_id:id,created_by:sbUser.id})));
+      gapSkippedN=res.skipped.length;
+      res.inserted.forEach(r=>(gapAdded[id]=gapAdded[id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""}));
+      rows.length=res.inserted.length;
       buildShelfOptions();rebuildCatFilter();render();
     }
     gapText[id]="";
-    gapMsg=rows.length?`${rows.length} ${rows.length>1?"böcker":"bok"} tillagd${rows.length>1?"a":""} i ${g.cap||locLabel(g.shelf)}`:"Luckan markerad som löst";
+    gapMsg=(gapSkippedN?`${gapSkippedN} fanns redan och hoppades över. `:"")+(rows.length?`${rows.length} ${rows.length>1?"böcker":"bok"} tillagd${rows.length>1?"a":""} i ${g.cap||locLabel(g.shelf)}`:"Luckan markerad som löst");
     gapCur=null;
     await gapSet(id,"done");
     scrollTo({top:0,behavior:"smooth"});
@@ -926,6 +925,38 @@ function analysClose(kind,id){
   const w=document.getElementById("ab-"+analysKey(kind,id));
   if(w){w.style.display="none"}
 }
+/* Lägg in böcker utan att en enda dubblett fäller hela sparningen.
+   Databasen tillåter samma titel + författare bara en gång per hyllkod
+   (manual_books_unik_bok, normaliserat på gemener och trimmad text).
+   Vi sorterar bort sådana rader i förväg, och skulle någon ändå slinka
+   igenom sparar vi rad för rad och hoppar över just den. */
+const bookKey=(t,a,sh)=>[(t||"").trim().toLowerCase(),(a||"").trim().toLowerCase(),sh||""].join("|");
+async function insertBooks(payload){
+  const have=new Set(data.filter(d=>d.shelf).map(d=>bookKey(d.title,d.author,d.shelf)));
+  const fresh=[],skipped=[];
+  payload.forEach(r=>{const k=bookKey(r.title,r.author,r.shelf);
+    if(have.has(k)){skipped.push(r.title)}else{have.add(k);fresh.push(r)}});
+  let inserted=[];
+  if(fresh.length){
+    const {data:ins,error}=await sb.from("manual_books").insert(fresh).select();
+    if(!error)inserted=ins||[];
+    else if(error.code==="23505"||/unik_bok|duplicate key/i.test(error.message||"")){
+      for(const r of fresh){
+        const {data:one,error:e1}=await sb.from("manual_books").insert(r).select();
+        if(!e1)inserted=inserted.concat(one||[]);
+        else if(e1.code==="23505"||/unik_bok|duplicate key/i.test(e1.message||""))skipped.push(r.title);
+        else throw e1;
+      }
+    }else throw error;
+  }
+  inserted.forEach(r=>{
+    data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",
+               shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+    if(r.description)BOOK_INFO[r.title]=r.description;
+  });
+  return {inserted,skipped};
+}
+const skippedTxt=sk=>sk.length?` ${sk.length} fanns redan på hyllan och hoppades över.`:"";
 async function analysSave(kind,id,btn){
   const key=analysKey(kind,id),st=analysBooks[key];
   if(!st)return;
@@ -948,18 +979,12 @@ async function analysSave(kind,id,btn){
       cat:(b.cat||"Okategoriserad"), shelf,
       description:(b.description||"").trim()||null,
       source:"claude", uncertain:!!b.uncertain, created_by:sbUser.id}));
-    const {data:ins,error}=await sb.from("manual_books").insert(payload).select();
-    if(error)throw error;
-    (ins||[]).forEach(r=>{
-      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",
-                 shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
-      if(r.description)BOOK_INFO[r.title]=r.description;
-    });
+    const {inserted:ins,skipped}=await insertBooks(payload);
     delete analysBooks[key];
     analysClose(kind,id);
     buildShelfOptions();rebuildCatFilter();render();
     if(kind==="gap")renderGaps();else await loadNewShelves();
-    alert(`${ins.length} böcker inlagda på ${locLabel(shelf)}.\n\nKontrollera dem i boklistan och klarmarkera hyllan när du är nöjd.`);
+    alert(`${ins.length} ${ins.length===1?"bok":"böcker"} inlagda på ${locLabel(shelf)}.${skippedTxt(skipped)}\n\nKontrollera dem i boklistan och klarmarkera hyllan när du är nöjd.`);
   }catch(e){
     alert("Kunde inte spara: "+(e.message||e));
     if(btn){btn.disabled=false;btn.textContent=label}
