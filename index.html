@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20260926185549">
+<link rel="stylesheet" href="css/style.css?v=20260926194358">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
@@ -22,7 +22,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20260926185549";
+  var MY="20260926194358";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -167,11 +167,15 @@
     <div class="page-head"><h1>Platser</h1></div>
     <p class="fine">Tryck på ett namn för att byta det. Namnen delas med familjen när du är inloggad.</p>
     <div id="bcEditorIns" class="bc-editor"></div>
-    <h2 class="sub-h">Lägg till eller fota om</h2>
-    <p class="fine">Lägg till en ny plats i hemmet, eller skicka ett nytt foto av en hylla som ändrats.</p>
-    <button class="btn btn-primary" id="nsStart">Ny hylla eller nytt foto</button>
-    <div id="nsWizard" class="ns-wiz"></div>
-    <div id="nsList"></div>
+    <div class="pl-photos">
+      <div class="page-head pl-h"><h2>Foton</h2><span class="mono muted" id="plDoneTxt"></span></div>
+      <div class="progress"><span id="plProg"></span></div>
+      <p class="fine">Varje foto analyseras till en boklista. Rätta det som blivit fel och markera fotot som klart.</p>
+      <button class="pl-new" id="nsStart"><i data-ic="camera"></i>Ny hylla eller nytt foto</button>
+      <div id="nsWizard" class="ns-wiz"></div>
+      <div id="plMsg"></div>
+      <div id="nsList"></div>
+    </div>
   </div>
   <div class="set-page" data-page="kategorier">
     <div class="page-head"><h1>Kategorier</h1></div>
@@ -238,6 +242,6 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20260926185549"></script>
+<script src="js/app.js?v=20260926194358"></script>
 </body>
 </html>
