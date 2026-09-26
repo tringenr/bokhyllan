@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926184132";
+const DV="?v=20260926184833";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1516,6 +1516,13 @@ async function nsFinish(){
    klara ligger hopfällda längst ner, så att de ändå går att läsa av igen
    (t.ex. när en bok saknades) eller öppna på nytt. */
 let nsDoneOpen=false;
+const NS_KEEP_DAYS=30;
+/* Dagar kvar innan ett klarmarkerat foto försvinner ur listan. Saknar raden
+   tidpunkt (klarmarkerad innan done_at fanns) räknas den som gammal. */
+function nsDaysLeft(r){
+  if(!r.done_at)return 0;
+  return Math.ceil(NS_KEEP_DAYS-(Date.now()-new Date(r.done_at).getTime())/864e5);
+}
 function nsItem(r){
   const done=r.state==="done";
   const thumb=r.photo_data||r.photo_url;
@@ -1528,6 +1535,7 @@ function nsItem(r){
       ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
       <div class="ns-titles"><span>${esc(r.name)}${r.label?" · "+esc(r.label.trim()):""}</span>
         <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
+        ${done?`<div class="ns-note">Försvinner ur listan om ${nsDaysLeft(r)} ${nsDaysLeft(r)===1?"dag":"dagar"}</div>`:""}
       </div>
       ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
         <textarea class="note-ta" id="nt-shelf-${r.id}">${esc(r.claude_note)}</textarea>
@@ -1550,10 +1558,10 @@ async function loadNewShelves(){
   const el=document.getElementById("nsList");if(!el)return;
   if(!rows||!rows.length){el.innerHTML="";return}
   const byTime=rows.slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id));
-  const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done");
+  const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done"&&nsDaysLeft(r)>0);
   el.innerHTML=(open.length?`<h4 class="ns-listh">Att klarmarkera (${open.length})</h4>`+open.map(nsItem).join("")
       :`<p class="fine">Alla inskickade hyllfoton är klarmarkerade.</p>`)+
-    (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length})</summary>${done.map(nsItem).join("")}</details>`:"");
+    (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>${done.map(nsItem).join("")}</details>`:"");
   const det=el.querySelector(".ns-done");if(det)det.addEventListener("toggle",()=>nsDoneOpen=det.open);
 }
 /* Foton som laddats upp via "Ny hylla" bor i databasen, inte i photos.json.
@@ -1613,7 +1621,7 @@ let nsRot={};
 function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
 async function nsSetState(id,state){
   if(!sbUser){alert("Logga in först.");return false}
-  const {error}=await sb.from("new_shelves").update({state}).eq("id",id);
+  const {error}=await sb.from("new_shelves").update({state,done_at:state==="done"?new Date().toISOString():null}).eq("id",id);
   if(error){alert("Kunde inte spara: "+error.message);return false}
   await loadNewShelves();return true;
 }
