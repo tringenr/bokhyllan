@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926181133";
+const DV="?v=20260926185549";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -367,7 +367,8 @@ function renderPhotoTabs(){renderHome();if(curView==="place")renderPlace()}
 function placeList(){
   return topPlaces().map(bc=>{
     const mem=membersOf(bc);
-    const ph=PH.filter(p=>mem.includes(p.bc));
+    const ph=PH.filter(p=>mem.includes(p.bc)&&!p.replaced)
+      .sort((a,b)=>cmpKey(photoKey(a,mem),photoKey(b,mem)));
     const big=ph.find(p=>p.src);
     return {bc,members:mem,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:big?big.src:(ph[0]?ph[0].thumb:""),
             count:data.filter(d=>d.shelf&&mem.includes(d.shelf.split(":")[0])).length};
@@ -1512,51 +1513,117 @@ async function nsFinish(){
     if(b2){b2.disabled=false;b2.style.opacity=""}
   }
 }
+/* Inskickade hyllfoton. Bara de som inte är klarmarkerade syns i listan;
+   klara ligger hopfällda längst ner, så att de ändå går att läsa av igen
+   (t.ex. när en bok saknades) eller öppna på nytt. */
+let nsDoneOpen=false,nsRepOpen=false;
+const NS_KEEP_DAYS=30;
+/* Dagar kvar innan ett klarmarkerat foto försvinner ur listan. Saknar raden
+   tidpunkt (klarmarkerad innan done_at fanns) räknas den som gammal. */
+function nsDaysLeft(r){
+  if(!r.done_at)return 0;
+  return Math.ceil(NS_KEEP_DAYS-(Date.now()-new Date(r.done_at).getTime())/864e5);
+}
+function nsItem(r){
+  const done=r.state==="done";
+  const thumb=r.photo_data||r.photo_url;
+  const code=shelfCodeForRow(r);
+  const antal=code?data.filter(d=>d.shelf===code).length:0;
+  const status=antal?`${antal} böcker i katalogen`
+    :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
+  return `<div class="ns-item">
+    <div class="ns-head-row">
+      ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
+      <div class="ns-titles"><span>${esc(r.name)} · ${esc(nsCap(r))}</span>
+        <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
+        ${done?`<div class="ns-note">Försvinner ur listan om ${nsDaysLeft(r)} ${nsDaysLeft(r)===1?"dag":"dagar"}</div>`:""}
+      </div>
+      ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
+        <textarea class="note-ta" id="nt-shelf-${r.id}">${esc(r.claude_note)}</textarea>
+        <div class="ns-item-acts" style="margin-top:.4rem">
+          <button onclick="saveNote('shelf',${r.id},this)">Spara ändringar</button>
+          <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
+        </div></div>`:""}</div>
+    <div class="analys-box" id="ab-shelf-${r.id}" style="display:none"></div>
+    <div class="ns-item-acts">
+      ${thumb?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
+      ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">Läs av</button>`:""}
+      ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">Rätta</button>`:""}
+      ${done?`<button class="ghost" onclick="nsReopen(${r.id})">Öppna igen</button>`:`<button onclick="nsDone(${r.id})">Klar</button>`}
+    </div></div>`;
+}
 async function loadNewShelves(){
   const {data:rows}=await sb.from("new_shelves").select("*").order("created_at",{ascending:false});
+  window.__nsRows=rows||[];
+  syncShelfPhotos(rows);
   const el=document.getElementById("nsList");if(!el)return;
   if(!rows||!rows.length){el.innerHTML="";return}
-  el.innerHTML=`<h4 class="ns-listh">Inskickade hyllfoton</h4>`+rows.map(r=>{
-    const done=r.state==="done";
-    /* Miniatyr och en rad status. Hela avlasningstexten gjorde listan
-       olasbar - den finns kvar bakom Visa och Ratta. */
-    const thumb=r.photo_data||r.photo_url;
-    const code=shelfCodeForRow(r);
-    const antal=code?data.filter(d=>d.shelf===code).length:0;
-    const status=antal?`${antal} böcker i katalogen`
-      :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
-    return `<div class="ns-item">
-      <div class="ns-head-row">
-        ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
-        <div class="ns-titles"><span>${esc(r.name)}${r.label?" · "+esc(r.label.trim()):""} <span class="badge ${done?"b-success":"b-warning"}">${done?"Klar":"Ej klar"}</span></span>
-          <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
-        </div>
-        ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
-          <textarea class="note-ta" id="nt-shelf-${r.id}">${(r.claude_note||"").replace(/</g,"&lt;")}</textarea>
-          <div class="ns-item-acts" style="margin-top:.4rem">
-            <button onclick="saveNote('shelf',${r.id},this)">💾 Spara ändringar</button>
-            <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
-          </div></div>`:""}</div>
-      <div class="analys-box" id="ab-shelf-${r.id}" style="display:none"></div>
-      <div class="ns-item-acts">
-        ${r.photo_data||r.photo_url?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
-        ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">🤖 Analysera</button>`:""}
-        ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">✏️ Rätta</button>`:""}
-        ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
-      </div></div>`}).join("");
-  window.__nsRows=rows;
-  syncShelfPhotos(rows);
+  const byTime=rows.slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id));
+  const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done"&&nsDaysLeft(r)>0);
+  el.innerHTML=(open.length?`<h4 class="ns-listh">Att klarmarkera (${open.length})</h4>`+open.map(nsItem).join("")
+      :`<p class="fine">Alla inskickade hyllfoton är klarmarkerade.</p>`)+
+    (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>${done.map(nsItem).join("")}</details>`:"");
+  const rep=PH.filter(x=>x.replaced&&x.replacedAt&&(Date.now()-x.replacedAt)<NS_KEEP_DAYS*864e5)
+    .sort((a,b)=>b.replacedAt-a.replacedAt);
+  if(rep.length)el.insertAdjacentHTML("beforeend",`<details class="ns-done ns-replaced"${nsRepOpen?" open":""}>
+    <summary>Ersatta foton (${rep.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>
+    <p class="fine">Fotona har ersatts av nyare foton av samma hylla. Vill du ha tillbaka ett gammalt foto: öppna det nya igen under Klarmarkerade.</p>
+    ${rep.map(x=>{const left=Math.ceil(NS_KEEP_DAYS-(Date.now()-x.replacedAt)/864e5);
+      return `<div class="ns-item"><div class="ns-head-row">
+        <img class="ns-thumb-img" src="${x.thumb}" alt="" onclick="showPhoto(${x.fi})">
+        <div class="ns-titles"><span>${esc(bcNames[x.bc]||"")} · ${esc(x.cap)}</span>
+          <div class="ns-note">Ersatt ${new Date(x.replacedAt).toLocaleDateString("sv-SE")}${x.replacedBy?` av "${esc(x.replacedBy.cap)}"`:""}</div>
+          <div class="ns-note">Försvinner ur listan om ${left} ${left===1?"dag":"dagar"}</div></div></div>
+        <div class="ns-item-acts"><button class="ghost" onclick="showPhoto(${x.fi})">Visa</button></div></div>`}).join("")}</details>`);
+  const det=el.querySelector(".ns-done:not(.ns-replaced)");if(det)det.addEventListener("toggle",()=>nsDoneOpen=det.open);
+  const rdet=el.querySelector(".ns-replaced");if(rdet)rdet.addEventListener("toggle",()=>nsRepOpen=rdet.open);
 }
 /* Foton som laddats upp via "Ny hylla" bor i databasen, inte i photos.json.
    Lägg in dem i fotolistan så att platsvyn visar dem. Den nedskalade
    kopian (photo_data) används - originalet i lagringen kan vara flera MB. */
+/* Ett foto ersätts när ett NYARE, klarmarkerat foto täcker alla dess hyllor.
+   Fotona ur repot räknas som äldst. Det ersatta fotot försvinner ur
+   platsvyn och ligger i 30 dagar under "Ersatta foton" i Platser.
+   Tidpunkten är när det nya fotot klarmarkerades; saknas den (klart innan
+   done_at fanns) räknas ersättningen som gammal. */
+function markReplaced(){
+  PH.forEach(x=>{x.replaced=false;x.replacedAt=0;x.replacedBy=null});
+  PH.forEach(x=>{
+    if(!x.shelves.length)return;
+    const newer=PH.filter(y=>y!==x&&y.db&&y.done&&y.shelves.length&&(!x.db||y.createdAt>x.createdAt)&&y.shelves.some(c=>x.shelves.includes(c)));
+    const covered=new Set(newer.flatMap(y=>y.shelves));
+    if(!newer.length||!x.shelves.every(c=>covered.has(c)))return;
+    x.replaced=true;
+    x.replacedAt=Math.max(...newer.map(y=>y.doneAt||0));
+    x.replacedBy=newer.find(y=>y.doneAt===x.replacedAt)||newer[0];
+  });
+}
+/* Sortering i platsvyn: översta planet först, vänster före höger, lösa
+   platser sist - samma ordning som fotona i photos.json har. */
+function photoKey(ph,members){
+  const codes=ph.shelves.length?ph.shelves:[ph.bc+":L0"];
+  const loose=codes.every(c=>/:L\d+$/.test(c)||c==="4:K3");
+  const plan=Math.max(...codes.map(c=>+(c.match(/(\d+)$/)||[0,0])[1]));
+  const sec={V:0,H:1,S:2,K:2,L:3}[(codes[0].split(":")[1]||"S")[0]]??2;
+  return [members.indexOf(ph.bc),loose?1:0,-plan,sec,ph.db?1:0,ph.db?ph.createdAt:ph.fi];
+}
+function cmpKey(a,b){for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]<b[i]?-1:1;return 0}
+/* Läsbart namn på ett inskickat foto. Står hyllkoden som etikett ("1:V3")
+   blir det "Vänster · plan 3". */
+function nsCap(r){
+  const lbl=(r.label||"").trim(),code=shelfCodeForRow(r);
+  return /^\d+:[VHSKL]\d+$/i.test(lbl)&&code?locLabel(code).split(" · ").slice(1).join(" · ").replace(/^./,c=>c.toUpperCase()):(lbl||"Foto");
+}
 function syncShelfPhotos(rows){
   for(let i=PH.length-1;i>=0;i--)if(PH[i].db)PH.splice(i,1);
   (rows||[]).slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id)).forEach(r=>{
     const src=r.photo_data||r.photo_url;if(!src||!r.bc)return;
     const code=shelfCodeForRow(r);
-    PH.push({bc:String(r.bc),cap:(r.label||"").trim()||"Foto",src,thumb:src,shelves:code?[code]:[],fi:PH.length,db:true});
+    const cap=nsCap(r);
+    PH.push({bc:String(r.bc),cap,src,thumb:src,shelves:code?[code]:[],fi:PH.length,db:true,
+      nsId:r.id,done:r.state==="done",doneAt:r.done_at?new Date(r.done_at).getTime():0,createdAt:new Date(r.created_at||0).getTime()});
   });
+  markReplaced();
   renderHome();if(curView==="place")renderPlace();
 }
 /* Vilken hyllkod hor det har fotot till? Forst den gissade koden ur
@@ -1602,17 +1669,23 @@ function nsView(id){
 }
 let nsRot={};
 function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
-async function nsDone(id){
-  if(!sbUser){alert("Logga in först.");return}
-  await sb.from("new_shelves").update({state:"done"}).eq("id",id);
-  await loadNewShelves();
+async function nsSetState(id,state){
+  if(!sbUser){alert("Logga in först.");return false}
+  const {error}=await sb.from("new_shelves").update({state,done_at:state==="done"?new Date().toISOString():null}).eq("id",id);
+  if(error){alert("Kunde inte spara: "+error.message);return false}
+  await loadNewShelves();return true;
 }
+async function nsDone(id){
+  const r=(window.__nsRows||[]).find(x=>x.id===id);
+  if(await nsSetState(id,"done"))toast(`${r?nsCap(r):"Hyllan"} är klar – finns under Klarmarkerade`);
+}
+async function nsReopen(id){if(await nsSetState(id,"waiting"))toast("Öppnad igen")}
 const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
-window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;
+window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";

@@ -546,3 +546,17 @@ body.splashing{overflow:hidden}
 .btn-danger{background:var(--danger-500);color:#fff}
 .btn-danger:hover{background:#C23A35}
 .ns-titles .badge{font-size:11px;padding:2px 8px;margin-left:4px;vertical-align:1px}
+/* Inskickade hyllfoton: ett kort per foto, klara hopfällda längst ner */
+#nsList{display:flex;flex-direction:column;gap:8px}
+.ns-item{padding:12px;margin:0;gap:10px;box-shadow:var(--shadow-sm)}
+.ns-head-row{gap:12px}
+.ns-thumb-img{width:56px;height:56px;border-radius:10px}
+.ns-titles>span{font:600 14px var(--font-body)}
+.ns-note{font-size:12px}
+.ns-item-acts{flex-wrap:wrap;gap:6px}
+.ns-item-acts button{font-size:12px;padding:6px 12px}
+.ns-listh{margin:8px 0 0}
+.ns-done{background:transparent;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px}
+.ns-done summary{font:600 13px var(--font-body);color:var(--text-secondary);padding:8px 0;cursor:pointer}
+.ns-done[open]{display:flex;flex-direction:column;gap:8px}
+.ns-done .ns-item{opacity:.85}
