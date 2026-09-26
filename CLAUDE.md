@@ -34,9 +34,15 @@ kontrollerade funktioner, inte bara att det blev grönt — en syntaxkontroll
 räcker inte, en raderad funktion har en gång slagit ut hela appen utan
 syntaxfel.
 
-Versionsstämpla vid varje ändring av css/js/data: `?v=<tidsstämpel>` i
-`index.html` och `const DV` i `js/app.js`. Utan det sitter användaren kvar i
-webbläsarens cache.
+Versionsstämpla vid varje ändring av css/js/data:
+
+    sh test/versionsstampla.sh
+
+Skriptet sätter samma nummer på `?v=` och `var MY` i `index.html`, `const DV`
+i `js/app.js` och `data/version.json`. Appen jämför `MY` med `version.json`
+vid start och när den kommer tillbaka från bakgrunden, och laddar om sig
+själv när de skiljer sig - det är så appen på iPhones hemskärm uppdateras.
+Starttestet fäller en push där numren inte stämmer.
 
 Pusha inte flera gånger i snabb följd — GitHub Pages avbryter pågående
 publiceringar. Vänta på grön bock i Actions mellan varje push.

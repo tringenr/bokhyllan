@@ -136,6 +136,17 @@ setTimeout(() => {
     catch (e) { fel.push(`data/${f} är trasig JSON: ${e.message}`); }
   }
 
+  // 4. Stämmer versionsnumren? Annars slår automatisk uppdatering aldrig
+  //    till (MY == version.json) eller laddar om i onödan.
+  try {
+    const my = (html.match(/var MY="(\d+)"/) || [])[1];
+    const vj = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "version.json"), "utf8")).v;
+    const qs = [...new Set([...html.matchAll(/\?v=(\d+)/g)].map((x) => x[1]))];
+    const dv = (appSrc.match(/const DV="\?v=(\d+)"/) || [])[1];
+    if (!my || my !== vj || qs.length !== 1 || qs[0] !== vj || dv !== vj)
+      fel.push(`versionsnumren stämmer inte: MY=${my}, version.json=${vj}, ?v=${qs.join("/")}, DV=${dv} — alla ska vara lika`);
+  } catch (e) { fel.push("kunde inte kontrollera versionsnumren: " + e.message); }
+
   // ---- Utfall ---------------------------------------------------------
   if (fel.length) {
     console.error("\nSTARTTEST MISSLYCKADES\n");
