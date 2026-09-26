@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926180717";
+const DV="?v=20260926181133";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -143,15 +143,21 @@ function buildShelfOptions(){
 buildShelfOptions();
 [...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv")).forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("#fCat").appendChild(o)});
 const STATUS={hylla:["På plats","s-hylla"],utlanad:["Utlånad","s-utlanad"],flyter:["Flyter runt","s-flyter"]};
-async function saveBook(d){
+/* Sparar status. Misslyckas det säger vi till och backar - tidigare
+   svaldes felet, och ändringen såg sparad ut fast den inte var det. */
+async function saveBook(d,prev){
   if(!sbUser)return;
-  await sb.from("book_status").upsert({book_id:d.id,status:d.status,lent_to:d.lentTo||"",seen_date:d.ts,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+  const {error}=await sb.from("book_status").upsert({book_id:d.id,status:d.status,lent_to:d.lentTo||"",seen_date:d.ts,updated_at:new Date().toISOString(),updated_by:sbUser.id});
+  if(error){
+    if(prev)Object.assign(d,prev);render();
+    alert("Statusen kunde inte sparas: "+(error.message||error));
+  }
 }
 function save(){}
-function cycle(id){if(!sbUser){alert("Logga in för att ändra status.");return}const d=data.find(x=>x.id===id);const order=["hylla","utlanad","flyter"];d.status=order[(order.indexOf(d.status)+1)%3];
+function cycle(id){if(!sbUser){alert("Logga in för att ändra status.");return}const d=data.find(x=>x.id===id);const prev={status:d.status,lentTo:d.lentTo,ts:d.ts};const order=["hylla","utlanad","flyter"];d.status=order[(order.indexOf(d.status)+1)%3];
 d.ts=new Date().toISOString().slice(0,10);
 if(d.status!=="utlanad")d.lentTo="";
-saveBook(d);render();
+saveBook(d,prev);render();
 if(d.status==="utlanad"){const inp=document.querySelector(`input[data-lent="${id}"]`);if(inp)inp.focus()}}
 function setLent(id,val){if(!sbUser)return;const d=data.find(x=>x.id===id);d.lentTo=val.trim();saveBook(d);
 document.querySelectorAll(`button[data-sbtn="${id}"]`).forEach(btn=>btn.textContent="Utlånad"+(d.lentTo?" → "+d.lentTo:""))}
@@ -892,7 +898,7 @@ async function gapDelBook(gid,rowId){
   const {error}=await sb.from("manual_books").delete().eq("id",rowId);
   if(error){alert("Kunde inte ta bort: "+error.message);return}
   gapAdded[gid]=(gapAdded[gid]||[]).filter(x=>x.id!==rowId);
-  const k=data.findIndex(d=>d.id===1e6+rowId);if(k>=0)data.splice(k,1);
+  const k=data.findIndex(d=>d.id===rowId);if(k>=0)data.splice(k,1);
   render();renderGaps();
 }
 function catOptions(sel){
@@ -1127,7 +1133,7 @@ async function insertBooks(payload){
     }else throw error;
   }
   inserted.forEach(r=>{
-    data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",
+    data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",
                shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
     if(r.description)BOOK_INFO[r.title]=r.description;
   });
@@ -1257,7 +1263,10 @@ async function loadManualBooks(){
   if(sbUser){
     const {data:rows}=await sb.from("manual_books").select("*");
     if(rows)rows.forEach(r=>{
-      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+      /* Bokens id är manual_books.id rakt av. Den gamla förskjutningen med en
+         miljon (från tiden då böckerna låg i en fil) gör att databasens regler
+         avvisar statusändringar: de kräver att book_id finns i manual_books. */
+      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
       if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
       if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
     });
@@ -1265,7 +1274,7 @@ async function loadManualBooks(){
     const {data:rows}=await sb.from("books_public").select("*");
     if(rows)rows.forEach(r=>{
       /* Ingen hyllplats - utloggade ska inte veta var bocker star. */
-      data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
+      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
       if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
     });
   }
