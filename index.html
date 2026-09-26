@@ -4,9 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#f7f5f1">
+<meta name="theme-color" content="#F2EAE4">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20260906190503">
+<link rel="stylesheet" href="css/style.css?v=20260926154310">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
@@ -51,103 +54,174 @@
 })();
 </script>
 
-<header class="app-bar">
-  <span class="app-title">Bokhyllan</span>
-  <span class="bar-btns"><button id="shareBtn" class="auth-icon" aria-label="Dela">🔗</button><button id="authToggle" class="auth-icon" aria-label="Konto">👤</button></span>
-</header>
-<div id="authPanel" class="auth-panel"><div id="authBar" class="auth-bar"></div></div>
+<div id="splash" class="splash" aria-hidden="true">
+  <div class="splash-in">
+    <span class="splash-title" id="splashTitle">Min Bokhylla</span>
+    <span class="splash-line"></span>
+    <span class="splash-track"><span class="splash-fill"></span></span>
+  </div>
+</div>
+<div class="safe-top" aria-hidden="true"></div>
 
 <main class="wrap">
 
-<div id="tab-sok">
-  <button class="hero-shelves" id="heroShelves">
-    <span class="hero-txt">Bokhyllan<small>Bläddra bland alla hyllor och foton</small></span>
-  </button>
-
-  <button class="gap-reminder" id="gapReminder" style="display:none"></button>
-  <div class="search-row">
-    <input id="q" type="search" placeholder="Sök titel eller författare…">
+<!-- ================= HEM ================= -->
+<section id="view-hem" class="view">
+  <div class="home-head">
+    <button class="avatar" id="homeAvatar" data-edit aria-label="Byt namn eller bild"></button>
+    <button class="home-title" data-edit>
+      <span id="homeName">Min Bokhylla</span>
+      <small>Tryck för att byta namn eller bild</small>
+    </button>
+    <button class="icon-btn" id="gearBtn" aria-label="Inställningar"><i data-ic="settings"></i><span class="dot" id="gearDot"></span></button>
   </div>
+
+  <label class="search"><i data-ic="search"></i><input id="q" type="search" placeholder="Sök titel eller författare" autocomplete="off"></label>
   <div class="quick-row" id="quickRow"></div>
 
-  <button class="list-toggle" id="listToggle">📖 Visa hela boklistan <span id="listCount"></span></button>
-
-  <div id="listWrap" style="display:none">
+  <div id="listWrap" class="list-wrap" style="display:none">
     <div class="controls">
       <select id="fShelf"></select>
       <select id="fCat"><option value="">Alla kategorier</option></select>
+    </div>
+    <div class="chips">
       <button class="chip active" data-s="">Alla</button>
       <button class="chip" data-s="hylla">På plats</button>
       <button class="chip" data-s="utlanad">Utlånad</button>
       <button class="chip" data-s="flyter">Flyter runt</button>
     </div>
-    <div class="stats">
-      <div class="stat"><b id="stTot">0</b><span>böcker</span></div>
-      <div class="stat"><b id="stHylla">0</b><span>på plats</span></div>
-      <div class="stat"><b id="stUt">0</b><span>utlånade</span></div>
-      <div class="stat"><b id="stFly">0</b><span>flyter runt</span></div>
-    </div>
     <div id="count"></div>
-    <div class="grid" id="grid"></div>
+    <div class="booklist" id="grid"></div>
   </div>
+  <button class="list-toggle" id="listToggle">Visa hela boklistan</button>
 
-<section class="photos" id="photos">
-  <h2>Bokhyllan</h2>
-  <p class="photo-intro">Klicka på en hylla för att se bilden i stort format och böckerna som står där. <span class="badge-hard">Rödmarkerat</span> = svårlästa ryggar.</p>
-  <div id="photoGrid"></div>
-  <div id="shelfView" style="display:none">
-    <button class="chip" id="backToGrid">← Alla hyllor</button>
-    <div id="shelfViewBody"></div>
+  <div class="place-grid" id="placeGrid"></div>
+
+  <div class="summary">
+    <div class="sum-top"><span class="sum-n" id="stTot">0</span><span class="sum-lbl" id="stPlaces">böcker</span></div>
+    <div class="sum-bar" id="sumBar"></div>
+    <div class="sum-legend">
+      <span><i class="lg" style="background:var(--pink-500)"></i><b id="stHylla">0</b>på plats</span>
+      <span><i class="lg" style="background:var(--orange-500)"></i><b id="stUt">0</b>utlånade</span>
+      <span><i class="lg" style="background:var(--magenta-300)"></i><b id="stFly">0</b>flyter runt</span>
+    </div>
   </div>
 </section>
-</div><!-- /tab-sok -->
 
-<div id="tab-salj" style="display:none">
-  <h2 class="salj-h">💰 Säljbara böcker</h2>
-  <p id="sellNote" class="photo-intro"></p>
+<!-- ================= PLATS ================= -->
+<section id="view-place" class="view" style="display:none"></section>
+
+<!-- ================= DELADE ================= -->
+<section id="view-delade" class="view" style="display:none">
+  <div class="page-head"><h1>Delade</h1><span class="badge b-warning">Kommer snart</span></div>
+  <div class="card share-card">
+    <div class="share-who"><span class="avatar avatar-48" id="shareAvatar"></span>
+      <div><b id="shareName">Min Bokhylla</b><small class="mono" id="shareMeta"></small></div></div>
+    <p>Dela din hylla med vänner och bekanta. De kan bläddra bland dina böcker och se vad som går att låna.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm" id="shareBtn">Bjud in</button>
+      <button class="btn btn-outline btn-sm" id="copyLink">Kopiera länk</button>
+    </div>
+    <p class="fine" id="shareMsg">Mottagaren ser titlar, författare och kategorier. Var böckerna står och vem som lånat dem syns bara för inloggade.</p>
+  </div>
+  <h2 class="sub-h">Delat med dig</h2>
+  <div class="empty">Ingen har delat en hylla med dig än.</div>
+</section>
+
+<!-- ================= SÄLJ ================= -->
+<section id="view-salj" class="view" style="display:none">
+  <div class="page-head"><h1>Sälj</h1></div>
   <div id="sellList"></div>
-</div>
+  <p id="sellNote" class="fine"></p>
+</section>
 
-<div id="tab-install" style="display:none">
-  <h2 class="salj-h">⚙️ Inställningar</h2>
-  <h3 class="ins-h">Hyllornas namn</h3>
-  <p class="photo-intro">Klicka för att byta namn. Namnen delas med familjen när du är inloggad.</p>
-  <div id="bcEditorIns"></div>
-  <h3 class="ins-h">Hyllor</h3>
-  <p class="photo-intro">Lägg till en ny plats i hemmet, eller skicka ett nytt foto av en hylla som ändrats.</p>
-  <button class="ns-start" id="nsStart">➕ Ny hylla</button>
-  <div id="nsWizard" class="ns-wiz"></div>
-  <div id="nsList"></div>
+<!-- ================= LUCKOR ================= -->
+<section id="view-gaps" class="view" style="display:none">
+  <button class="back-link" data-back-settings>← Inställningar</button>
+  <div class="page-head"><h1>Luckor</h1><span class="mono muted" id="gapSolvedTxt"></span></div>
+  <div class="progress"><span id="gapProg"></span></div>
+  <div id="gapFlow"></div>
+  <details class="gap-all"><summary>Alla luckor</summary><div id="gapList"></div></details>
+</section>
 
-  <h3 class="ins-h">Kategorier</h3>
-  <p class="photo-intro">Byt namn eller slå ihop kategorier. Skriv samma namn på två för att slå ihop dem.</p>
-  <div id="catEditor"></div>
+<!-- ================= INSTÄLLNINGAR: UNDERSIDOR ================= -->
+<section id="view-set" class="view" style="display:none">
+  <button class="back-link" data-back-settings>← Inställningar</button>
+  <div class="set-page" data-page="platser">
+    <div class="page-head"><h1>Platser</h1></div>
+    <p class="fine">Tryck på ett namn för att byta det. Namnen delas med familjen när du är inloggad.</p>
+    <div id="bcEditorIns" class="bc-editor"></div>
+    <h2 class="sub-h">Lägg till eller fota om</h2>
+    <p class="fine">Lägg till en ny plats i hemmet, eller skicka ett nytt foto av en hylla som ändrats.</p>
+    <button class="btn btn-primary" id="nsStart">Ny hylla eller nytt foto</button>
+    <div id="nsWizard" class="ns-wiz"></div>
+    <div id="nsList"></div>
+  </div>
+  <div class="set-page" data-page="kategorier">
+    <div class="page-head"><h1>Kategorier</h1></div>
+    <p class="fine">Byt namn eller slå ihop kategorier. Skriv samma namn på två för att slå ihop dem.</p>
+    <div id="catEditor"></div>
+  </div>
+  <div class="set-page" data-page="konto">
+    <div class="page-head"><h1>Konto</h1></div>
+    <p class="fine">Logga in för att se var böckerna står, ändra status och lägga till böcker. Konton skapas av den som administrerar hyllan.</p>
+    <div id="authBar" class="auth-bar card"></div>
+  </div>
+  <div class="set-page" data-page="om">
+    <div class="page-head"><h1>Om appen</h1></div>
+    <div class="card note">Bokhyllan är familjens katalog över böckerna hemma, avlästa från foton av hyllorna. Status och ändringar sparas i en delad databas och syns direkt för alla som är inloggade.<br><br>Bokbeskrivningarna är skrivna av Claude och kan innehålla fel.<br><br><b>På önskelistan:</b> exakta bokmarkeringar på fotona, Arbetsrummet och barnens rum, kökets nedersta hylla, jämförelse mot katalogen när en hylla fotas om.</div>
+  </div>
+</section>
 
-  <h3 class="ins-h">Luckor i katalogen</h3>
-  <p class="photo-intro">Ryggar jag inte kunde läsa. Fyll i för hand eller fota närmare.</p>
-  <button class="list-toggle" id="openGaps">🔍 Öppna luckor <span id="gapCount"></span></button>
-
-  <h3 class="ins-h">Om appen</h3>
-  <div class="note">Detta är en prototyp med böckerna från ett foto (två sektioner av vardagsrumshyllan, ca 150 av titlarna gick att läsa av). Statusändringar sparas lokalt i din webbläsare. Nästa steg: fler foton, rättning av feltolkade titlar, och ev. en riktig databas så status kan delas mellan enheter.<br><br><b>Backlogg:</b> exakta bokmarkeringar på fotona (koordinater per bokrygg istället för "ungefär här") · soffan och resten av sovrummet · kökets nedersta hylla · de rödmarkerade svårlästa partierna.</div>
-</div><!-- /tab-install -->
-
-
-<div id="gapView" class="gap-view">
-  <div class="gap-head"><button class="chip" id="gapBack">← Tillbaka</button><h2 class="salj-h">🔍 Luckor</h2></div>
-  <p class="photo-intro" id="gapIntro"></p>
-  <p class="photo-intro" style="margin-top:-.4rem">💡 Zooma bilden genom att klicka på den, och skriv sedan in böckerna du ser — en rad per bok, med egen kategori.</p>
-  <div class="gap-filter"><button class="quick on" data-g="open">Kvar att göra</button><button class="quick" data-g="waiting">Bara väntande</button><button class="quick" data-g="done">Klara</button></div>
-  <div id="gapList"></div>
-</div>
 </main>
 
 <nav class="tabbar">
-  <button class="tab" data-tab="salj"><span>💰</span>Sälj</button>
-  <button class="tab active" data-tab="sok"><span>🔍</span>Sök</button>
-  <button class="tab" data-tab="install"><span>⚙️</span>Inställningar</button>
+  <button class="tab" data-tab="delade"><i data-ic="users"></i>Delade</button>
+  <span class="tab-mid"><button class="tab-home" data-tab="hem" aria-label="Hem"><i data-ic="library"></i></button></span>
+  <button class="tab" data-tab="salj"><i data-ic="tag"></i>Sälj</button>
 </nav>
 
+<!-- ================= SIDOPANEL ================= -->
+<div class="scrim" id="panelScrim"></div>
+<aside class="panel" id="panel" aria-label="Inställningar">
+  <div class="panel-head"><h2>Inställningar</h2><button class="round-btn" id="panelClose" aria-label="Stäng"><i data-ic="x"></i></button></div>
+  <button class="gap-card-btn" id="openGaps">
+    <span class="gc-top"><b>Luckor</b><span class="mono gc-left" id="gapCount"></span></span>
+    <span class="gc-txt" id="gapCardTxt"></span>
+    <span class="progress"><span id="gapCardProg"></span></span>
+  </button>
+  <div class="set-list">
+    <button data-edit><i data-ic="pencil"></i><span><b>Hyllans namn och bild</b><small id="setNameSub">Min Bokhylla</small></span></button>
+    <button data-set="platser"><i data-ic="map-pin"></i><span><b>Platser</b><small id="setPlacesSub">byt namn eller lägg till</small></span></button>
+    <button data-set="kategorier"><i data-ic="folder"></i><span><b>Kategorier</b><small id="setCatsSub">byt namn eller slå ihop</small></span></button>
+    <button data-set="konto"><i data-ic="user"></i><span><b>Konto</b><small id="setAuthSub">Inte inloggad</small></span></button>
+    <button id="replaySplash"><i data-ic="play"></i><span><b>Visa startsidan igen</b><small>Förhandsvisa startskärmen</small></span></button>
+    <button data-set="om"><i data-ic="info"></i><span><b>Om appen</b><small>Vad Bokhyllan är och vad som är på gång</small></span></button>
+  </div>
+</aside>
+
+<!-- ================= REDIGERA HYLLA ================= -->
+<div class="scrim scrim-top" id="editScrim"></div>
+<div class="sheet" id="editSheet" role="dialog" aria-label="Din hylla">
+  <span class="grip"></span>
+  <h2>Din hylla</h2>
+  <div class="ed-row">
+    <span class="avatar avatar-84" id="edAvatar"></span>
+    <div class="ed-acts">
+      <label class="btn btn-primary btn-sm btn-ic"><i data-ic="camera"></i>Ladda upp bild<input type="file" accept="image/*" id="edFile" hidden></label>
+      <button class="link-btn" id="edClear">Ta bort bild</button>
+    </div>
+  </div>
+  <div class="field"><span class="lbl">Eller välj ett av dina hyllfoton</span><div class="ed-picks" id="edPicks"></div></div>
+  <div class="field"><span class="lbl">Namn på hyllan</span>
+    <input id="edName" class="inp inp-lg" placeholder="Min Bokhylla" maxlength="40">
+    <span class="fine">Namn och bild syns när du delar din hylla.</span></div>
+  <div class="btn-row"><button class="btn btn-primary" id="edSave">Spara</button><button class="btn btn-ghost" id="edCancel">Avbryt</button></div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20260906190503"></script>
+<script src="js/app.js?v=20260926154310"></script>
 </body>
 </html>

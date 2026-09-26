@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260906190503";
+const DV="?v=20260926154310";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -22,6 +22,49 @@ try{
 }
 let sbUser=null;
 
+/* ---------- Designhjälpare (ikoner, färger, profil) ---------- */
+const ICONS={"settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","library":"<path d=\"m16 6 4 14\"/> <path d=\"M12 6v14\"/> <path d=\"M8 8v12\"/> <path d=\"M4 4v16\"/>","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\"/> <circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/>","pencil":"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/> <path d=\"m15 5 4 4\"/>","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/> <circle cx=\"12\" cy=\"13\" r=\"3\"/>","x":"<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>","chevron-right":"<path d=\"m9 18 6-6-6-6\"/>","map-pin":"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\"/>","play":"<polygon points=\"6 3 20 12 6 21 6 3\"/>","scan-search":"<path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/> <path d=\"m16 16-1.9-1.9\"/>","search":"<circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","user":"<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/> <circle cx=\"12\" cy=\"7\" r=\"4\"/>","info":"<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M12 16v-4\"/> <path d=\"M12 8h.01\"/>"};
+function ic(n){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||""}</svg>`}
+function fillIcons(root){(root||document).querySelectorAll("i[data-ic]").forEach(el=>{if(!el.firstChild)el.innerHTML=ic(el.dataset.ic)})}
+fillIcons();
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const PAL=["#F24B78","#BF348E","#F29441","#F26D3D","#4A3D41","#D474BB","#F6B878","#F486A3","#F6935F","#7D6D72"];
+function catColor(c){let h=0;for(const ch of String(c||""))h=(h*31+ch.charCodeAt(0))|0;return PAL[Math.abs(h)%PAL.length]}
+const fmtN=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"\u2009");
+let toastT=null;
+function toast(msg){const t=document.getElementById("toast");if(!t)return;t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)}
+/* Hyllans namn och bild. Sparas i webbläsaren tills vidare - i databasen
+   behövs en egen tabell (per konto) innan det kan följa med vid delning. */
+const PROFILE_KEY="minbokhylla-profile";
+let profile={name:"Min Bokhylla",avatar:null};
+try{const pr=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(pr)profile={name:pr.name||"Min Bokhylla",avatar:pr.avatar||null}}catch(e){}
+const initials=n=>(n||"MB").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
+function paintAvatar(el,av,name){if(!el)return;el.style.backgroundImage=av?`url("${av}")`:"none";el.textContent=av?"":initials(name)}
+function renderProfile(){
+  ["homeAvatar","shareAvatar"].forEach(id=>paintAvatar(document.getElementById(id),profile.avatar,profile.name));
+  const set=(id,t)=>{const el=document.getElementById(id);if(el)el.textContent=t};
+  set("homeName",profile.name);set("shareName",profile.name);set("splashTitle",profile.name);set("setNameSub",profile.name);
+}
+renderProfile();
+/* ---------- Startsida: 5 s, tryck = hoppa över ---------- */
+const splashEl=document.getElementById("splash");
+let splashT=[];
+function playSplash(){
+  if(!splashEl)return;
+  splashT.forEach(clearTimeout);splashT=[];
+  splashEl.style.display="";splashEl.classList.remove("fade","go");document.body.classList.add("splashing");
+  void splashEl.offsetWidth;
+  splashT.push(setTimeout(()=>splashEl.classList.add("go"),60));
+  splashT.push(setTimeout(fadeSplash,5000));
+}
+function fadeSplash(){
+  if(!splashEl||splashEl.classList.contains("fade"))return;
+  splashT.forEach(clearTimeout);splashT=[];
+  splashEl.classList.add("fade");document.body.classList.remove("splashing");
+  splashT.push(setTimeout(()=>{splashEl.style.display="none"},1100));
+}
+if(splashEl){splashEl.addEventListener("click",fadeSplash);playSplash()}
+
 /* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books /
    books_public). Endast photos.json (hyllfotons metadata) laser vi fortfarande
    fran fil - photos.json arkiveras i Fas 3a. BOOK_INFO fylls nu av
@@ -36,6 +79,11 @@ photos.forEach(p=>{
 });
 const DEFAULT_BC={1:"Bokhylla 1 – vardagsrummet",2:"Bokhylla 2",3:"Bokskåpet",4:"Köket",5:"Sovrummet – vid sängen",6:"Sovrummet – gröna skåpet",7:"Sovrummet – fönsterbrädan",8:"Soffan"};
 let bcNames={...DEFAULT_BC};
+const FLAT=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>FLAT.push({src:im.src,cap:(g.bc?bcNames[g.bc]+" · ":"")+im.cap})));
+function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
+/* Alla foton i en platt lista, i samma ordning som helskärmsvyn (FLAT). */
+const PH=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>PH.push({bc:g.bc,cap:im.cap,src:im.src,thumb:im.thumb,shelves:im.shelves||[],fi:PH.length})));
+let curView="hem";
 async function loadBcNames(){const {data:rows}=await sb.from("bc_names").select("*");if(rows)rows.forEach(r=>bcNames[r.bc]=r.name)}
 /* Losa platser: bocker som ligger utanfor ett hyllplan. Kod <bc>:L<n>. */
 let spotNames={};
@@ -86,7 +134,31 @@ if(d.status!=="utlanad")d.lentTo="";
 saveBook(d);render();
 if(d.status==="utlanad"){const inp=document.querySelector(`input[data-lent="${id}"]`);if(inp)inp.focus()}}
 function setLent(id,val){if(!sbUser)return;const d=data.find(x=>x.id===id);d.lentTo=val.trim();saveBook(d);
-const btn=document.querySelector(`button[data-sbtn="${id}"]`);if(btn)btn.textContent="Utlånad"+(d.lentTo?" → "+d.lentTo:"")}
+document.querySelectorAll(`button[data-sbtn="${id}"]`).forEach(btn=>btn.textContent="Utlånad"+(d.lentTo?" → "+d.lentTo:""))}
+/* En bokrad: färgstreck efter kategori, titel (öppnar bokinfo), byline och
+   status som badge. Tryck på badgen byter status. */
+function bookRow(d,opts){
+  const [label]=STATUS[d.status]||STATUS.hylla;
+  const tone={hylla:"b-success",utlanad:"b-warning",flyter:"b-brand"}[d.status]||"b-success";
+  const lent=d.status==="utlanad"&&d.lentTo?` → ${esc(d.lentTo)}`:"";
+  const lentInp=d.status==="utlanad"?`<input class="lent-input" data-lent="${d.id}" placeholder="Utlånad till…" value="${esc(d.lentTo||"")}" onchange="setLent(${d.id},this.value)">`:"";
+  const showLoc=!(opts&&opts.noLoc);
+  const loc=showLoc?`<div class="bk-loc"><span class="${d.shelf?"":"loc-dold"}">${esc(locLabel(d.shelf))}</span>${d.shelf?`<a class="var-link" onclick="lbShelf('${d.shelf}',${d.id})">${ic("map-pin")}sågs senast${d.ts?" "+d.ts:""}</a>`:""}</div>`:"";
+  return `<div class="bk"><span class="bk-stripe" style="background:${catColor(d.cat)}"></span>
+    <div class="bk-main"><button class="bk-title" onclick="showInfo(${d.id})">${esc(d.title)}</button>
+      <span class="bk-by">${esc([d.author,d.cat].filter(Boolean).join(" · "))}</span>${loc}${lentInp}</div>
+    <button class="badge ${tone}" data-sbtn="${d.id}" onclick="cycle(${d.id})">${label}${lent}</button></div>`;
+}
+function renderSummary(){
+  const n=k=>data.filter(d=>d.status===k).length;
+  const segs=[[n("hylla"),"var(--pink-500)"],[n("utlanad"),"var(--orange-500)"],[n("flyter"),"var(--magenta-300)"]];
+  const bar=document.getElementById("sumBar");
+  if(bar)bar.innerHTML=segs.filter(x=>x[0]>0).map(([v,c])=>`<span style="flex:${v};background:${c}"></span>`).join("");
+  $("#stTot").textContent=fmtN(data.length);
+  const np=placeList().length;
+  const sp=document.getElementById("stPlaces");if(sp)sp.textContent=`böcker på ${np} platser`;
+  const sm=document.getElementById("shareMeta");if(sm)sm.textContent=`${fmtN(data.length)} böcker · ${np} platser`;
+}
 function render(){
   const norm=s=>s.toLowerCase();
   const shelfOk=d=>!fShelf||(fShelf.startsWith("bc:")?d.shelf.split(":")[0]===fShelf.slice(3):d.shelf===fShelf);
@@ -97,14 +169,9 @@ function render(){
   $("#stFly").textContent=data.filter(d=>d.status==="flyter").length;
   $("#count").textContent=list.length+" böcker visas";
   if(window.__lt)window.__lt();
-  $("#grid").innerHTML=list.map(d=>{
-    const [label,cls]=STATUS[d.status];
-    const lent=d.status==="utlanad"&&d.lentTo?` → ${d.lentTo}`:"";
-    const lentInp=d.status==="utlanad"?`<input class="lent-input" data-lent="${d.id}" placeholder="Utlånad till…" value="${(d.lentTo||"").replace(/"/g,'&quot;')}" onchange="setLent(${d.id},this.value)">`:"";
-    return `<div class="book"><h3 onclick="showInfo(${d.id})" title="Visa beskrivning">${d.title}</h3><div class="auth">${d.author||"&nbsp;"}</div>
-    <div class="row"><span class="loc${d.shelf?"":" loc-dold"}">${locLabel(d.shelf)}</span>
-    <button class="status ${cls}" data-sbtn="${d.id}" onclick="cycle(${d.id})">${label}${lent}</button></div>
-    ${lentInp}<div class="cat">${d.cat}${d.shelf?` · <a class="var-link" onclick="lbShelf('${d.shelf}',${d.id})">📍 sågs senast${d.ts?" "+d.ts:""}</a>`:""}</div></div>`}).join("");
+  $("#grid").innerHTML=list.length?list.map(bookRow).join(""):`<p class="pl-empty">Inga böcker matchar.</p>`;
+  renderSummary();renderHome();
+  if(curView==="place")renderPlace();
   renderBcEditor();
 }
 $("#q").addEventListener("input",e=>{q=e.target.value;render();if(q)setList(true)});
@@ -114,7 +181,7 @@ document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{do
 render();
 function renderBcEditor(){
   const el=$("#bcEditorIns")||$("#bcEditor");if(!el)return;
-  el.innerHTML=Object.keys(bcNames).map(bc=>`<button class="bc-name" data-bc="${bc}" title="Klicka för att byta namn">✏️ ${bcNames[bc]}</button>`).join("")
+  el.innerHTML=Object.keys(bcNames).map(bc=>`<button class="bc-name" data-bc="${bc}" title="Tryck för att byta namn">${ic("pencil")}<span>${esc(bcNames[bc])}</span></button>`).join("")
     ;
   el.querySelectorAll("button.bc-name").forEach(b=>b.addEventListener("click",()=>{
     const bc=b.dataset.bc;
@@ -126,35 +193,56 @@ function renderBcEditor(){
     inp.addEventListener("keydown",e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){buildShelfOptions();render()}});
     inp.addEventListener("blur",commit)}))
 }
-function renderPhotoTabs(){renderPhotoGrid()}
-const FLAT=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>FLAT.push({src:im.src,cap:(g.bc?bcNames[g.bc]+" · ":"")+im.cap})));
-function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
-function renderPhotoGrid(){
-  const el=$("#photoGrid");el.style.display="";$("#shelfView").style.display="none";
-  const byBc={};
-  SHELF_IMGS.forEach((g,gi)=>{(byBc[g.bc]=byBc[g.bc]||[]).push([g,gi])});
-  el.innerHTML=Object.keys(byBc).map(bc=>`<div class="bc-group"><h3>${bcNames[bc]}</h3><div class="thumb-row">`+
-    byBc[bc].map(([g,gi])=>g.imgs.map((im,j)=>
-      `<button class="thumb" onclick="openShelfView(${gi},${j})"><img src="${im.thumb}" alt="${im.cap}" loading="lazy" decoding="async"><span>${im.cap}</span></button>`).join("")).join("")+
-    `</div></div>`).join("");
-}
-function openShelfView(gi,j){
-  const g=SHELF_IMGS[gi],im=g.imgs[j];
-  $("#photoGrid").style.display="none";$("#shelfView").style.display="";
-  let booksHtml="";
-  (im.shelves||[]).forEach(sh=>{
-    const list=data.filter(d=>d.shelf===sh);
-    if(!list.length)return;
-    booksHtml+=`<h4>${locLabel(sh)} — ${list.length} böcker</h4><ul>`+
-      list.map(d=>`<li><a class="var-link" onclick="showInfo(${d.id})">${d.title.replace(/'/g,"’")}</a><span class="bk-cat">${d.cat}</span></li>`).join("")+`</ul>`;
+function renderPhotoTabs(){renderHome();if(curView==="place")renderPlace()}
+function placeList(){
+  const bcs=new Set([...Object.keys(bcNames),...PH.map(p=>p.bc)]);
+  return [...bcs].sort((a,b)=>Number(a)-Number(b)).map(bc=>{
+    const ph=PH.filter(p=>p.bc===bc);
+    const big=ph.find(p=>p.src);
+    return {bc,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:big?big.src:(ph[0]?ph[0].thumb:""),
+            count:data.filter(d=>d.shelf&&d.shelf.split(":")[0]===bc).length};
   });
-  $("#shelfViewBody").innerHTML=
-    `<img class="main" src="${im.src}" alt="${im.cap}" onclick="lbOpen(${flatIndex(gi,j)})">
-     <div class="shelf-books"><div style="color:var(--muted);font-size:.8rem;margin-top:.3rem">${im.cap} · klicka på bilden för zoom</div>${booksHtml||"<p>Inga böcker registrerade för denna bild ännu.</p>"}</div>`;
-  $("#shelfView").scrollIntoView({behavior:"smooth"});
 }
-document.addEventListener("click",e=>{if(e.target.id==="backToGrid")renderPhotoGrid()});
-if(SHELF_IMGS.length)renderPhotoGrid();
+function renderHome(){
+  const el=document.getElementById("placeGrid");if(!el)return;
+  const known=data.some(d=>d.shelf);
+  el.innerHTML=placeList().map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
+      ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
+      <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("");
+  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=placeList().length+" platser · byt namn eller lägg till";
+}
+let curPlace=null,curPhoto=null;
+function openPlace(bc,fi){
+  curPlace=String(bc);
+  const p=placeList().find(x=>x.bc===curPlace);
+  curPhoto=(fi!=null)?fi:(p&&p.photos[0]?p.photos[0].fi:null);
+  go("place");
+}
+function pickPhoto(fi){curPhoto=fi;renderPlace()}
+function renderPlace(){
+  const el=document.getElementById("view-place");if(!el)return;
+  const p=placeList().find(x=>x.bc===curPlace);if(!p){el.innerHTML="";return}
+  const sel=PH[curPhoto]&&PH[curPhoto].bc===p.bc?PH[curPhoto]:p.photos[0];
+  const inPlace=data.filter(d=>d.shelf&&d.shelf.split(":")[0]===p.bc);
+  const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
+  const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
+  const books=sel?data.filter(d=>sel.shelves.includes(d.shelf)):inPlace;
+  const loggedOut=!data.some(d=>d.shelf);
+  el.innerHTML=`<div class="pl-cover">${p.cover?`<img src="${p.cover}" alt="">`:`<div class="no-img"></div>`}
+      <button class="pill-back" onclick="go('hem')">← Hem</button></div>
+    <div class="pl-head"><h1>${esc(p.name)}</h1><span>${loggedOut?"":p.count+" böcker · "}${p.photos.length} foton</span></div>
+    ${p.photos.length?`<div class="thumbs">${p.photos.map(ph=>`<button class="th${sel&&ph.fi===sel.fi?" on":""}" onclick="pickPhoto(${ph.fi})">
+        <img src="${ph.thumb}" alt="" loading="lazy"><span>${esc(ph.cap)}</span></button>`).join("")}</div>`:""}
+    ${cats.length?`<div class="card pl-cats"><h2>Vad står här</h2>${cats.map(([c,n])=>`<div class="cat-bar"><span>${esc(c)}</span>
+        <span class="track"><span style="width:${Math.round(n/cMax*100)}%;background:${catColor(c)}"></span></span><b>${n}</b></div>`).join("")}</div>`:""}
+    <div class="pl-books">
+      ${sel?`<div class="pl-sel"><span>${esc(sel.cap)}${books.length?" · tryck på status för att byta":""}</span><button onclick="lbOpen(${sel.fi})">Visa foto</button></div>`:""}
+      <div class="booklist">${loggedOut?`<p class="pl-empty">Logga in för att se vilka böcker som står här.</p>`
+        :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.</p>`)}</div>
+    </div>`;
+}
+/* Äldre ingång: öppna ett foto ur SHELF_IMGS - leder nu till platsvyn. */
+function openShelfView(gi,j){const g=SHELF_IMGS[gi];if(!g)return;openPlace(g.bc,flatIndex(gi,j))}
 renderBcEditor();
 
 /* ---------- Bokinfo ---------- */
@@ -186,7 +274,7 @@ function showInfo(id){
   infoModal.classList.add("open");
 }
 function coverUploadHtml(id){
-  return `<label class="ib-ph up">📷<span>Lägg till omslag</span>
+  return `<label class="ib-ph up">${ic("camera")}<span>Lägg till omslag</span>
     <input type="file" accept="image/*" style="display:none" onchange="uploadCover(${id},this)"></label>`;
 }
 window.coverUploadHtml=coverUploadHtml;
@@ -311,14 +399,20 @@ addEventListener("scroll",()=>toTop.classList.toggle("show",scrollY>600),{passiv
 
 function renderAuth(){
   const el=document.getElementById("authBar");if(!el)return;
-  if(sbUser){el.innerHTML=`<span class="who">Inloggad: ${sbUser.email}</span> <button id="btnOut">Logga ut</button>`;
-    el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();sbUser=null;renderAuth();render()};}
-  else if(!sbOnline){el.innerHTML='<span class="who">Inloggning otillgänglig – kunde inte nå servern. Ladda om sidan.</span>'}
-  else{el.innerHTML=`<input id="aEmail" type="email" placeholder="e-post"><input id="aPass" type="password" placeholder="lösenord"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
-    el.querySelector("#btnIn").onclick=async()=>{
+  const sub=document.getElementById("setAuthSub");
+  if(sub)sub.textContent=sbUser?("Inloggad: "+sbUser.email):(sbOnline?"Inte inloggad · logga in för att ändra":"Servern går inte att nå");
+  if(sbUser){el.innerHTML=`<span class="who">Inloggad som <b>${esc(sbUser.email)}</b></span><button id="btnOut">Logga ut</button>`;
+    el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();location.reload()};}
+  else if(!sbOnline){el.innerHTML='<span class="who">Inloggningen går inte att nå just nu. Ladda om sidan.</span>'}
+  else{el.innerHTML=`<input id="aEmail" type="email" placeholder="E-post" autocomplete="username"><input id="aPass" type="password" placeholder="Lösenord" autocomplete="current-password"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
+    const doIn=async()=>{
       const {data:res,error}=await sb.auth.signInWithPassword({email:el.querySelector("#aEmail").value,password:el.querySelector("#aPass").value});
-      if(error){el.querySelector("#aErr").textContent=error.message||"Inloggning misslyckades";console.warn("login",error);return}
-      sbUser=res.user;renderAuth();loadStatuses();};}
+      if(error){el.querySelector("#aErr").textContent=error.message||"Inloggningen misslyckades";console.warn("login",error);return}
+      /* Inloggad läser hela katalogen med hyllplatser - enklast och säkrast
+         att ladda om, så att alla vyer bygger på samma data. */
+      sbUser=res.user;location.reload();};
+    el.querySelector("#btnIn").onclick=doIn;
+    el.querySelector("#aPass").addEventListener("keydown",e=>{if(e.key==="Enter")doIn()});}
 }
 
 
@@ -335,7 +429,7 @@ function lbShelf(shelf,bookId){
     idx++})});
   if(found<0)found=0;
   lbOpen(found);
-  lbCap.textContent="📍 "+locLabel(shelf);
+  lbCap.textContent=locLabel(shelf);
   if(bookId!==undefined){
     const sib=data.filter(d=>d.shelf===shelf);
     const rank=sib.findIndex(d=>d.id===bookId);
@@ -351,7 +445,8 @@ function lbShelf(shelf,bookId){
 /* exportera klickhanterare tidigt så UI aldrig dör av ett misslyckat DB-anrop */
 window.cycle=cycle;window.setLent=setLent;window.lbShelf=lbShelf;window.lbOpen=lbOpen;
 window.showInfo=showInfo;window.openShelfView=openShelfView;
-window.gapWrite=gapWrite;window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapSave=gapSave;window.runAnalys=runAnalys;window.toggleNote=toggleNote;window.saveNote=saveNote;
+window.gapSet=gapSet;window.gapUpload=gapUpload;window.gapNext=gapNext;window.gapSkip=gapSkip;window.gapGo=gapGo;window.gapDelBook=gapDelBook;window.gapRestart=gapRestart;
+window.openPlace=openPlace;window.pickPhoto=pickPhoto;window.go=go;window.runAnalys=runAnalys;window.toggleNote=toggleNote;window.saveNote=saveNote;
 window.analysEdit=analysEdit;window.analysKeep=analysKeep;window.analysRotate=analysRotate;window.analysDrop=analysDrop;window.analysSetCode=analysSetCode;
 window.analysSetSpot=analysSetSpot;window.analysClose=analysClose;window.analysSave=analysSave;
 window.setBookCat=setBookCat;window.uploadCover=uploadCover;
@@ -368,28 +463,78 @@ sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table
   if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
 }).subscribe();
 
-/* ---------- Flikar (bottennav) ---------- */
-document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>{
-  document.querySelectorAll(".tabbar .tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
-  const id=t.dataset.tab;
-  ["sok","salj","install"].forEach(k=>document.getElementById("tab-"+k).style.display=(k===id?"":"none"));
-  scrollTo({top:0});
-}));
-/* ---------- Konto-panel ---------- */
-document.getElementById("authToggle").addEventListener("click",()=>document.getElementById("authPanel").classList.toggle("open"));
-/* ---------- Hero + boklista ---------- */
-const heroBtn=document.getElementById("heroShelves");
-if(SHELF_IMGS.length&&SHELF_IMGS[0].imgs[0])
-  heroBtn.insertAdjacentHTML("afterbegin",`<img src="${SHELF_IMGS[0].imgs[0].thumb}" alt="">`);
-heroBtn.addEventListener("click",()=>{renderPhotoGrid();document.getElementById("photos").scrollIntoView({behavior:"smooth"})});
+/* ---------- Navigering ---------- */
+const VIEWS=["hem","place","delade","salj","gaps","set"];
+function go(v,opts){
+  curView=v;
+  VIEWS.forEach(k=>{const el=document.getElementById("view-"+k);if(el)el.style.display=(k===v?"":"none")});
+  const homeish=["hem","place","gaps","set"].includes(v);
+  document.querySelectorAll(".tabbar [data-tab]").forEach(t=>{
+    const k=t.dataset.tab;t.classList.toggle("active",k==="hem"?homeish:k===v)});
+  if(v==="place")renderPlace();
+  if(v==="gaps")renderGaps();
+  closePanel();
+  if(!(opts&&opts.keepScroll))scrollTo({top:0});
+}
+document.querySelectorAll(".tabbar [data-tab]").forEach(t=>t.addEventListener("click",()=>go(t.dataset.tab)));
+/* ---------- Inställningar (sidopanel + undersidor) ---------- */
+const panel=document.getElementById("panel"),panelScrim=document.getElementById("panelScrim");
+function openPanel(){panel.classList.add("open");panelScrim.classList.add("open")}
+function closePanel(){panel.classList.remove("open");panelScrim.classList.remove("open")}
+document.getElementById("gearBtn").addEventListener("click",openPanel);
+document.getElementById("panelClose").addEventListener("click",closePanel);
+panelScrim.addEventListener("click",closePanel);
+go("hem",{keepScroll:true});
+function openSet(page){
+  document.querySelectorAll("#view-set .set-page").forEach(el=>el.classList.toggle("on",el.dataset.page===page));
+  go("set");
+}
+document.querySelectorAll("[data-set]").forEach(b=>b.addEventListener("click",()=>openSet(b.dataset.set)));
+document.querySelectorAll("[data-back-settings]").forEach(b=>b.addEventListener("click",()=>{go("hem");openPanel()}));
+document.getElementById("replaySplash").addEventListener("click",()=>{closePanel();playSplash()});
+/* ---------- Redigera hylla (namn och bild) ---------- */
+const sheet=document.getElementById("editSheet"),sheetScrim=document.getElementById("editScrim");
+let draft={name:"",avatar:null};
+function renderDraft(){
+  paintAvatar(document.getElementById("edAvatar"),draft.avatar,draft.name||"Min Bokhylla");
+  const picks=placeList().filter(p=>p.photos[0]).map(p=>p.photos[0].thumb);
+  document.getElementById("edPicks").innerHTML=picks.map(t=>`<button class="${draft.avatar===t?"on":""}" data-pick="${t}" style="background-image:url('${t}')" aria-label="Välj foto"></button>`).join("");
+  document.querySelectorAll("#edPicks [data-pick]").forEach(b=>b.addEventListener("click",()=>{draft.avatar=b.dataset.pick;renderDraft()}));
+}
+function openEdit(){
+  closePanel();draft={name:profile.name,avatar:profile.avatar};
+  document.getElementById("edName").value=profile.name;
+  renderDraft();sheet.classList.add("open");sheetScrim.classList.add("open");
+}
+function closeEdit(){sheet.classList.remove("open");sheetScrim.classList.remove("open")}
+document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",openEdit));
+sheetScrim.addEventListener("click",closeEdit);
+document.getElementById("edCancel").addEventListener("click",closeEdit);
+document.getElementById("edName").addEventListener("input",e=>{draft.name=e.target.value;if(!draft.avatar)renderDraft()});
+document.getElementById("edClear").addEventListener("click",()=>{draft.avatar=null;renderDraft()});
+document.getElementById("edFile").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f),img=new Image();
+  img.onload=()=>{const z=240,sc=Math.max(z/img.width,z/img.height),c=document.createElement("canvas");c.width=z;c.height=z;
+    c.getContext("2d").drawImage(img,(z-img.width*sc)/2,(z-img.height*sc)/2,img.width*sc,img.height*sc);
+    URL.revokeObjectURL(url);draft.avatar=c.toDataURL("image/jpeg",0.85);renderDraft()};
+  img.onerror=()=>{URL.revokeObjectURL(url);alert("Kunde inte läsa bilden. Prova en annan.")};
+  img.src=url;e.target.value="";
+});
+document.getElementById("edSave").addEventListener("click",()=>{
+  profile={name:(document.getElementById("edName").value||"").trim()||"Min Bokhylla",avatar:draft.avatar};
+  try{localStorage.setItem(PROFILE_KEY,JSON.stringify(profile))}catch(e){alert("Kunde inte spara i webbläsaren - bilden kan vara för stor.")}
+  renderProfile();closeEdit();toast("Sparat");
+});
+/* ---------- Boklistan (sök) ---------- */
 const listWrap=document.getElementById("listWrap"),listToggle=document.getElementById("listToggle");
 function setList(open){listWrap.style.display=open?"":"none";
-  listToggle.textContent=(open?"📖 Dölj boklistan ":"📖 Visa hela boklistan ")+(document.getElementById("count").textContent||"");}
+  listToggle.textContent=open?"Dölj boklistan":`Visa hela boklistan (${fmtN(data.length)})`;}
 listToggle.addEventListener("click",()=>setList(listWrap.style.display==="none"));
 /* ---------- Snabbknappar ---------- */
 const QUICK=["Psykologi","Terapi","Religion","Buddhism","Skönlitteratur","Mat","Ledarskap","Organisation","Filosofi"];
 const qr=document.getElementById("quickRow");
-qr.innerHTML=`<button class="quick" data-q="utlanad">📤 Utlånade</button>`+QUICK.map(c=>`<button class="quick" data-cat="${c}">${c}</button>`).join("");
+qr.innerHTML=`<button class="quick" data-q="utlanad">Utlånade</button>`+QUICK.map(c=>`<button class="quick" data-cat="${c}">${c}</button>`).join("");
 qr.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>{
   const on=b.classList.contains("on");
   qr.querySelectorAll(".quick").forEach(x=>x.classList.remove("on"));
@@ -399,26 +544,36 @@ qr.querySelectorAll(".quick").forEach(b=>b.addEventListener("click",()=>{
   render();setList(!on);
 }));
 /* ---------- Sälj ---------- */
-fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{
-  document.getElementById("sellNote").textContent=s.note+" Uppdaterad "+s.updated+".";
-  const sum=s.summary;
-  const summaryHtml=sum?`<div class="sell-summary">
-    <div class="sell-sum-top"><span class="sell-sum-kr">~${sum.summa.toLocaleString("sv-SE")} kr</span>
-    <span class="sell-sum-lbl">försiktig uppskattning · ${sum.antal_i_summan} titlar</span></div>
-    <div class="sell-sum-row">
-      <span><b>${sum.poster}</b> kandidater</span>
-      <span><b>${sum.heta}</b> heta</span>
-      <span><b>${sum.kvar_att_kolla}</b> kvar att kolla</span>
-    </div>
-    <p class="sell-sum-note">${sum.kommentar}</p></div>`:"";
-  document.getElementById("sellList").innerHTML=summaryHtml+s.items.map(it=>{
-    const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
-    const loc=d?locLabel(d.shelf):"";
-    return `<div class="sell-item"><h4>${it.title}<span class="heat heat-${it.heat}">${({het:"HET",medel:"MEDEL",lag:"LÅGT VÄRDE"})[it.heat]||"KOLLA"}</span></h4>
-    <p><span class="sell-price">${it.price}</span>${loc?" · står i: "+loc:""}</p>
-    <p>${it.why}</p>
-    <p><a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan →</a></p></div>`}).join("");
-}).catch(()=>{document.getElementById("sellList").innerHTML="<p>Kunde inte ladda säljlistan.</p>"});
+const HEAT={het:["Het","var(--pink-600)"],medel:["Medel","var(--orange-600)"],lag:["Låg efterfrågan","var(--ink-500)"],
+            "kolla-upplaga":["Kolla upplaga","var(--ink-500)"],kolla:["Ej prisverifierad","var(--ink-500)"]};
+let SELL=null;
+function renderSell(){
+  const el=document.getElementById("sellList");if(!el||!SELL)return;
+  const s=SELL,sum=s.summary;
+  const maxLow=Math.max(1,...s.items.map(it=>it.low||0));
+  el.innerHTML=(sum?`<div class="card sell-sum"><span class="fine">Försiktig uppskattning, lägsta pris per titel</span>
+      <span class="kr">ca ${fmtN(sum.summa)} kr</span>
+      <span class="fine"><span class="mono">${sum.antal_i_summan}</span> prisverifierade titlar · <span class="mono">${sum.heta}</span> heta just nu${sum.kvar_att_kolla?` · <span class="mono">${sum.kvar_att_kolla}</span> kvar att kolla`:""}</span>
+      </div>`:"")+
+    `<div>`+s.items.map((it,i)=>{
+      const h=HEAT[it.heat]||HEAT.kolla;
+      const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
+      const loc=d&&d.shelf?locLabel(d.shelf):"";
+      return `<div class="sell-row" id="sr-${i}"><button class="sell-head" onclick="toggleSell(${i})">
+          <span class="t">${esc(it.title)}</span><span class="p">${esc(shortPrice(it.price))}</span>
+          <span class="track"><span style="width:${Math.round((it.low||0)/maxLow*100)}%"></span></span>
+          <span class="h" style="color:${h[1]}">${h[0]}</span></button>
+        <div class="sell-more">${shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}${it.why?`<p>${esc(it.why)}</p>`:""}${loc?`<p>Står i: ${esc(loc)}</p>`:""}
+          ${it.url?`<a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
+  document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+"Uppdaterad "+s.updated+".";
+}
+/* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
+   raden fälls ut. "359 kr (uppl 5) / 175 kr (uppl 4)" -> "359 kr". */
+function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
+function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
+window.toggleSell=toggleSell;
+fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{SELL=s;renderSell()})
+  .catch(()=>{document.getElementById("sellList").innerHTML="<p class='fine'>Kunde inte ladda säljlistan.</p>"});
 
 /* ---------- Luckor ---------- */
 let GAPS=[],gapState={},gapFilter="open";
@@ -440,122 +595,134 @@ function gapStateOf(id){
   const g=GAPS.find(x=>x.id===id);
   return (g&&g.auto)||"open";
 }
+/* ---------- Luckflödet: en lucka i taget ---------- */
+let gapCur=null,gapText={},gapCat={},gapNewCat={},gapMsg="";
+const gapSkipped=new Set();
+const gapOpenList=()=>GAPS.filter(g=>gapStateOf(g.id)!=="done");
 function updateGapCount(){
-  const open=GAPS.filter(g=>gapStateOf(g.id)!=="done").length;
-  const el=document.getElementById("gapCount");if(el)el.textContent="("+open+")";
-  const rem=document.getElementById("gapReminder");
-  if(rem){if(open){rem.style.display="";rem.textContent=`🔍 ${open} luckor kvar att fylla i katalogen →`}else rem.style.display="none"}
+  const total=GAPS.length,open=gapOpenList().length,solved=total-open;
+  const pct=total?Math.round(solved/total*100):0;
+  const set=(id,t)=>{const el=document.getElementById(id);if(el)el.textContent=t};
+  set("gapCount",open+" kvar");
+  set("gapCardTxt",total?(open?`${solved} av ${total} olästa partier lösta. De som är kvar behöver närbild.`:`Alla ${total} olästa partier är lösta.`):"Inga luckor inlästa.");
+  set("gapSolvedTxt",`${solved} / ${total} lösta`);
+  ["gapCardProg","gapProg"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.width=pct+"%"});
+  const dot=document.getElementById("gearDot");if(dot)dot.classList.toggle("on",open>0);
+}
+function shelfDefaultCat(shelf){
+  const cm={};data.filter(d=>d.shelf===shelf).forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
+  const top=Object.entries(cm).sort((a,b)=>b[1]-a[1])[0];return top?top[0]:"";
 }
 function renderGaps(){
-  const list=GAPS.filter(g=>{const s=gapStateOf(g.id);
-    return gapFilter==="open" ? (s==="open"||s==="waiting") : s===gapFilter;});
-  document.getElementById("gapIntro").textContent=
-    `${GAPS.length} partier i hyllfotona gick inte att läsa av. Varje lucka rymmer ofta 3–10 böcker.`;
-  document.getElementById("gapList").innerHTML=list.length?list.map(g=>{
-    const st=gapStateOf(g.id),ph=gapState[g.id]&&gapState[g.id].photo;
-    return `<div class="gap-card">
-      <div class="gap-row">
-        <img src="${ph||g.crop}" alt="Lucka" onclick="lbGap('${ph||g.full}')">
-        <div class="gap-body">
-          <div class="gap-loc">📍 ${g.shelf?locLabel(g.shelf):g.cap}${st!=="open"?`<span class="gap-state ${st}${(st==="waiting"&&gapState[g.id]&&gapState[g.id].claude)?" review":""}">${st==="waiting"?((gapState[g.id]&&gapState[g.id].claude)?"AVLÄST – KONTROLLERA":"FOTO SKICKAT – VÄNTAR PÅ CLAUDE"):"KLAR"}</span>`:""}${g.note?`<br><em style="font-size:.76rem">${g.note}</em>`:""}
-            ${(gapState[g.id]&&gapState[g.id].claude)?`<br><span class="gap-claude">🤖 ${gapState[g.id].claude}</span>`:""}
-            ${(gapState[g.id]&&gapState[g.id].claude)?`<div class="note-edit" id="ne-gap-${g.id}" style="display:none">
-              <textarea class="note-ta" id="nt-gap-${g.id}">${(gapState[g.id].claude||"").replace(/</g,"&lt;")}</textarea>
-              <div class="gap-actions" style="margin-top:.4rem">
-                <button onclick="saveNote('gap','${g.id}',this)">💾 Spara ändringar</button>
-                <button class="ghost" onclick="toggleNote('gap','${g.id}')">Avbryt</button>
-              </div></div>`:""}
-            ${(gapAdded[g.id]&&gapAdded[g.id].length)?`<br><span class="gap-added">✓ Inskrivna: ${gapAdded[g.id].map(x=>x.title).join(", ")}</span>`:""}</div>
-          <div class="gap-saved" id="saved-${g.id}"></div>
-          <div class="gap-actions">
-            <button onclick="gapWrite('${g.id}')">✏️ Skriv in böcker</button>
-            <label class="ghost">📷 Fota<input type="file" accept="image/*" style="display:none" onchange="gapUpload('${g.id}',this)"></label>
-            ${ph?`<button class="ghost" onclick="runAnalys('gap','${g.id}',this)">🤖 Analysera</button>`:""}
-            ${(gapState[g.id]&&gapState[g.id].claude)?`<button class="ghost" onclick="toggleNote('gap','${g.id}')">✏️ Rätta avläsningen</button>`:""}
-            ${st!=="done"?`<button class="ghost" onclick="gapSet('${g.id}','done')">✓ Klar</button>`:`<button class="ghost" onclick="gapSet('${g.id}','open')">↩︎ Öppna</button>`}
-          </div>
-          <div class="analys-box" id="ab-gap-${g.id}" style="display:none"></div>
-          <div class="gap-form" id="form-${g.id}" style="display:none">
-            <p class="gap-help">Lägg till en rad per bok. Kategorin ärvs från raden ovanför – ändra där den skiljer sig.</p>
-            <div class="gap-rows" id="rows-${g.id}"></div>
-            <div class="gap-actions" style="margin-top:.5rem">
-              <button class="ghost" onclick="gapAddRow('${g.id}')">➕ Rad till</button>
-              <button onclick="gapSave('${g.id}')">💾 Spara <span id="cnt-${g.id}"></span></button>
-            </div>
-          </div>
-        </div>
-      </div></div>`}).join(""):"<p style='color:var(--muted)'>Inga luckor i den här vyn.</p>";
+  updateGapCount();
+  const flow=document.getElementById("gapFlow"),all=document.getElementById("gapList");
+  if(!flow)return;
+  const open=gapOpenList();
+  let g=GAPS.find(x=>x.id===gapCur);
+  if(!g){g=open.find(x=>!gapSkipped.has(x.id));gapCur=g?g.id:null}
+  const msg=gapMsg?`<span class="g-ok">${esc(gapMsg)}</span>`:"";
+  if(!g){
+    flow.innerHTML=msg+`<div class="g-done"><b>Alla luckor är genomgångna</b>
+      <span>${open.length?`${open.length} hoppade luckor ligger kvar till nästa gång.`:"Nya böcker finns nu i katalogen."}</span>
+      ${open.length?`<button class="btn btn-outline btn-sm" onclick="gapRestart()">Börja om</button>`:""}</div>`;
+  }else{
+    const st=gapStateOf(g.id),S=gapState[g.id]||{},ph=S.photo;
+    const idx=open.findIndex(x=>x.id===g.id);
+    const bc=g.shelf?g.shelf.split(":")[0]:"";
+    if(!(g.id in gapCat))gapCat[g.id]=shelfDefaultCat(g.shelf);
+    const added=gapAdded[g.id]||[];
+    const stTag=st==="waiting"?`<span class="badge b-warning">${S.claude?"Avläst – kontrollera":"Foto skickat – väntar på avläsning"}</span>`
+               :st==="done"?`<span class="badge b-success">Klar</span>`:"";
+    flow.innerHTML=`<div class="gap-one">
+      <div class="g-title"><b>${idx>=0?`Lucka ${idx+1} av ${open.length} · `:""}${esc(g.cap||locLabel(g.shelf))}</b><span>${esc(bcNames[bc]||"")}</span></div>
+      <div class="g-full"><img src="${ph||g.full||g.crop}" alt="Hela hyllfotot" onclick="lbGap('${ph||g.full||g.crop}')"></div>
+      <div class="g-crop"><img src="${g.crop}" alt="Utsnitt av luckan" onclick="lbGap('${g.crop}')">
+        <div class="g-note">${stTag}${g.note?`<span>${esc(g.note)}</span>`:`<span class="muted">Ryggarna här gick inte att läsa på det stora fotot. En närbild brukar räcka.</span>`}
+          ${S.claude?`<span class="g-claude">Avläsning: ${esc(S.claude)}</span>`:""}</div></div>
+      ${S.claude?`<div class="note-edit" id="ne-gap-${g.id}" style="display:none">
+          <textarea class="note-ta" id="nt-gap-${g.id}">${esc(S.claude)}</textarea>
+          <div class="gap-actions" style="margin-top:.4rem"><button onclick="saveNote('gap','${g.id}',this)">Spara ändringar</button>
+          <button class="ghost" onclick="toggleNote('gap','${g.id}')">Avbryt</button></div></div>`:""}
+      <div class="g-tools">
+        <label class="btn btn-outline btn-sm btn-ic">${ic("camera")}Fota närbild<input type="file" accept="image/*" hidden onchange="gapUpload('${g.id}',this)"></label>
+        ${ph?`<button class="btn btn-outline btn-sm" onclick="runAnalys('gap','${g.id}',this)">Läs av fotot</button>`:""}
+        ${S.claude?`<button class="btn btn-ghost btn-sm" onclick="toggleNote('gap','${g.id}')">Rätta avläsningen</button>`:""}
+      </div>
+      <div class="analys-box" id="ab-gap-${g.id}" style="display:none"></div>
+      <span class="fine">Skriv in böckerna du ser — en rad per bok.</span>
+      <textarea class="g-text" id="gt-${g.id}" rows="3" placeholder="Titel – Författare">${esc(gapText[g.id]||"")}</textarea>
+      <div class="g-cat"><select class="inp" id="gc-${g.id}">${catOptions(gapCat[g.id])}</select>
+        <input class="inp" id="gn-${g.id}" placeholder="Ny kategoris namn" value="${esc(gapNewCat[g.id]||"")}" style="display:${gapCat[g.id]==="__new"?"":"none"}"></div>
+      ${added.length?`<div class="g-added"><span class="lbl">Inskrivna här</span><ul>${added.map(b=>`<li><span>${esc(b.title)}${b.author?" – "+esc(b.author):""}</span>
+          <button onclick="gapDelBook('${g.id}',${b.id})" aria-label="Ta bort">✕</button></li>`).join("")}</ul></div>`:""}
+      <div class="btn-row">
+        ${st==="done"?`<button class="btn btn-outline" onclick="gapSet('${g.id}','open')">Öppna igen</button><button class="btn btn-ghost" onclick="gapSkip('${g.id}')">Nästa lucka</button>`
+          :`<button class="btn btn-primary" onclick="gapNext('${g.id}',this)">Spara och nästa</button><button class="btn btn-ghost" onclick="gapSkip('${g.id}')">Hoppa över</button>`}
+      </div>${msg}</div>`;
+    const ta=document.getElementById("gt-"+g.id),sel=document.getElementById("gc-"+g.id),nc=document.getElementById("gn-"+g.id);
+    ta.addEventListener("input",()=>gapText[g.id]=ta.value);
+    sel.addEventListener("change",()=>{gapCat[g.id]=sel.value;nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus()});
+    nc.addEventListener("input",()=>gapNewCat[g.id]=nc.value);
+  }
+  if(all)all.innerHTML=GAPS.map(x=>{const st=gapStateOf(x.id);
+    return `<button class="ga-row" onclick="gapGo('${x.id}')"><img src="${x.crop}" alt="" loading="lazy">
+      <span>${esc(x.cap||"")}<small>${esc(bcNames[(x.shelf||"").split(":")[0]]||"")}</small></span>
+      <span class="badge ${st==="done"?"b-success":st==="waiting"?"b-warning":"b-brand"}" style="flex:none">${st==="done"?"Klar":st==="waiting"?"Väntar":"Kvar"}</span></button>`}).join("");
+}
+function gapGo(id){gapCur=id;gapMsg="";renderGaps();scrollTo({top:0,behavior:"smooth"})}
+function gapSkip(id){gapSkipped.add(id);gapCur=null;gapMsg="";renderGaps();scrollTo({top:0,behavior:"smooth"})}
+function gapRestart(){gapSkipped.clear();gapCur=null;gapMsg="";renderGaps()}
+/* "Titel – Författare", en per rad. Tankstreck, bindestreck med mellanslag
+   runt, eller " av " skiljer titel från författare. */
+function parseGapLines(txt){
+  return (txt||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
+    const m=l.split(/\s[–—-]\s|\s+av\s+/i);
+    return {title:m[0].trim(),author:(m.slice(1).join(" – ")||"").trim()};
+  }).filter(r=>r.title);
+}
+async function gapNext(id,btn){
+  if(!sbUser){alert("Logga in för att spara luckor.");return}
+  const g=GAPS.find(x=>x.id===id);if(!g)return;
+  let cat=gapCat[id]||"";
+  if(cat==="__new")cat=(gapNewCat[id]||"").trim();
+  const existing=new Set((gapAdded[id]||[]).map(x=>x.title.toLowerCase()));
+  const rows=parseGapLines(gapText[id]).filter(r=>!existing.has(r.title.toLowerCase()));
+  if(btn){btn.disabled=true;btn.textContent="Sparar…"}
+  try{
+    if(rows.length){
+      const {data:ins,error}=await sb.from("manual_books")
+        .insert(rows.map(r=>({title:r.title,author:r.author,cat:cat||"Okategoriserad",shelf:g.shelf,gap_id:id,created_by:sbUser.id}))).select();
+      if(error)throw error;
+      (ins||[]).forEach(r=>{
+        data.push({id:1e6+r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+        (gapAdded[id]=gapAdded[id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""});
+      });
+      buildShelfOptions();rebuildCatFilter();render();
+    }
+    gapText[id]="";
+    gapMsg=rows.length?`${rows.length} ${rows.length>1?"böcker":"bok"} tillagd${rows.length>1?"a":""} i ${g.cap||locLabel(g.shelf)}`:"Luckan markerad som löst";
+    gapCur=null;
+    await gapSet(id,"done");
+    scrollTo({top:0,behavior:"smooth"});
+  }catch(e){
+    alert("Kunde inte spara: "+(e.message||e));
+    if(btn){btn.disabled=false;btn.textContent="Spara och nästa"}
+  }
+}
+async function gapDelBook(gid,rowId){
+  if(!sbUser){alert("Logga in för att ändra.");return}
+  const b=(gapAdded[gid]||[]).find(x=>x.id===rowId);if(!b)return;
+  if(!confirm(`Ta bort "${b.title}" ur katalogen?`))return;
+  const {error}=await sb.from("manual_books").delete().eq("id",rowId);
+  if(error){alert("Kunde inte ta bort: "+error.message);return}
+  gapAdded[gid]=(gapAdded[gid]||[]).filter(x=>x.id!==rowId);
+  const k=data.findIndex(d=>d.id===1e6+rowId);if(k>=0)data.splice(k,1);
+  render();renderGaps();
 }
 function catOptions(sel){
   const cats=[...new Set(data.map(d=>d.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
   return `<option value="">Kategori…</option>`+cats.map(c=>`<option${c===sel?" selected":""}>${c}</option>`).join("")+`<option value="__new">➕ Ny kategori…</option>`;
 }
-function gapAddRow(id,inherit,saved){
-  const wrap=document.getElementById("rows-"+id);if(!wrap)return;
-  const prev=wrap.querySelector(".gap-brow:last-child select");
-  const cat=inherit||(saved&&saved.cat)||(prev?prev.value:"");
-  const div=document.createElement("div");div.className="gap-brow"+(saved?" saved":"");
-  if(saved)div.dataset.rowid=saved.id;
-  div.innerHTML=`<input class="gb-title" placeholder="Titel" value="${saved?(saved.title||"").replace(/"/g,'&quot;'):""}">
-    <input class="gb-auth" placeholder="Författare (valfritt)" value="${saved?(saved.author||"").replace(/"/g,'&quot;'):""}">
-    <select class="gb-cat">${catOptions(cat)}</select>
-    <input class="gb-newcat" placeholder="Ny kategoris namn" style="display:none">
-    <button class="gb-del" title="${saved?"Ta bort boken":"Ta bort rad"}">✕</button>`;
-  wrap.appendChild(div);
-  const sel=div.querySelector(".gb-cat"),nc=div.querySelector(".gb-newcat");
-  sel.addEventListener("change",()=>{nc.style.display=sel.value==="__new"?"":"none";if(sel.value==="__new")nc.focus();
-    if(saved)saveRowEdit(id,div)});
-  div.querySelector(".gb-del").addEventListener("click",async()=>{
-    if(saved){
-      if(!confirm("Ta bort \""+saved.title+"\" ur katalogen?"))return;
-      await sb.from("manual_books").delete().eq("id",saved.id);
-      gapAdded[id]=(gapAdded[id]||[]).filter(x=>x.id!==saved.id);
-      const k=data.findIndex(d=>d.title===saved.title&&d.shelf===GAPS.find(g=>g.id===id).shelf);
-      if(k>=0)data.splice(k,1);
-      render();
-    }
-    div.remove();gapCount(id);
-  });
-  const nextRow=()=>{const rows=[...wrap.querySelectorAll(".gap-brow")];const i=rows.indexOf(div);
-    const nxt=rows[i+1]||gapAddRow(id);nxt.querySelector(".gb-title").focus()};
-  div.querySelectorAll(".gb-title,.gb-auth,.gb-newcat").forEach(inp=>{
-    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();nextRow()}});
-    inp.addEventListener("input",()=>gapCount(id));
-    if(saved)inp.addEventListener("blur",()=>saveRowEdit(id,div));
-  });
-  gapCount(id);
-  return div;
-}
-async function saveRowEdit(id,div){
-  const rid=div.dataset.rowid;if(!rid||!sbUser)return;
-  let cat=div.querySelector(".gb-cat").value;
-  if(cat==="__new")cat=(div.querySelector(".gb-newcat").value||"").trim();
-  const rec={title:div.querySelector(".gb-title").value.trim(),
-             author:div.querySelector(".gb-auth").value.trim(),
-             cat:cat||"Okategoriserad"};
-  if(!rec.title)return;
-  await sb.from("manual_books").update(rec).eq("id",rid);
-  const e=(gapAdded[id]||[]).find(x=>String(x.id)===String(rid));
-  if(e){const old=e.title;Object.assign(e,rec);
-    const d=data.find(d=>d.title===old);if(d)Object.assign(d,{title:rec.title,author:rec.author,cat:rec.cat});}
-  rebuildCatFilter();render();
-}
-function gapCount(id){
-  const n=[...document.querySelectorAll(`#rows-${id} .gb-title`)].filter(i=>i.value.trim()).length;
-  const el=document.getElementById("cnt-"+id);if(el)el.textContent=n?`(${n} ${n===1?"bok":"böcker"})`:"";
-}
-function gapWrite(id){
-  const f=document.getElementById("form-"+id);
-  const open=f.style.display==="none";f.style.display=open?"":"none";
-  if(open&&!document.querySelector(`#rows-${id} .gap-brow`))fillRows(id);
-}
-function fillRows(id){
-  const wrap=document.getElementById("rows-"+id);if(!wrap)return;
-  wrap.innerHTML="";
-  (gapAdded[id]||[]).forEach(s=>gapAddRow(id,null,s));
-  gapAddRow(id);gapAddRow(id);
-}
-window.gapAddRow=gapAddRow;
 async function gapSet(id,state,photo){
   if(!sbUser){alert("Logga in för att ändra luckor.");return}
   gapState[id]={state,photo:(photo||(gapState[id]&&gapState[id].photo)),
@@ -874,48 +1041,6 @@ async function saveNote(kind,id,btn){
     if(btn){btn.disabled=false;btn.textContent=label}
   }
 }
-async function gapSave(id){
-  if(!sbUser){alert("Logga in för att spara.");return}
-  if(saving[id])return; saving[id]=true;
-  const btn=document.querySelector(`#form-${id} .gap-actions button:last-child`);
-  if(btn){btn.disabled=true;btn.style.opacity=".6"}
-  try{
-    const g=GAPS.find(x=>x.id===id);
-    const existing=new Set((gapAdded[id]||[]).map(x=>x.title.toLowerCase()));
-    const rows=[...document.querySelectorAll(`#rows-${id} .gap-brow:not(.saved)`)].map(r=>{
-      let cat=r.querySelector(".gb-cat").value;
-      if(cat==="__new")cat=(r.querySelector(".gb-newcat").value||"").trim();
-      return {title:r.querySelector(".gb-title").value.trim(),
-              author:r.querySelector(".gb-auth").value.trim(),
-              cat:cat||"Okategoriserad"}}).filter(r=>r.title);
-    const seen=new Set(),fresh=[],dupes=[];
-    rows.forEach(r=>{const k=r.title.toLowerCase();
-      if(existing.has(k)||seen.has(k)){dupes.push(r.title);return}
-      seen.add(k);fresh.push(r)});
-    if(!fresh.length){
-      alert(dupes.length?("Redan inskriven: "+dupes.join(", ")):"Skriv in minst en ny titel först.");
-      return;
-    }
-    const {data:ins,error}=await sb.from("manual_books")
-      .insert(fresh.map(r=>({...r,shelf:g.shelf,gap_id:id,created_by:sbUser.id}))).select();
-    if(error){alert("Kunde inte spara: "+error.message);return}
-    (ins||fresh).forEach((r,i)=>{
-      const rec={id:r.id||Date.now()+i,title:fresh[i].title,author:fresh[i].author,cat:fresh[i].cat};
-      data.push({id:1e6+data.length,title:rec.title,author:rec.author,cat:rec.cat,shelf:g.shelf,status:"hylla",lentTo:"",ts:null});
-      (gapAdded[id]=gapAdded[id]||[]).push(rec);
-    });
-    buildShelfOptions();rebuildCatFilter();render();renderGaps();
-    const f=document.getElementById("form-"+id);
-    if(f){f.style.display="";fillRows(id)}
-    const t=document.getElementById("saved-"+id);
-    if(t){t.textContent=`✓ ${fresh.length} tillagd${fresh.length>1?"a":""}`+(dupes.length?` (hoppade över dubbletter: ${dupes.join(", ")})`:"")+` – tryck "✓ Klar" när luckan är avbetad.`;
-          setTimeout(()=>{if(t)t.textContent=""},7000)}
-  } finally {
-    saving[id]=false;
-    const b2=document.querySelector(`#form-${id} .gap-actions button:last-child`);
-    if(b2){b2.disabled=false;b2.style.opacity=""}
-  }
-}
 let gapAdded={};
 /* Utloggade laser via vyn books_public - bara titel, forfattare, kategori,
    beskrivning och kalla. Inloggade laser hela manual_books med hyllplats,
@@ -937,18 +1062,7 @@ async function loadManualBooks(){
     });
   }
 }
-function openGapView(o){
-  document.getElementById("gapView").classList.toggle("open",o);
-  ["sok","salj","install"].forEach(k=>{if(o)document.getElementById("tab-"+k).style.display="none"});
-  if(!o)document.querySelector('.tabbar .tab[data-tab="install"]').click();
-  scrollTo({top:0})}
-document.getElementById("openGaps").addEventListener("click",()=>openGapView(true));
-document.getElementById("gapReminder").addEventListener("click",()=>openGapView(true));
-document.getElementById("gapBack").addEventListener("click",()=>openGapView(false));
-document.querySelectorAll(".gap-filter .quick").forEach(b=>b.addEventListener("click",()=>{
-  document.querySelectorAll(".gap-filter .quick").forEach(x=>x.classList.remove("on"));b.classList.add("on");
-  gapFilter=b.dataset.g;renderGaps()}));
-document.querySelectorAll(".tabbar .tab").forEach(t=>t.addEventListener("click",()=>document.getElementById("gapView").classList.remove("open")));
+document.getElementById("openGaps").addEventListener("click",()=>{gapCur=null;gapMsg="";go("gaps")});
 window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidden";markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";lbImg.src=src;lbCap.textContent="Lucka – scrolla för att zooma, dra för att flytta";lbImg.onload=()=>{measureBase();applyT()}};
 
 /* ---------- Kategoriredigering ---------- */
@@ -1270,7 +1384,7 @@ window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;w
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
-shareSheet.innerHTML=`<div class="share-box"><h3>🔗 Dela bokhyllan</h3>
+shareSheet.innerHTML=`<div class="share-box"><h3>Dela hyllan</h3>
   <textarea id="shareTxt"></textarea>
   <div class="share-acts">
     <button id="shareNative">Dela…</button>
@@ -1283,25 +1397,30 @@ document.getElementById("shareClose")&&0;
 shareSheet.querySelector("#shareClose").onclick=()=>shareSheet.classList.remove("open");
 shareSheet.querySelector("#shareCopy").onclick=()=>{
   navigator.clipboard.writeText(shareSheet.querySelector("#shareTxt").value)
-    .then(()=>alert("Kopierat!"),()=>alert("Kunde inte kopiera"))};
+    .then(()=>toast("Texten är kopierad"),()=>alert("Kunde inte kopiera"))};
 shareSheet.querySelector("#shareNative").onclick=async()=>{
   const text=shareSheet.querySelector("#shareTxt").value;
-  if(navigator.share){try{await navigator.share({title:"Min bokhylla",text,url:location.href})}catch(e){}}
+  if(navigator.share){try{await navigator.share({title:profile.name,text})}catch(e){}}
   else shareSheet.querySelector("#shareCopy").click();
 };
 document.getElementById("shareBtn").addEventListener("click",()=>{
   const n=data.length, cats=[...new Set(data.map(d=>d.cat))].length;
   shareSheet.querySelector("#shareTxt").value=
-`📚 Titta i min bokhylla! ${n} böcker i ${cats} kategorier — allt från buddhism och terapi till kokböcker och fantasy.
+`Titta i min bokhylla! ${n} böcker i ${cats} kategorier — allt från buddhism och terapi till kokböcker och fantasy.
 
 Vill du låna någon? Eller bara prata om en? Hör av dig.
 
 ${location.href}`;
   shareSheet.classList.add("open");
 });
-window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent="📖 Visa hela boklistan ("+data.length+")"};window.__lt();
+document.getElementById("copyLink").addEventListener("click",()=>{
+  const url=location.origin+location.pathname;
+  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+    .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
+});
+window.__lt=()=>{const lw=document.getElementById("listWrap");if(lw&&lw.style.display==="none")document.getElementById("listToggle").textContent=`Visa hela boklistan (${fmtN(data.length)})`};window.__lt();
 
-for(const [name,fn] of [["manualBooks",loadManualBooks],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
+for(const [name,fn] of [["manualBooks",loadManualBooks],["statuses",loadStatuses],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
   try{await fn()}catch(e){console.warn(name+" misslyckades:",e)}
 }
 })();
