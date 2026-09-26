@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926193645";
+const DV="?v=20260926194620";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -23,7 +23,7 @@ try{
 let sbUser=null;
 
 /* ---------- Designhjälpare (ikoner, färger, profil) ---------- */
-const ICONS={"settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","library":"<path d=\"m16 6 4 14\"/> <path d=\"M12 6v14\"/> <path d=\"M8 8v12\"/> <path d=\"M4 4v16\"/>","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\"/> <circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/>","pencil":"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/> <path d=\"m15 5 4 4\"/>","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/> <circle cx=\"12\" cy=\"13\" r=\"3\"/>","x":"<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>","chevron-right":"<path d=\"m9 18 6-6-6-6\"/>","map-pin":"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\"/>","play":"<polygon points=\"6 3 20 12 6 21 6 3\"/>","scan-search":"<path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/> <path d=\"m16 16-1.9-1.9\"/>","search":"<circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","user":"<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/> <circle cx=\"12\" cy=\"7\" r=\"4\"/>","info":"<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M12 16v-4\"/> <path d=\"M12 8h.01\"/>"};
+const ICONS={"eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\"/> <path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\"/> <path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\"/> <path d=\"m2 2 20 20\"/>","scan-text":"<path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <path d=\"M7 8h8\"/> <path d=\"M7 12h10\"/> <path d=\"M7 16h6\"/>","circle-check":"<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"m9 12 2 2 4-4\"/>","rotate-cw":"<path d=\"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8\"/> <path d=\"M21 3v5h-5\"/>","chevron-down":"<path d=\"m6 9 6 6 6-6\"/>","check":"<path d=\"M20 6 9 17l-5-5\"/>","plus":"<path d=\"M5 12h14\"/> <path d=\"M12 5v14\"/>","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/>","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/> <circle cx=\"9\" cy=\"7\" r=\"4\"/> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>","library":"<path d=\"m16 6 4 14\"/> <path d=\"M12 6v14\"/> <path d=\"M8 8v12\"/> <path d=\"M4 4v16\"/>","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\"/> <circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/>","pencil":"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/> <path d=\"m15 5 4 4\"/>","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/> <circle cx=\"12\" cy=\"13\" r=\"3\"/>","x":"<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>","chevron-right":"<path d=\"m9 18 6-6-6-6\"/>","map-pin":"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\"/>","play":"<polygon points=\"6 3 20 12 6 21 6 3\"/>","scan-search":"<path d=\"M3 7V5a2 2 0 0 1 2-2h2\"/> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\"/> <path d=\"M21 17v2a2 2 0 0 1-2 2h-2\"/> <path d=\"M7 21H5a2 2 0 0 1-2-2v-2\"/> <circle cx=\"12\" cy=\"12\" r=\"3\"/> <path d=\"m16 16-1.9-1.9\"/>","search":"<circle cx=\"11\" cy=\"11\" r=\"8\"/> <path d=\"m21 21-4.3-4.3\"/>","user":"<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/> <circle cx=\"12\" cy=\"7\" r=\"4\"/>","info":"<circle cx=\"12\" cy=\"12\" r=\"10\"/> <path d=\"M12 16v-4\"/> <path d=\"M12 8h.01\"/>"};
 function ic(n){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||""}</svg>`}
 function fillIcons(root){(root||document).querySelectorAll("i[data-ic]").forEach(el=>{if(!el.firstChild)el.innerHTML=ic(el.dataset.ic)})}
 fillIcons();
@@ -1230,7 +1230,9 @@ async function runAnalys(kind,id,btn){
     }else{
       await loadNewShelves();
     }
-    if(analysBooks[analysKey(kind,id)])renderAnalys(kind,id);
+    if(analysBooks[analysKey(kind,id)]){
+      if(kind==="shelf")psOpen("analys",id);else renderAnalys(kind,id);
+    }
   }catch(e){
     alert("Kunde inte analysera: "+(e.message||e));
     if(btn){btn.disabled=false;btn.textContent=label}
@@ -1531,44 +1533,66 @@ function nsDaysLeft(r){
   if(!r.done_at)return 0;
   return Math.ceil(NS_KEEP_DAYS-(Date.now()-new Date(r.done_at).getTime())/864e5);
 }
+/* ---------- Platser → Foton: kort per inskickat foto ---------- */
+let nsOpenId=null,nsMsg=null; /* nsMsg: {text, undo:id|null} */
+let nsRot={};try{nsRot=JSON.parse(localStorage.getItem("bokhyllan-rot")||"{}")}catch(e){}
+const rotCss=id=>{const r=nsRot[id]||0;return `rotate(${r}deg) scale(${r%180?0.62:1})`};
+function nsRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;try{localStorage.setItem("bokhyllan-rot",JSON.stringify(nsRot))}catch(e){}
+  document.querySelectorAll(`[data-rot="${id}"]`).forEach(img=>img.style.transform=rotCss(id))}
 function nsItem(r){
-  const done=r.state==="done";
-  const thumb=r.photo_data||r.photo_url;
-  const code=shelfCodeForRow(r);
-  const antal=code?data.filter(d=>d.shelf===code).length:0;
-  const status=antal?`${antal} böcker i katalogen`
-    :(r.claude_note?"Avläst – inga böcker inlagda än":"Väntar på avläsning");
-  return `<div class="ns-item">
-    <div class="ns-head-row">
-      ${thumb?`<img class="ns-thumb-img" src="${thumb}" alt="" onclick="nsView(${r.id})">`:""}
-      <div class="ns-titles"><span>${esc(r.name)} · ${esc(nsCap(r))}</span>
-        <div class="ns-note">${status}${code?` · <span class="mono">${code}</span>`:""}</div>
-        ${done?`<div class="ns-note">Försvinner ur listan om ${nsDaysLeft(r)} ${nsDaysLeft(r)===1?"dag":"dagar"}</div>`:""}
-      </div>
-      ${r.claude_note?`<div class="note-edit" id="ne-shelf-${r.id}" style="display:none">
-        <textarea class="note-ta" id="nt-shelf-${r.id}">${esc(r.claude_note)}</textarea>
-        <div class="ns-item-acts" style="margin-top:.4rem">
-          <button onclick="saveNote('shelf',${r.id},this)">Spara ändringar</button>
-          <button class="ghost" onclick="toggleNote('shelf',${r.id})">Avbryt</button>
-        </div></div>`:""}</div>
-    <div class="analys-box" id="ab-shelf-${r.id}" style="display:none"></div>
-    <div class="ns-item-acts">
-      ${thumb?`<button class="ghost" onclick="nsView(${r.id})">Visa</button>`:""}
-      ${r.photo_data?`<button class="ghost" onclick="runAnalys('shelf',${r.id},this)">Läs av</button>`:""}
-      ${r.claude_note?`<button class="ghost" onclick="toggleNote('shelf',${r.id})">Rätta</button>`:""}
-      ${done?`<button class="ghost" onclick="nsReopen(${r.id})">Öppna igen</button>`:`<button onclick="nsDone(${r.id})">Klar</button>`}
+  const thumb=r.photo_data||r.photo_url,code=shelfCodeForRow(r);
+  const books=code?data.filter(d=>d.shelf===code):[];
+  const meta=books.length?`${books.length} ${books.length===1?"bok":"böcker"}`:(r.claude_note?"Avläst – inga böcker än":"Väntar på avläsning");
+  const open=nsOpenId===r.id,done=r.state==="done";
+  return `<div class="pc${open?" open":""}" id="pc-${r.id}">
+    <button class="pc-head" onclick="nsToggle(${r.id})">
+      ${thumb?`<img src="${thumb}" alt="">`:`<span class="pc-noimg"></span>`}
+      <span class="pc-t"><b>${esc(nsCap(r))}</b><span class="pc-meta"><span>${meta}</span>${code?`<span class="chip-code">${code}</span>`:""}</span>
+        ${done?`<span class="pc-meta">Försvinner ur listan om ${nsDaysLeft(r)} ${nsDaysLeft(r)===1?"dag":"dagar"}</span>`:""}</span>
+      <span class="pc-chev">${ic("chevron-down")}</span></button>
+    ${open?`<div class="pc-body">
+      <div class="pc-photo">${thumb?`<img src="${thumb}" alt="" data-rot="${r.id}" style="transform:${rotCss(r.id)}" onclick="lbGap('${thumb}')">`:""}
+        <button class="pc-rot" onclick="nsRotate(${r.id})">${ic("rotate-cw")}Vrid</button></div>
+      ${books.length?`<div class="pc-books"><span class="pc-count"><span class="mono">${books.length}</span> böcker i katalogen</span>
+        ${books.map(d=>`<div class="pc-bk"><span style="background:${catColor(d.cat)}"></span><b>${esc(d.title)}</b><small>${esc(d.cat)}</small></div>`).join("")}</div>`
+        :`<span class="pc-empty">Inga böcker inlagda här ännu. Tryck Analysera.</span>`}
+    </div>`:""}
+    <div class="pc-acts">
+      <button onclick="nsToggle(${r.id})">${ic(open?"eye-off":"eye")}${open?"Dölj":"Visa"}</button>
+      <button onclick="nsAnalyse(${r.id},this)" ${r.photo_data?"":"disabled"}>${ic("scan-text")}Analysera</button>
+      <button onclick="psOpen('ratta',${r.id})" ${code?"":"disabled"}>${ic("pencil")}Rätta</button>
+      ${done?`<button class="pc-done" onclick="nsReopen(${r.id})">${ic("rotate-cw")}Öppna igen</button>`
+             :`<button class="pc-done" onclick="nsDone(${r.id})">${ic("circle-check")}Klar</button>`}
     </div></div>`;
 }
+function nsToggle(id){nsOpenId=nsOpenId===id?null:id;renderNsList()}
+function renderNsMsg(){
+  const el=document.getElementById("plMsg");if(!el)return;
+  el.innerHTML=nsMsg?`<div class="pl-msg">${ic("circle-check")}<span>${esc(nsMsg.text)}</span>${nsMsg.undo!=null?`<button onclick="nsUndo()">Ångra</button>`:""}</div>`:"";
+}
+function nsUndo(){if(nsMsg&&nsMsg.undo!=null){const id=nsMsg.undo;nsMsg=null;nsReopen(id,true)}}
 async function loadNewShelves(){
   const {data:rows}=await sb.from("new_shelves").select("*").order("created_at",{ascending:false});
   window.__nsRows=rows||[];
   syncShelfPhotos(rows);
+  renderNsList();
+}
+function renderNsList(){
+  const rows=window.__nsRows||[];
   const el=document.getElementById("nsList");if(!el)return;
-  if(!rows||!rows.length){el.innerHTML="";return}
+  renderNsMsg();
+  const total=rows.length,nDone=rows.filter(r=>r.state==="done").length;
+  const dt=document.getElementById("plDoneTxt");if(dt)dt.textContent=total?`${nDone} / ${total} klara`:"";
+  const pg=document.getElementById("plProg");if(pg)pg.style.width=(total?Math.round(nDone/total*100):0)+"%";
+  if(!rows.length){el.innerHTML=`<div class="empty">Inga inskickade foton än.</div>`;return}
   const byTime=rows.slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id));
   const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done"&&nsDaysLeft(r)>0);
-  el.innerHTML=(open.length?`<h4 class="ns-listh">Att klarmarkera (${open.length})</h4>`+open.map(nsItem).join("")
-      :`<p class="fine">Alla inskickade hyllfoton är klarmarkerade.</p>`)+
+  /* Grupper per plats (sammanslagna platser samlas under sin förälder). */
+  const groups=[];open.forEach(r=>{const top=topBc(String(r.bc));let g=groups.find(x=>x.bc===top);
+    if(!g){g={bc:top,rows:[]};groups.push(g)}g.rows.push(r)});
+  el.innerHTML=(groups.length?groups.map(g=>`<div class="pl-group"><div class="pl-gh"><b>${esc(bcNames[g.bc]||("Plats "+g.bc))}</b><span class="mono">${g.rows.length} kvar</span></div>
+      ${g.rows.map(nsItem).join("")}</div>`).join("")
+      :`<div class="empty">Alla foton är klara.</div>`)+
     (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>${done.map(nsItem).join("")}</details>`:"");
   const rep=PH.filter(x=>x.replaced&&x.replacedAt&&(Date.now()-x.replacedAt)<NS_KEEP_DAYS*864e5)
     .sort((a,b)=>b.replacedAt-a.replacedAt);
@@ -1615,6 +1639,133 @@ function photoKey(ph,members){
   return [members.indexOf(ph.bc),loose?1:0,-plan,sec,ph.db?1:0,ph.db?ph.createdAt:ph.fi];
 }
 function cmpKey(a,b){for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]<b[i]?-1:1;return 0}
+/* Analysera: finns en avläsning som inte sparats öppnas den direkt, annars
+   läses fotot av först. */
+async function nsAnalyse(id,btn){
+  if(analysBooks[analysKey("shelf",id)]){psOpen("analys",id);return}
+  if(btn){btn.disabled=true;btn.lastChild.textContent="Läser av…"}
+  await runAnalys("shelf",id,null);
+  if(btn&&document.body.contains(btn)){btn.disabled=false;btn.lastChild.textContent="Analysera"}
+}
+/* ---------- Analysera / Rätta: helskärmsvy ---------- */
+let PS=null; /* {mode,id,rows,code,spot,showEx} */
+function psCats(){return [...new Set(data.map(d=>d.cat).concat(["Okategoriserad"]))].sort((a,b)=>a.localeCompare(b,"sv"))}
+function psOpen(mode,id){
+  const r=(window.__nsRows||[]).find(x=>x.id===id);if(!r)return;
+  if(!sbUser){alert("Logga in först.");return}
+  const code=shelfCodeForRow(r)||"";
+  let rows=[];
+  if(mode==="analys"){
+    const st=analysBooks[analysKey("shelf",id)];if(!st)return;
+    rows=st.books.map((b,i)=>{const kn=knownBook(b.title,b.author,st.shelf);
+      return {k:"a"+i,title:b.title||"",author:b.author||"",cat:b.cat||"Okategoriserad",description:b.description||"",
+        checked:!kn,exists:!!kn,unsure:!!b.uncertain,note:kn?(kn.sameShelf?"Finns redan här":"Finns redan – "+kn.where):""}});
+    PS={mode,id,rows,code:st.shelf||code,spot:st.spotLabel||"",showEx:false};
+  }else{
+    rows=data.filter(d=>d.shelf===code).map(d=>({k:"e"+d.id,bookId:d.id,orig:{title:d.title,author:d.author||"",cat:d.cat},
+      title:d.title,author:d.author||"",cat:d.cat,checked:true,exists:false}));
+    PS={mode,id,rows,code,spot:"",showEx:false};
+  }
+  renderPS();document.body.classList.add("ps-lock");
+}
+function psClose(){PS=null;const el=document.getElementById("psView");if(el)el.remove();document.body.classList.remove("ps-lock")}
+function renderPS(){
+  if(!PS)return;
+  let el=document.getElementById("psView");
+  if(!el){el=document.createElement("div");el.id="psView";el.className="ps";document.body.appendChild(el)}
+  const r=(window.__nsRows||[]).find(x=>x.id===PS.id)||{};
+  const img=r.photo_data||r.photo_url||"",isA=PS.mode==="analys";
+  const newRows=PS.rows.filter(x=>!x.exists),exRows=PS.rows.filter(x=>x.exists);
+  const sel=PS.rows.filter(x=>x.checked&&x.title.trim()).length,unsure=PS.rows.filter(x=>x.unsure).length;
+  const cats=psCats();
+  const row=(x,compact)=>{const i=PS.rows.indexOf(x);
+    return `<div class="ps-row${x.unsure?" unsure":""}${x.exists&&!x.checked?" dim":""}">
+      <div class="ps-r1"><button class="ps-cb${x.checked?" on":""}" onclick="psSet(${i},'checked',${!x.checked})" aria-label="Välj">${ic("check")}</button>
+        <input class="ps-title" value="${esc(x.title)}" placeholder="Titel" oninput="psSet(${i},'title',this.value,1)">
+        <button class="ps-x" onclick="psDel(${i})" aria-label="Ta bort">${ic("x")}</button></div>
+      ${compact?"":`<div class="ps-r2"><input value="${esc(x.author)}" placeholder="Författare" oninput="psSet(${i},'author',this.value,1)">
+        <select onchange="psSet(${i},'cat',this.value,1)">${(cats.includes(x.cat)?cats:[x.cat].concat(cats)).map(c=>`<option${c===x.cat?" selected":""}>${esc(c)}</option>`).join("")}</select></div>`}
+      ${x.unsure?`<span class="ps-note warn">Osäker avläsning – kontrollera</span>`:x.note?`<span class="ps-note">${esc(x.note)}</span>`:""}</div>`};
+  const isSpot=/:L\d+$/.test(PS.code);
+  el.innerHTML=`<div class="ps-top"><button class="ps-cancel" onclick="psClose()">Avbryt</button>
+      <div class="ps-ttl"><b>${isA?"Analysera":"Rätta"}</b><span>${esc(nsCap(r))}</span></div><span></span></div>
+    <div class="ps-scroll">
+      <div class="ps-photo">${img?`<img src="${img}" alt="" data-rot="${PS.id}" style="transform:${rotCss(PS.id)}" onclick="lbGap('${img}')">`:""}
+        <button class="pc-rot" onclick="nsRotate(${PS.id})">${ic("rotate-cw")}Vrid</button></div>
+      ${isA?`<div class="ps-chips"><span><b class="mono">${PS.rows.length}</b>avlästa</span>${unsure?`<span class="warn"><b class="mono">${unsure}</b>osäker</span>`:""}${exRows.length?`<span class="ex"><b class="mono">${exRows.length}</b>finns redan</span>`:""}</div>
+        <p class="fine ps-help">Rätta det som blivit fel och stryk det som inte är en bok. Orange rader var osäkra. Böcker som redan finns i katalogen är bortvalda.</p>`
+        :`<p class="fine ps-help">Böckerna på hyllan. Ändra det som är fel. Kryssa ur eller tryck ✕ för att ta bort en bok ur katalogen.</p>`}
+      <div class="ps-code"><span>Hyllkod</span><input value="${esc(PS.code)}" oninput="PS.code=this.value.trim().toUpperCase()" ${isA?"":"disabled"}>
+        ${isA&&isSpot?`<input class="ps-spot" value="${esc(PS.spot)}" placeholder="Platsens namn" oninput="PS.spot=this.value">`:""}</div>
+      <div class="ps-rows">${newRows.map(x=>row(x)).join("")||(isA?"":`<p class="fine">Inga böcker på den här hyllan än.</p>`)}</div>
+      ${exRows.length?`<div class="ps-ex"><button class="ps-exh" onclick="PS.showEx=!PS.showEx;renderPS()"><span><b class="mono">${exRows.length}</b> finns redan i katalogen</span><span class="pc-chev${PS.showEx?" up":""}">${ic("chevron-down")}</span></button>
+        ${PS.showEx?`<div class="ps-rows">${exRows.map(x=>row(x,true)).join("")}</div>`:""}</div>`:""}
+      <button class="ps-add" onclick="psAdd()">${ic("plus")}Lägg till bok</button>
+    </div>
+    <div class="ps-bar"><button class="ps-save${isA&&!sel?" off":""}" onclick="psSave(this)" ${isA&&!sel?"disabled":""}>${ic("check")}${isA?(sel?`Lägg in ${sel} ${sel===1?"bok":"böcker"}`:"Inget valt"):"Spara ändringar"}</button></div>`;
+}
+/* Ändringar i fält ritar inte om vyn (då tappar fältet fokus) - bara knappen. */
+function psSet(i,f,v,quiet){if(!PS||!PS.rows[i])return;PS.rows[i][f]=v;if(f==="title"||f==="author")PS.rows[i].unsure=false;
+  if(!quiet)renderPS();else psUpdateBar()}
+function psUpdateBar(){
+  const b=document.querySelector("#psView .ps-save");if(!b||!PS)return;
+  const sel=PS.rows.filter(x=>x.checked&&x.title.trim()).length;
+  if(PS.mode==="analys"){b.disabled=!sel;b.classList.toggle("off",!sel);b.lastChild.textContent=sel?`Lägg in ${sel} ${sel===1?"bok":"böcker"}`:"Inget valt"}
+}
+/* Ta bort en rad. I Rätta blir en befintlig bok markerad för radering
+   (bekräftas när du sparar); nya rader stryks bara. */
+function psDel(i){if(!PS||!PS.rows[i])return;const x=PS.rows[i];
+  if(x.bookId)PS.deleted=(PS.deleted||[]).concat([x]);
+  PS.rows.splice(i,1);renderPS()}
+function psAdd(){if(!PS)return;PS.rows.push({k:"m"+Date.now(),title:"",author:"",cat:"Okategoriserad",checked:true,exists:false});renderPS();
+  const ins=document.querySelectorAll("#psView .ps-rows .ps-title");const last=ins[ins.length-1];if(last)last.focus()}
+async function psSave(btn){
+  if(!PS||!sbUser)return;
+  const r=(window.__nsRows||[]).find(x=>x.id===PS.id)||{};
+  if(btn){btn.disabled=true}
+  try{
+    if(PS.mode==="analys"){
+      const shelf=(PS.code||"").trim().toUpperCase();
+      if(!/^\d+:[VHSKL]\d+$/.test(shelf)){alert("Hyllkoden ser inte rätt ut. Den ska se ut som 10:S3, 1:V2 eller 10:L1.");if(btn)btn.disabled=false;return}
+      if(/:L\d+$/.test(shelf)&&PS.spot.trim()){await sb.from("spot_names").upsert({code:shelf,name:PS.spot.trim()});spotNames[shelf]=PS.spot.trim()}
+      const rows=PS.rows.filter(x=>x.checked&&x.title.trim());
+      const {inserted,skipped}=await insertBooks(rows.map(x=>({title:x.title.trim(),author:x.author.trim(),cat:x.cat||"Okategoriserad",shelf,
+        description:(x.description||"").trim()||null,source:"claude",uncertain:!!x.unsure,created_by:sbUser.id})));
+      delete analysBooks[analysKey("shelf",PS.id)];
+      nsMsg={text:`${inserted.length} ${inserted.length===1?"bok inlagd":"böcker inlagda"} i ${nsCap(r)}.${skipped.length?` ${skipped.length} fanns redan.`:""}`,undo:null};
+    }else{
+      const removed=(PS.deleted||[]).concat(PS.rows.filter(x=>x.bookId&&!x.checked));
+      const added=PS.rows.filter(x=>!x.bookId&&x.checked&&x.title.trim());
+      const changed=PS.rows.filter(x=>x.bookId&&x.checked&&x.orig&&(x.title.trim()!==x.orig.title||x.author.trim()!==x.orig.author||x.cat!==x.orig.cat));
+      if(!removed.length&&!added.length&&!changed.length){psClose();return}
+      if(removed.length){
+        const ok=await ask({title:"Ta bort böcker?",text:`${removed.length} ${removed.length===1?"bok tas":"böcker tas"} bort ur katalogen: ${removed.map(x=>x.orig.title).slice(0,5).join(", ")}${removed.length>5?" …":""}. Det går inte att ångra.`,
+          buttons:[{label:"Ja, spara",value:true,kind:"danger"},{label:"Avbryt",value:false}]});
+        if(!ok){if(btn)btn.disabled=false;return}
+      }
+      for(const x of changed){
+        const {error}=await sb.from("manual_books").update({title:x.title.trim(),author:x.author.trim(),cat:x.cat}).eq("id",x.bookId);
+        if(error)throw new Error(`"${x.title}": ${error.message}`);
+        if(x.cat!==x.orig.cat)await sb.from("book_cat").upsert({book_id:x.bookId,cat:x.cat,updated_at:new Date().toISOString()});
+        const d=data.find(d=>d.id===x.bookId);if(d)Object.assign(d,{title:x.title.trim(),author:x.author.trim(),cat:x.cat});
+      }
+      for(const x of removed){
+        const {error}=await sb.from("manual_books").delete().eq("id",x.bookId);
+        if(error)throw new Error(`"${x.orig.title}": ${error.message}`);
+        const k=data.findIndex(d=>d.id===x.bookId);if(k>=0)data.splice(k,1);
+      }
+      let ins=[];
+      if(added.length)ins=(await insertBooks(added.map(x=>({title:x.title.trim(),author:x.author.trim(),cat:x.cat||"Okategoriserad",shelf:PS.code,created_by:sbUser.id})))).inserted;
+      const parts=[changed.length&&`${changed.length} ändrade`,removed.length&&`${removed.length} borttagna`,ins.length&&`${ins.length} tillagda`].filter(Boolean);
+      nsMsg={text:`Ändringarna i ${nsCap(r)} är sparade (${parts.join(", ")}).`,undo:null};
+    }
+    nsOpenId=PS.id;psClose();
+    buildShelfOptions();rebuildCatFilter();render();renderNsList();
+  }catch(e){alert("Kunde inte spara: "+(e.message||e));if(btn)btn.disabled=false}
+}
+window.psClose=psClose;window.psSet=psSet;window.psDel=psDel;window.psAdd=psAdd;window.psSave=psSave;window.renderPS=renderPS;
+Object.defineProperty(window,"PS",{get:()=>PS,configurable:true});
+
 /* Läsbart namn på ett inskickat foto. Står hyllkoden som etikett ("1:V3")
    blir det "Vänster · plan 3". */
 function nsCap(r){
@@ -1674,7 +1825,6 @@ function nsView(id){
     </div>`;
   wrap.style.display="";
 }
-let nsRot={};
 function nsViewRotate(id){nsRot[id]=((nsRot[id]||0)+90)%360;nsViewOpen[id]=false;nsView(id)}
 async function nsSetState(id,state){
   if(!sbUser){alert("Logga in först.");return false}
@@ -1684,15 +1834,20 @@ async function nsSetState(id,state){
 }
 async function nsDone(id){
   const r=(window.__nsRows||[]).find(x=>x.id===id);
-  if(await nsSetState(id,"done"))toast(`${r?nsCap(r):"Hyllan"} är klar – finns under Klarmarkerade`);
+  if(nsOpenId===id)nsOpenId=null;
+  nsMsg={text:`${r?nsCap(r):"Fotot"} (${r?(bcNames[topBc(String(r.bc))]||r.name):""}) är klar.`,undo:id};
+  if(!await nsSetState(id,"done"))nsMsg=null;
 }
-async function nsReopen(id){if(await nsSetState(id,"waiting"))toast("Öppnad igen")}
+async function nsReopen(id,quiet){
+  const r=(window.__nsRows||[]).find(x=>x.id===id);
+  if(await nsSetState(id,"waiting")){if(!quiet)nsMsg={text:`${r?nsCap(r):"Fotot"} är öppnad igen.`,undo:null};renderNsMsg()}
+}
 const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
-window.nsFinish=nsFinish;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
