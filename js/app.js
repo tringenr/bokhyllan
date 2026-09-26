@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926194358";
+const DV="?v=20260926194620";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -49,8 +49,15 @@ renderProfile();
 /* ---------- Startsida: 5 s, tryck = hoppa över ---------- */
 const splashEl=document.getElementById("splash");
 let splashT=[];
-function playSplash(){
+/* Bild och typsnitt väljs av ett litet skript direkt i index.html, så att
+   rätt bild syns från första stund. Vid första start är det redan gjort;
+   "Visa startsidan igen" slumpar en ny. */
+let splashFirst=true;
+function playSplash(i){
   if(!splashEl)return;
+  const S=window.__splash;
+  if(S&&!(splashFirst&&S.applied))S.apply(Number.isInteger(i)?i:S.pick());
+  splashFirst=false;
   splashT.forEach(clearTimeout);splashT=[];
   splashEl.style.display="";splashEl.classList.remove("fade","go");document.body.classList.add("splashing");
   void splashEl.offsetWidth;
