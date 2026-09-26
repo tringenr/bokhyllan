@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260926170215";
+const DV="?v=20260926175351";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -383,28 +383,40 @@ function openPlace(bc,fi){
   go("place");
 }
 const capOf=ph=>(ph.bc!==curPlace?shortName(ph.bc)+" · ":"")+ph.cap;
+/* Helskärm: fotona ur repot bläddras i helskärmsvyn, uppladdade öppnas ett och ett. */
+function showPhoto(fi){const ph=PH[fi];if(!ph)return;if(ph.db)lbSrc(ph.src,capOf(ph));else lbOpen(fi)}
 function pickPhoto(fi){curPhoto=fi;renderPlace()}
 function renderPlace(){
   const el=document.getElementById("view-place");if(!el)return;
   const p=placeList().find(x=>x.bc===curPlace);if(!p){el.innerHTML="";return}
-  const sel=PH[curPhoto]&&PH[curPhoto].bc===p.bc?PH[curPhoto]:p.photos[0];
+  /* Valt foto måste höra till platsen eller någon av dess hyllor - i en
+     sammanslagen plats har fotona de gamla platsernas nummer. */
+  const sel=PH[curPhoto]&&p.members.includes(PH[curPhoto].bc)?PH[curPhoto]:p.photos[0];
+  const prevStrip=el.querySelector(".thumbs"),keepX=prevStrip&&prevStrip.dataset.place===p.bc?prevStrip.scrollLeft:0;
+  const coverSrc=sel?(sel.src||sel.thumb):p.cover;
   const inPlace=data.filter(d=>d.shelf&&p.members.includes(d.shelf.split(":")[0]));
   const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
   const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
   const books=sel?data.filter(d=>sel.shelves.includes(d.shelf)):inPlace;
   const loggedOut=!data.some(d=>d.shelf);
-  el.innerHTML=`<div class="pl-cover">${p.cover?`<img src="${p.cover}" alt="">`:`<div class="no-img"></div>`}
+  el.innerHTML=`<div class="pl-cover">${coverSrc?`<img src="${coverSrc}" alt="${sel?esc(capOf(sel)):""}" onclick="showPhoto(${sel?sel.fi:-1})">`:`<div class="no-img"></div>`}
       <button class="pill-back" onclick="go('hem')">← Hem</button></div>
     <div class="pl-head"><h1>${esc(p.name)}</h1><span>${loggedOut?"":p.count+" böcker · "}${p.photos.length} foton</span></div>
-    ${p.photos.length?`<div class="thumbs">${p.photos.map(ph=>`<button class="th${sel&&ph.fi===sel.fi?" on":""}" onclick="pickPhoto(${ph.fi})">
+    ${p.photos.length?`<div class="thumbs" data-place="${p.bc}">${p.photos.map(ph=>`<button class="th${sel&&ph.fi===sel.fi?" on":""}" onclick="pickPhoto(${ph.fi})">
         <img src="${ph.thumb}" alt="" loading="lazy"><span>${esc(capOf(ph))}</span></button>`).join("")}</div>`:""}
     ${cats.length?`<div class="card pl-cats"><h2>Vad står här</h2>${cats.map(([c,n])=>`<div class="cat-bar"><span>${esc(c)}</span>
         <span class="track"><span style="width:${Math.round(n/cMax*100)}%;background:${catColor(c)}"></span></span><b>${n}</b></div>`).join("")}</div>`:""}
     <div class="pl-books">
-      ${sel?`<div class="pl-sel"><span>${esc(capOf(sel))}${books.length?" · tryck på status för att byta":""}</span><button onclick="lbOpen(${sel.fi})">Visa foto</button></div>`:""}
+      ${sel?`<div class="pl-sel"><span>${esc(capOf(sel))}${books.length?" · tryck på status för att byta":""}</span><button onclick="showPhoto(${sel.fi})">Visa foto</button></div>`:""}
       <div class="booklist">${loggedOut?`<p class="pl-empty">Logga in för att se vilka böcker som står här.</p>`
-        :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.</p>`)}</div>
+        :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.${sel&&sel.db?" Läs av det under Inställningar → Platser.":""}</p>`)}</div>
     </div>`;
+  /* Bildraden ritas om vid varje val - behåll var du var, och se till att
+     det valda fotot syns. Utan detta hoppade raden tillbaka till början. */
+  const strip=el.querySelector(".thumbs");
+  if(strip){strip.scrollLeft=keepX;const on=strip.querySelector(".th.on");
+    if(on){const l=on.offsetLeft-strip.offsetLeft,r=l+on.offsetWidth;
+      if(l<strip.scrollLeft||r>strip.scrollLeft+strip.clientWidth)strip.scrollLeft=Math.max(0,l-20)}}
 }
 /* Äldre ingång: öppna ett foto ur SHELF_IMGS - leder nu till platsvyn. */
 function openShelfView(gi,j){const g=SHELF_IMGS[gi];if(!g)return;openPlace(g.bc,flatIndex(gi,j))}
@@ -1253,6 +1265,8 @@ async function loadManualBooks(){
   }
 }
 document.getElementById("openGaps").addEventListener("click",()=>{gapCur=null;gapMsg="";go("gaps")});
+function lbSrc(src,cap){window.lbGap(src);lbCap.textContent=cap||""}
+window.showPhoto=showPhoto;
 window.lbGap=(src)=>{lb.classList.add("open");document.body.style.overflow="hidden";markFrac=null;scale=1;tx=0;ty=0;lbImg.style.transform="none";lbImg.src=src;lbCap.textContent="Lucka – scrolla för att zooma, dra för att flytta";lbImg.onload=()=>{measureBase();applyT()}};
 
 /* ---------- Kategoriredigering ---------- */
@@ -1516,6 +1530,19 @@ async function loadNewShelves(){
         ${done?"":`<button onclick="nsDone(${r.id})">✓ Klar</button>`}
       </div></div>`}).join("");
   window.__nsRows=rows;
+  syncShelfPhotos(rows);
+}
+/* Foton som laddats upp via "Ny hylla" bor i databasen, inte i photos.json.
+   Lägg in dem i fotolistan så att platsvyn visar dem. Den nedskalade
+   kopian (photo_data) används - originalet i lagringen kan vara flera MB. */
+function syncShelfPhotos(rows){
+  for(let i=PH.length-1;i>=0;i--)if(PH[i].db)PH.splice(i,1);
+  (rows||[]).slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id)).forEach(r=>{
+    const src=r.photo_data||r.photo_url;if(!src||!r.bc)return;
+    const code=shelfCodeForRow(r);
+    PH.push({bc:String(r.bc),cap:(r.label||"").trim()||"Foto",src,thumb:src,shelves:code?[code]:[],fi:PH.length,db:true});
+  });
+  renderHome();if(curView==="place")renderPlace();
 }
 /* Vilken hyllkod hor det har fotot till? Forst den gissade koden ur
    etiketten, annars en los plats vars namn matchar etiketten. */
