@@ -13,13 +13,20 @@ const ROOT = path.join(__dirname, "..");
 const fel = [];
 
 // ---- Stubbad Supabase -------------------------------------------------
-// Kedjebar query som alltid svarar tomt, så app.js får köra sina await utan nät.
-function stubQuery() {
-  const q = {
+// Kedjebar query utan nät. De publika bokraderna får två påhittade böcker, så
+// att kod som går igenom katalogen (sökning, kategorier) faktiskt körs i testet.
+const TESTRADER = {
+  books_public: [
+    { id: 1, title: "Psykologins grunder", author: "Test Testsson", cat: "Psykologi" },
+    { id: 2, title: "Kokbok för nybörjare", author: "", cat: "Mat" },
+  ],
+};
+function stubQuery(tabell) {
+  const q = { __t: tabell,
     select: () => q, order: () => q, eq: () => q, in: () => q,
     insert: () => q, upsert: () => q, update: () => q, delete: () => q,
     limit: () => q, single: () => q, maybeSingle: () => q,
-    then: (res) => Promise.resolve({ data: [], error: null }).then(res),
+    then: (res) => Promise.resolve({ data: TESTRADER[q.__t] || [], error: null }).then(res),
   };
   return q;
 }
@@ -90,6 +97,23 @@ try {
   fel.push("fel vid DOMContentLoaded/load: " + e.stack);
 }
 
+// Skriv i sökfältet och tryck på några knappar, som en användare. Fel som
+// bara uppstår efter en interaktion (t.ex. i en fördröjd sparning) fångas
+// av jsdomError-lyssnaren ovan. Kontrollerna väntar tills timrarna gått.
+setTimeout(() => {
+  try {
+    const d = window.document, q = d.getElementById("q");
+    if (q) { q.value = "psyk"; q.dispatchEvent(new window.Event("input", { bubbles: true })); }
+    for (const id of ["fBtn", "blBtn", "gearBtn"]) { const b = d.getElementById(id); if (b) b.click(); }
+    const cat = d.querySelector("#catChips [data-c]"); if (cat) cat.click();
+  } catch (e) { fel.push("fel vid simulerad användning: " + e.stack); }
+}, 1000);
+// Stäng listan först när den fördröjda sparningen av sökningen hunnit köras.
+setTimeout(() => {
+  try { const lw = window.document.getElementById("lwClose"); if (lw) lw.click(); }
+  catch (e) { fel.push("fel vid simulerad användning: " + e.stack); }
+}, 2800);
+
 // ---- Kontroller -------------------------------------------------------
 setTimeout(() => {
   // 1. Renderade appen något innehåll?
@@ -156,4 +180,4 @@ setTimeout(() => {
   }
   console.log(`\nSTARTTEST OK — appen startar, ${anropade.size} onclick-funktioner finns, all JSON parsar.\n`);
   process.exit(0);
-}, 1500);
+}, 3500);
