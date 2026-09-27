@@ -788,3 +788,8 @@ body.ps-lock{overflow:hidden}
 :root[data-theme="dark"] .ps-cb.on{background:var(--pink-500);border-color:var(--pink-500)}
 :root[data-theme="dark"] .ps-cb:not(.on){background:transparent}
 .avatar{background-color:var(--magenta-500);color:#fff}
+/* Byt bild / Ny bild i platsvyn */
+.pl-acts{display:flex;gap:8px;padding:0 20px;margin-top:-4px}
+.pl-acts .btn{flex:1}
+.pl-acts .btn-outline{color:var(--fg)}
+.dlg-in{font:500 15px var(--font-body);padding:11px 12px}
