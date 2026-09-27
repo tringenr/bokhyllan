@@ -4,12 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#F2EAE4">
+<meta name="theme-color" content="#231A1E">
+<script>
+/* Tema: ljust, mörkt eller auto (följer telefonen). Förval mörkt. Sätts
+   innan sidan ritas, så att fel tema aldrig blinkar förbi. */
+(function(){
+  var m="dark";try{m=localStorage.getItem("minbokhylla-theme")||"dark"}catch(e){}
+  var mq=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
+  function res(){return m==="auto"?(mq&&mq.matches?"dark":"light"):m}
+  function apply(){var t=res(),r=document.documentElement;r.dataset.theme=t;r.dataset.mode=m;
+    var mc=document.querySelector('meta[name="theme-color"]');if(mc)mc.content=t==="dark"?"#231A1E":"#F2EAE4"}
+  apply();
+  window.__theme={get:function(){return m},resolved:res,set:function(x){m=x;try{localStorage.setItem("minbokhylla-theme",x)}catch(e){}apply()}};
+  try{mq.addEventListener("change",function(){if(m==="auto")apply()})}catch(e){}
+})();
+</script>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20260926200145">
+<link rel="stylesheet" href="css/style.css?v=20260927141346">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20260926200145";
+  var MY="20260927141346";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -123,20 +137,26 @@
 <section id="view-hem" class="view">
   <div class="home-head">
     <button class="avatar" id="homeAvatar" data-edit aria-label="Byt namn eller bild"></button>
-    <button class="home-title" data-edit>
-      <span id="homeName">Min Bokhylla</span>
-      <small>Tryck för att byta namn eller bild</small>
-    </button>
-    <button class="icon-btn" id="gearBtn" aria-label="Inställningar"><i data-ic="settings"></i><span class="dot" id="gearDot"></span></button>
+    <button class="home-title" data-edit aria-label="Byt namn eller bild"><span id="homeName">Min Bokhylla</span></button>
+    <button class="gear" id="gearBtn" aria-label="Inställningar"><i data-ic="settings"></i><span class="dot" id="gearDot"></span></button>
   </div>
 
-  <label class="search"><i data-ic="search"></i><input id="q" type="search" placeholder="Sök titel eller författare" autocomplete="off"></label>
-  <div class="quick-row" id="quickRow"></div>
+  <div class="hs">
+    <div class="hs-row" id="hsRow">
+      <input id="q" type="search" placeholder="Vad letar du efter?" autocomplete="off" enterkeyhint="search" aria-label="Sök titel eller författare">
+      <button class="hs-f" id="fBtn" aria-label="Kategorier" aria-expanded="false"><i data-ic="sliders-horizontal"></i></button>
+    </div>
+    <div class="hs-panel" id="fPanel" hidden>
+      <div class="hs-chips" id="catChips"></div>
+      <div class="hs-recent" id="recentRow"></div>
+    </div>
+  </div>
 
   <div id="listWrap" class="list-wrap" style="display:none">
+    <div class="lw-head"><span id="count"></span><button class="link-btn" id="lwClose">Dölj listan</button></div>
     <div class="controls">
       <select id="fShelf"></select>
-      <select id="fCat"><option value="">Alla kategorier</option></select>
+      <select id="fCat" hidden><option value="">Alla kategorier</option></select>
     </div>
     <div class="chips">
       <button class="chip active" data-s="">Alla</button>
@@ -144,10 +164,8 @@
       <button class="chip" data-s="utlanad">Utlånad</button>
       <button class="chip" data-s="flyter">Flyter runt</button>
     </div>
-    <div id="count"></div>
     <div class="booklist" id="grid"></div>
   </div>
-  <button class="list-toggle" id="listToggle">Visa hela boklistan</button>
 
   <div class="place-grid" id="placeGrid"></div>
 
@@ -159,6 +177,12 @@
       <span><i class="lg" style="background:var(--orange-500)"></i><b id="stUt">0</b>utlånade</span>
       <span><i class="lg" style="background:var(--magenta-300)"></i><b id="stFly">0</b>flyter runt</span>
     </div>
+  </div>
+
+  <div class="bl-card" id="blCard">
+    <div class="bl-row"><span class="bl-t"><i data-ic="list"></i>Visa hela boklistan<b class="mono" id="blN"></b></span>
+      <button class="bl-btn" id="blBtn" aria-label="Visa kategorier" aria-expanded="false"><i data-ic="chevron-down"></i></button></div>
+    <div class="bl-cats" id="blCats" hidden></div>
   </div>
 </section>
 
@@ -256,6 +280,15 @@
     <button id="replaySplash"><i data-ic="play"></i><span><b>Visa startsidan igen</b><small>Förhandsvisa startskärmen</small></span></button>
     <button data-set="om"><i data-ic="info"></i><span><b>Om appen</b><small>Vad Bokhyllan är och vad som är på gång</small></span></button>
   </div>
+  <span class="set-lbl">Utseende</span>
+  <div class="app-card">
+    <div class="app-row"><i data-ic="sun-moon"></i><span><b>Ljust eller mörkt läge</b><small id="modeSub">Mörkt läge</small></span></div>
+    <div class="seg" id="themeSeg">
+      <button data-mode="light"><i data-ic="sun"></i>Ljust</button>
+      <button data-mode="dark"><i data-ic="moon"></i>Mörkt</button>
+      <button data-mode="auto"><i data-ic="smartphone"></i>Auto</button>
+    </div>
+  </div>
 </aside>
 
 <!-- ================= REDIGERA HYLLA ================= -->
@@ -280,6 +313,6 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20260926200145"></script>
+<script src="js/app.js?v=20260927141346"></script>
 </body>
 </html>
