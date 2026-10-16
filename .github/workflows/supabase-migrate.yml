@@ -1,0 +1,34 @@
+name: Supabase-migreringar
+
+# Kör automatiskt databas-migreringarna i supabase/migrations/ mot
+# produktionsprojektet, men bara när en commit som rör den mappen hamnar på
+# main (dvs. efter att en PR mergats). Detta ersätter att köra migreringar
+# manuellt via mcp__Supabase__apply_migration eller SQL Editor - se CLAUDE.md
+# för ordningen "appen först, funktionen sedan".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Länka till produktionsprojektet
+        run: supabase link --project-ref zuesxdqifsnvhleiukum
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Kör migreringar
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
