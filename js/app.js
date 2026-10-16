@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20260927145732";
+const DV="?v=20261016142129";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -72,10 +72,10 @@ function fadeSplash(){
 }
 if(splashEl){splashEl.addEventListener("click",fadeSplash);playSplash()}
 
-/* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books /
-   books_public). Endast photos.json (hyllfotons metadata) laser vi fortfarande
-   fran fil - photos.json arkiveras i Fas 3a. BOOK_INFO fylls nu av
-   loadManualBooks, inte fran fil. */
+/* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books).
+   Endast photos.json (hyllfotons metadata) laser vi fortfarande fran fil -
+   photos.json arkiveras i Fas 3a. BOOK_INFO fylls nu av loadManualBooks,
+   inte fran fil. */
 const photos=await fetch("data/photos.json"+DV).then(r=>r.json());
 const BOOK_INFO={};
 const SHELF_IMGS=[];
@@ -696,14 +696,43 @@ window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
 renderAuth();
-try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
-try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
-buildShelfOptions();
-try{await loadStatuses()}catch(e){console.warn("statuses",e)}
-sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
-  const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
-  if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
-}).subscribe();
+
+/* Utloggad: ingen katalogdata hämtas (se gatade anrop nedan) - books_public
+   är borttagen (den läckte, och kunde skrivas till av vem som helst med
+   anon-nyckeln, se PR 2). Visa en inloggningsskärm istället för appen.
+   Resten av uppstarten (funktionsdefinitioner, onclick-export) körs ändå
+   som vanligt - annars saknas de när inloggningen sedan laddar om sidan. */
+if(!sbUser){
+  const hemEl=document.getElementById("view-hem"),tabbar=document.querySelector(".tabbar"),loginEl=document.getElementById("view-login");
+  if(hemEl)hemEl.style.display="none";
+  if(tabbar)tabbar.style.display="none";
+  if(loginEl)loginEl.style.display="";
+  const loginForm=document.getElementById("loginForm");
+  if(loginForm)loginForm.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const errEl=document.getElementById("loginErr"),btn=document.getElementById("loginBtn");
+    const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
+    errEl.textContent="";btn.disabled=true;btn.textContent="Loggar in…";
+    const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";btn.disabled=false;btn.textContent="Logga in";return}
+    sbUser=res.user;location.reload();
+  });
+  const forgotBtn=document.getElementById("loginForgot");
+  if(forgotBtn)forgotBtn.addEventListener("click",()=>toast("Glömt lösenord kommer snart."));
+  const signupBtn=document.getElementById("loginSignup");
+  if(signupBtn)signupBtn.addEventListener("click",()=>toast("Skapa konto kommer snart."));
+}
+
+if(sbUser){
+  try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
+  try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
+  buildShelfOptions();
+  try{await loadStatuses()}catch(e){console.warn("statuses",e)}
+  sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
+    const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
+    if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
+  }).subscribe();
+}
 
 /* ---------- Navigering ---------- */
 const VIEWS=["hem","place","delade","salj","gaps","set"];
@@ -726,7 +755,7 @@ function closePanel(){panel.classList.remove("open");panelScrim.classList.remove
 document.getElementById("gearBtn").addEventListener("click",openPanel);
 document.getElementById("panelClose").addEventListener("click",closePanel);
 panelScrim.addEventListener("click",closePanel);
-go("hem",{keepScroll:true});
+if(sbUser)go("hem",{keepScroll:true});
 function openSet(page){
   document.querySelectorAll("#view-set .set-page").forEach(el=>el.classList.toggle("on",el.dataset.page===page));
   go("set");
@@ -1370,28 +1399,20 @@ async function saveNote(kind,id,btn){
   }
 }
 let gapAdded={};
-/* Utloggade laser via vyn books_public - bara titel, forfattare, kategori,
-   beskrivning och kalla. Inloggade laser hela manual_books med hyllplats,
-   lucksignal och skaparinfo. Vyn ar oppen for anon, tabellen ar det inte. */
+/* books_public togs bort i PR 2 (läckte, och kunde skrivas till av vem som
+   helst med anon-nyckeln). Den här funktionen anropas numera bara inifrån
+   if(sbUser)-blocket längre ner i filen - utloggade användare fastnar på
+   inloggningsskärmen och anropet görs aldrig för dem. */
 async function loadManualBooks(){
-  if(sbUser){
-    const {data:rows}=await sb.from("manual_books").select("*");
-    if(rows)rows.forEach(r=>{
-      /* Bokens id är manual_books.id rakt av. Den gamla förskjutningen med en
-         miljon (från tiden då böckerna låg i en fil) gör att databasens regler
-         avvisar statusändringar: de kräver att book_id finns i manual_books. */
-      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
-      if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
-      if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
-    });
-  }else{
-    const {data:rows}=await sb.from("books_public").select("*");
-    if(rows)rows.forEach(r=>{
-      /* Ingen hyllplats - utloggade ska inte veta var bocker star. */
-      data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:"",status:"hylla",lentTo:"",ts:null});
-      if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
-    });
-  }
+  const {data:rows}=await sb.from("manual_books").select("*");
+  if(rows)rows.forEach(r=>{
+    /* Bokens id är manual_books.id rakt av. Den gamla förskjutningen med en
+       miljon (från tiden då böckerna låg i en fil) gör att databasens regler
+       avvisar statusändringar: de kräver att book_id finns i manual_books. */
+    data.push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||"Okategoriserad",shelf:r.shelf,status:"hylla",lentTo:"",ts:null});
+    if(r.description&&!BOOK_INFO[r.title])BOOK_INFO[r.title]=r.description;
+    if(r.gap_id){(gapAdded[r.gap_id]=gapAdded[r.gap_id]||[]).push({id:r.id,title:r.title,author:r.author||"",cat:r.cat||""})}
+  });
 }
 document.getElementById("openGaps").addEventListener("click",()=>{gapCur=null;gapMsg="";go("gaps")});
 function lbSrc(src,cap){window.lbGap(src);lbCap.textContent=cap||""}
@@ -2007,7 +2028,9 @@ document.getElementById("copyLink").addEventListener("click",()=>{
 });
 window.__lt=()=>renderCatUI();window.__lt();
 
-for(const [name,fn] of [["manualBooks",loadManualBooks],["statuses",loadStatuses],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
-  try{await fn()}catch(e){console.warn(name+" misslyckades:",e)}
+if(sbUser){
+  for(const [name,fn] of [["manualBooks",loadManualBooks],["statuses",loadStatuses],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
+    try{await fn()}catch(e){console.warn(name+" misslyckades:",e)}
+  }
 }
 })();
