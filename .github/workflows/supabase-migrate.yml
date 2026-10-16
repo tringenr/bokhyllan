@@ -24,13 +24,17 @@ jobs:
           version: latest
 
       - name: Länka till produktionsprojektet
-        run: supabase link --project-ref zuesxdqifsnvhleiukum --password "$SUPABASE_DB_PASSWORD"
+        run: supabase link --project-ref zuesxdqifsnvhleiukum
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
+      # Separat --password-flagga gav upprepat "password authentication
+      # failed" trots nyresatta lösenord - troligen ett kopierings-/
+      # inklistringsproblem. En hel anslutningssträng från Supabases
+      # "Connect"-sida (med lösenordet redan korrekt inbakat och
+      # URL-kodat) är mer robust.
       - name: Kör migreringar
-        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
