@@ -45,7 +45,8 @@ const supabaseStub = {
       signOut: async () => ({ error: null }),
     },
     storage: { from: () => ({ upload: async () => ({ data: null, error: null }),
-                              getPublicUrl: () => ({ data: { publicUrl: "" } }) }) },
+                              getPublicUrl: () => ({ data: { publicUrl: "" } }),
+                              createSignedUrl: async () => ({ data: { signedUrl: "" }, error: null }) }) },
   }),
 };
 
