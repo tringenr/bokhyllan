@@ -1,208 +1,169 @@
 # Bokhyllans karta
 
-*Genomgång 27 augusti 2026. Var böckerna faktiskt bor, hur ett foto blir en
-katalogpost, och de nio ställen där systemet tappar sammanhanget.*
-
-756 böcker · 9 tabeller · 37 hyllfoton · 51 luckor · 1 edge function
+*Genomgång 17 oktober 2026, efter flera-användare-arbetet (PR1–PR5a). Ersätter
+helt genomgången från 27 augusti — den byggde på ett läge (böcker delvis i en
+fil, ingen inloggning krävd för läsning, en enda användare) som inte finns
+längre. Detta är facit nu.*
 
 ---
 
-## Tre lager, två sanningar
+## Arkitekturen i korthet
 
-Appen är en statisk sida utan byggkedja — `index.html`, `js/app.js`,
-`css/style.css` och några JSON-filer. Supabase sköter allt som användaren
-ändrar. Det som gör systemet svårare att resonera om än det ser ut är att
-**böcker kommer från två håll som aldrig möts**.
+Statisk sida utan byggkedja — `index.html`, `js/app.js` (en enda
+async-funktion, ~2050 rader), `css/style.css`. Publiceras via GitHub Pages vid
+merge till `main`. All data bor i Supabase (`zuesxdqifsnvhleiukum`), RLS på för
+alla tabeller. En edge function (`analysera`) sköter bildanalysen via Claude.
 
-| Lager | Innehåll | Ändras av |
+**Allt är per bibliotek sedan PR3/PR4.** Varje konto (inkl. anonyma, se nedan)
+hör till minst ett `libraries`, och varenda rad i katalogen har en
+`library_id`. De gamla filerna `data/books.json`, `data/gaps.json`,
+`data/bookinfo.json` är arkiverade och läses inte längre — **med ett
+undantag**, se glapp 1 nedan.
+
+### Inloggning
+
+- `signInWithPassword` för riktiga konton.
+- **Sedan PR5a: `signInAnonymously` körs automatiskt** om ingen session finns,
+  så en ny besökare kommer rakt in och kan bygga sin hylla innan de skapar
+  konto. Inloggningsskärmen (`view-login`) visas bara om den anonyma
+  inloggningen själv misslyckas (t.ex. nätverksfel).
+- En trigger på `auth.users` (`handle_new_user`, PR5a) skapar automatiskt ett
+  `libraries`-bibliotek + en `library_members`-rad (roll `owner`) för **varje**
+  nytt konto, anonymt eller riktigt. Utan den triggern har ett nytt konto
+  ingenstans att skriva.
+- E-postbekräftelse är avstängd i Supabase-inställningarna (Thomas stängde av
+  den under arbetet med PR5a).
+- **Ej byggt än:** vägen från anonymt konto till riktigt konto ("spara din
+  hylla", namnge biblioteket, glömt lösenord) — det är PR5b, inte påbörjad.
+
+### Databasmodellen (efter PR4)
+
+Två nycklar hänger ihop varje rad: `library_id` (direkt kolumn på nästan alla
+tabeller sedan PR4) och platskoden `bc` (t.ex. `"1"`, med underkoder som
+`1:V3` för vänster plan 3, `1:L1` för en lös plats). **`bc` är bara unik
+INOM ett bibliotek**, inte globalt — det är poängen med PR4.
+
+| Tabell | Innehåll | library_id? |
 |---|---|---|
-| **Statiska filer** (`data/*.json`) | 737 böcker, 490 beskrivningar, 37 hyllfoton, 51 luckor, 31 säljkandidater | Bara en commit till repot |
-| **Databasen** (Supabase) | 19 böcker, status, hyllnamn, luckstatus, hyllfoton i kö, kategorinamn, omslag | Appen, när du är inloggad |
-| **Avläsningen** (edge function) | Läser ett foto, föreslår böcker | Deployas separat, utanför repots flöde |
+| `libraries` | Ett bibliotek per ägare, `name` (default "Mitt bibliotek") | är själv nyckeln |
+| `library_members` | Medlemskap, roll `owner`/`member` | — |
+| `bc_names` | Platsers/hyllors namn, `parent_bc` (gruppering), `hidden` | ja, unik (library_id, bc) |
+| `manual_books` | Böckerna. Unik på (titel, författare, hyllkod) normaliserat | ja |
+| `book_status` | Status (hylla/utlånad/flyter), lånad till, sedd-datum | — (kopplar via book_id → manual_books) |
+| `book_cat` | Kategori per bok | ja |
+| `book_cover` | Omslagsöverskrivning per bok | ja |
+| `cat_renames` | Namnbyten på kategorier | ja |
+| `gaps` | Registrerade luckor (oläsbara partier) | ja |
+| `gap_status` | Status + foto + Claude-anteckning per lucka | ja |
+| `shelves` | Hyllregister (Fas 2.4) | ja — **0 rader i produktion**, verkar aldrig ha fyllts |
+| `spot_names` | Namn på lösa platser (`bc:L<n>`) | ja |
+| `new_shelves` | Kö för nya/uppdaterade hyllfoton, väntar på granskning | ja |
+| `shelf_shares` | Delning av en plats med någon utanför biblioteket | ja |
 
-Vid start slås lagren ihop i minnet: de 737 laddas ur filen, de 19 hämtas ur
-databasen och läggs till med id från en miljon och uppåt. Därefter är de
-likvärdiga i gränssnittet — men bara det ena lagret går att ändra från appen.
-
-```mermaid
-flowchart LR
-    A[Hyllfoto i guiden] --> D[Avläsning<br/>edge function]
-    B[Närbild på lucka] --> D
-    C[Handinmatning] -->|sparar direkt| E
-    D -->|efter granskning| E[(manual_books<br/>databasen · 19<br/>går att ändra)]
-    F[Äldre avläsning<br/>manuellt, i en chatt] -.->|bara via commit| G[(books.json<br/>filen i repot · 737<br/>låst för appen)]
-    E --> H[Boklistan<br/>756 i minnet]
-    G --> H
-```
-
-**De två lagren möts först i webbläsaren.** Allt nytt hamnar i databasen, medan
-de 737 ursprungliga böckerna sitter i en fil som appen inte kan skriva till.
-Därför går en gammal bok inte att flytta, döpa om eller ta bort från appen —
-bara en ny kan det.
-
----
-
-## Vägen från foto till bok
-
-Det här är flödet vi byggt de senaste dagarna, och det enda som faktiskt fyller
-katalogen automatiskt.
-
-1. **Du fotar.** Guiden laddar upp bilden till lagringen och sparar samtidigt en
-   nedskalad kopia i databasraden. Det är kopian avläsningen läser — lagringen
-   når den inte.
-2. **Du trycker Analysera.** Appen skickar radens id och listan över kategorier
-   du redan använder, tillsammans med din inloggning.
-3. **Funktionen kontrollerar att du är inloggad.** Den skriver förbi databasens
-   egna spärrar, så den måste själv avvisa alla utan giltig session.
-   Anon-nyckeln ligger i klartext i det publika repot och stoppas här.
-4. **Claude läser ryggarna** och svarar med en rad per bok: titel, författare,
-   kategori ur din lista, beskrivning, och en markering för det den var osäker
-   på. Roterade foton hanteras genom att textens riktning avgör vad som är upp.
-5. **Du granskar.** Raderna visas redigerbara, med föreslagen hyllkod. Inget är
-   sparat än.
-6. **Du sparar.** Böckerna blir rader i databasen och dyker upp i boklistan.
-7. **Du klarmarkerar hyllan.** Först nu försvinner den ur kön. Avläsningen gör
-   det aldrig åt dig — det var ett medvetet val efter att den första versionen
-   gömde undan hyllan innan du hunnit titta.
-
-> **Hyllkoden** gissas ur etiketten du skrev i guiden: `Plan 3` blir `10:S3`,
-> `Vänster plan 3` blir `1:V3`. En etikett som inte beskriver ett hyllplan —
-> `Skrivbord`, `Fönsterbrädan` — blir en lös plats med koden `10:L1` och ett
-> eget namn, så att den kan heta det den heter. Koden går alltid att rätta
-> innan du sparar.
+RLS-mönstret är genomgående: `can_read_bc(library_id, bc)` och
+`can_admin_bc(library_id, bc)` (SECURITY DEFINER-funktioner i
+`20261016133435_platskoder_per_bibliotek.sql`) slår upp antingen
+biblioteksmedlemskap (`is_library_member`) eller en rad i `shelf_shares`.
+Tabeller som pekar på en bok/lucka istället för en bar platskod (`book_cat`,
+`book_cover`, `gap_status`) joinar till `manual_books`/`gaps` för att komma åt
+`bc`. Insert-triggers (`set_library_id_from_caller`/`_from_book`/`_from_gap`)
+sätter `library_id` automatiskt från den inloggades medlemskap — **aldrig**
+genom att slå upp en bar bc-sträng, eftersom den inte längre är global (en
+bugg som faktiskt triggades och fixades under PR4:s egen testning).
 
 ---
 
-## Övriga flöden
+## Edge function `analysera`
 
-| Flöde | Vad det gör | Var det bor | Läge |
-|---|---|---|---|
-| **Sök och bläddra** | Fritext, filter på plats och kategori, klick på en bok ger beskrivning och länkar till Goodreads och Adlibris | Söksidan | Fungerar |
-| **Status** | Klick växlar mellan på plats, utlånad och flyter runt. Delas med familjen i realtid. | Söksidan | Fungerar |
-| **Hyllvyn** | Foto i stort format med böckerna som hör till platsen listade under | Söksidan | Ur takt |
-| **Luckor** | 51 partier som inte gick att läsa. Fota om, skriv in böcker för hand, eller läs av. | Inställningar | Halvt |
-| **Ny hylla** | Guide som lägger till en plats och skickar in ett foto per hyllplan | Inställningar | Fungerar |
-| **Uppdatera hylla** | Nytt foto av en hylla som ändrats. Fotot hamnar i kön — men bilden i hyllvyn byts aldrig, och böckerna jämförs inte. | Inställningar | **Slutar halvvägs** |
-| **Kategorier** | Döp om en kategori, eller flytta en bok till en annan | Inställningar | Fungerar |
-| **Sälj** | 31 kandidater med prisuppskattning mot Studentapan och länk vidare | Egen flik | Manuell |
-| **Dela** | Textsammanfattning av hyllan att skicka vidare | Toppfältet | Fungerar |
+`supabase/functions/analysera/index.ts`. Tar emot `{kind, id, cats}` +
+JWT, läser `photo_data` ur `gap_status` eller `new_shelves`, skickar till
+Claude, skriver tillbaka `claude_note`.
 
----
-
-## De nio glappen
-
-Ordnade efter hur mycket de kommer att kosta dig om de får ligga kvar. De fem
-första är sådana vi sprang på 27 augusti.
-
-### 1. Katalogen har två sanningar — *grundorsak*
-
-De 737 ursprungliga böckerna sitter i en fil som bara kan ändras genom en
-commit. De 19 nya finns i databasen. Att flytta en gammal bok, rätta en titel
-eller ta bort en dubblett går inte från appen — och de flesta böcker är gamla.
-
-**Åtgärd:** flytta hela `books.json` in i databasen en gång, och låt filen bli
-en ren startdump. Allt nedan blir enklare efteråt.
-
-### 2. Utloggad ser en halv katalog, utan att märka det — *förvirrar*
-
-Databasens spärrar släpper bara in inloggade även för *läsning*, tvärtemot vad
-överlämningen påstår. En utloggad besökare — du själv efter en utgången session
-— ser 737 böcker, inga hyllnamn, inga statusar, och inte ett felmeddelande.
-
-**Åtgärd:** öppna läsning för alla, eller visa tydligt i gränssnittet när något
-inte kunde laddas. Notera att öppen läsning gör hyllornas innehåll läsbart för
-den som har länken.
-
-### 3. Inget skydd mot dubbletter — *skapar städarbete*
-
-Tabellen har ingen unik regel, och granskningslistan jämför inte mot böcker som
-redan finns. Fotar du om en hylla som redan är katalogiserad och sparar, får du
-varenda bok två gånger.
-
-**Åtgärd:** markera rader som redan finns i katalogen och låt dem vara förvalt
-bortvalda i granskningen.
-
-### 4. En plats kan bara ha ett innehåll, fast den har flera högar
-
-Sovrummet vid sängen har tre högar men en enda kod, `5:S1`, och ett enda foto.
-Alla tio böcker ligger på samma kod medan bilden visar fyra av dem. Det ser ut
-som ett fel i appen men är en modellfråga: platsen behöver `5:S1` till `5:S3`.
-
-**Åtgärd:** fota de två andra högarna med koderna angivna, och flytta de sex
-böckerna till rätt kod.
-
-### 5. Uppdatering av en hylla slutar halvvägs — *halvbyggt flöde*
-
-Guiden har alternativet "nytt foto av en hylla som finns", och det fungerar så
-långt att fotot hamnar i kön med rätt hyllkod. Men där tar flödet slut: **den
-gamla bilden byts aldrig ut i hyllvyn**, eftersom bilderna ligger i en fil i
-repot och kön ligger i databasen. Och ingenting jämför vad kameran ser med vad
-katalogen tror står där. Varje omfotografering ökar alltså avståndet mellan
-bild och verklighet i stället för att minska det.
-
-**Åtgärd:** två delar. Låt hyllvyn visa det senaste fotot ur databasen när ett
-sådant finns, i stället för filen. Och låt avläsningen svara med tre listor —
-nya, försvunna, oförändrade — i stället för en. Det stod redan på önskelistan
-som "automatisk diff", och går att bygga nu när avläsningen ger strukturerade
-rader.
-
-### 6. Luckor utan eget foto kan inte läsas av — *begränsning*
-
-De 51 luckorna har en beskuren miniatyr ur det stora hyllfotot, men den ligger i
-repot och inte i databasen — och avläsningen når bara databasen. Därför saknar
-de flesta luckor knappen tills du fotat om dem. Miniatyrerna är dessutom för
-suddiga för att läsa ryggarna, så en närbild behövs ändå.
-
-**Åtgärd:** ingen kod behövs — men texten i kortet bör säga varför knappen
-saknas.
-
-### 7. Böcker identifieras med sin titel — *tickar*
-
-Beskrivningarna slås upp på titelsträngen. Två böcker med samma titel delar
-beskrivning, och en rättad titel tappar sin. Samma svaghet finns i katalogen på
-flera ställen: inget stabilt id per bok.
-
-**Åtgärd:** följer naturligt med om böckerna flyttas till databasen, där varje
-rad redan har ett id.
-
-### 8. De 490 beskrivningarna är overifierade — *känt sedan tidigare*
-
-De är skrivna ur bokkunskap, inte hämtade från någon källa, och kan innehålla
-fel. Nya beskrivningar från avläsningen ärver samma svaghet. Databasen märker
-numera varje bok med varifrån den kom (`source`, `uncertain`), men gränssnittet
-visar det inte.
-
-**Åtgärd:** visa ursprunget i informationsrutan, så att en overifierad
-beskrivning ser overifierad ut.
-
-### 9. Avläsningen och appen kan hamna i otakt — *processfråga*
-
-Funktionen deployas direkt till Supabase medan appen publiceras via en merge.
-Ändras båda samtidigt kan det nya svarsformatet nå en app som inte förstår det
-— det hände 27 augusti, och gav en textklump där en boklista skulle stått.
-
-**Åtgärd:** deploya funktionen först när appen är mergad, eller låt funktionen
-svara med båda formaten under övergången.
+**Viktigt att veta:** funktionen kör med **service-role-nyckeln**, som går
+runt RLS helt. Den kontrollerar bara att anroparen har en giltig inloggad
+session (`auth.getUser()` lyckas) — **den kontrollerar aldrig att den
+inloggade faktiskt har rätt till just den raden/det biblioteket den frågar
+om.** Så länge RLS-skyddade vägar (`sb.from(...)` i appen) är det enda sättet
+att få reda på ett `id`, märks det inte i praktiken. Men det är ett eget,
+separat hål i biblioteksisoleringen jämfört med databasens RLS — värt att
+täppa till om id:n (särskilt `new_shelves.id`, som är ett vanligt
+löpnummer) någonsin blir gissningsbara eller läcker ut. **Inte åtgärdat.**
 
 ---
 
-## Vad jag skulle göra härnäst
+## Bildlagring — det stora öppna glappet
 
-I den här ordningen, för att varje steg gör nästa billigare:
+Tre ställen i `js/app.js` laddar upp foton, alla till samma Supabase
+Storage-bucket `gap-photos`, alla via `getPublicUrl` (ingen `createSignedUrl`
+någonstans i koden):
 
-- **Dubblettvarningen först.** Liten, och gör allt fotande härifrån och framåt
-  riskfritt.
-- **Läsrättigheterna.** En rad SQL, och tar bort en hel klass av förvirrande
-  fel.
-- **Böckerna in i databasen.** Störst arbete, men löser tre glapp på en gång —
-  redigerbarhet, stabila id, och en enda sanning.
-- **Diffen vid omfotografering.** Nu går den att bygga, eftersom avläsningen
-  redan svarar med strukturerade rader.
-- **Sängen och Arbetsrummet.** Fota klart, läs av, spara. Det är då katalogen
-  faktiskt växer.
+- `uploadShelfPhoto` (~rad 1639, "Ny hylla"-guiden)
+- gap-foto-uppladdningen (~rad 1094)
+- omslags-uppladdningen (~rad 1511)
+
+**`gap-photos`-bucketen är satt till publik** (`public: true` i
+`storage.buckets`, skapad 2026-08-26). Det betyder att varje foto som någonsin
+laddats upp genom appens normala funktioner ligger på en publikt nåbar URL,
+oavsett inloggning — inte bara gamla data, utan allt som laddas upp även
+framöver om inget ändras.
+
+**Dessutom**, separat från bucketen: `data/photos.json` + `img/` (36 foton,
+80 filer, 8 MB) är committade i repot och publiceras okrypterat via GitHub
+Pages — reda bekräftat nåbart på
+`https://tringenr.github.io/bokhyllan/data/photos.json`. Det här är den
+**enda källan** till omslagsfoto i Hem-rutnätet idag (`placeList()` bygger
+`cover` uteslutande ur `PH`-arrayen som fylls från den filen) — så den går
+inte att bara ta bort utan att först ersätta den funktionen.
+
+Ingen av de två är åtgärdad än. Rätt fix är densamma för båda: gör
+`gap-photos` privat, byt alla fyra läs/skrivställen (tre uppladdningar + Hem-
+rutnätets omslagsvisning) till signerade länkar, och migrera in de 36 gamla
+fotona i samma system innan filen och `img/`-mappen tas bort ur repot.
+
+**`DEFAULT_BC`** (Thomas riktiga rumsnamn hårdkodade i den publicerade JS-
+koden) är redan åtgärdad i kod (tom `{}`, faller tillbaka på "Plats N" /
+riktiga namn laddas från databasen) men ligger i en opushad/omergad gren,
+`teknik/dolj-riktiga-rumsnamn-i-kod` (PR #30) — väntar på klartecken.
 
 ---
 
-*Sammanställd ur koden i `tringenr/bokhyllan` och databasen
-`zuesxdqifsnvhleiukum`, 27 augusti 2026. Siffrorna är avlästa ur källorna samma
-dag och rör sig när du fortsätter fylla på.*
+## Appens flöden, kort
+
+| Flöde | Funktion/vy i koden | Läge |
+|---|---|---|
+| Sök/bläddra/status | `render()`, `bookRow()`, filter på `#fShelf`/`#fCat`/`#q` | Fungerar |
+| Platshantering (byt namn, slå ihop, dela, dölj) | `renderBcEditor()`, `placeMerge` m.fl. | Fungerar |
+| Ny hylla (foto → kö → granskning → spara) | `uploadShelfPhoto`, `new_shelves`, analysera-anropet | Fungerar, men delar bildproblemet ovan |
+| Luckor | `gaps`/`gap_status`, samma analysflöde | Fungerar, delar bildproblemet |
+| Kategorier | `cat_renames`, `book_cat` | Fungerar |
+| Sälj | Egen flik (`view-salj`) | Manuell, oförändrad sedan augusti |
+| Dela | `view-delade`, `shelf_shares` | Fungerar |
+| Inställningar | `view-set` | Fungerar |
+
+De nio gamla glappen från augusti (två sanningar i katalogen, dubbletter,
+utloggad läsning, etc.) är **lösta** av Fas 2–4-arbetet: all katalog bor i
+databasen, dublettregel finns på `manual_books`, och läsning kräver inloggning
+(tillgodosedd automatiskt av den anonyma sessionen sedan PR5a). De listas
+därför inte längre här.
+
+---
+
+## Öppet just nu (17 oktober 2026)
+
+1. **Bildlagringen** (ovan) — störst, inte påbörjad.
+2. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
+   identifierad idag, inte åtgärdad.
+3. **PR #30** (DEFAULT_BC-fixen) — byggd, väntar på klartecken att mergas.
+4. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
+   merge inte bekräftad på nytt efter att den byggdes.
+5. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
+   glömt lösenord. Inte påbörjad.
+6. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
+   kommentarer i koden antyder att den skulle fyllas — verkar vara ett dött
+   spår, inte undersökt vidare.
+
+---
+
+*Sammanställd ur koden i `tringenr/bokhyllan` (grepp över `js/app.js`, samtliga
+filer i `supabase/migrations/`, och `supabase/functions/analysera/index.ts`)
+samt produktionsdatabasen `zuesxdqifsnvhleiukum`, 17 oktober 2026.*
