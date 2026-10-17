@@ -41,6 +41,7 @@ const supabaseStub = {
       getUser: async () => ({ data: { user: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
       signInWithPassword: async () => ({ data: {}, error: null }),
+      signInAnonymously: async () => ({ data: { user: { id: "test-anon-user" } }, error: null }),
       signOut: async () => ({ error: null }),
     },
     storage: { from: () => ({ upload: async () => ({ data: null, error: null }),

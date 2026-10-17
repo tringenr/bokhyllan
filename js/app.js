@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261016142129";
+const DV="?v=20261017114034";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -9,7 +9,8 @@ function dummyQuery(){const q={select(){return q},order(){return q},eq(){return 
   then(res){return Promise.resolve({data:[],error:null}).then(res)}};return q}
 const sbFallback={from:dummyQuery,
   auth:{getSession:async()=>({data:{}}),signOut:async()=>({}),
-        signInWithPassword:async()=>({error:{message:"Kan inte nå inloggningstjänsten just nu."}})},
+        signInWithPassword:async()=>({error:{message:"Kan inte nå inloggningstjänsten just nu."}}),
+        signInAnonymously:async()=>({error:{message:"Kan inte nå inloggningstjänsten just nu."}})},
   channel:()=>({on(){return this},subscribe(){}}),
   storage:{from:()=>({upload:async()=>({error:{message:"offline"}}),getPublicUrl:()=>({data:{publicUrl:""}})})}};
 let sb;
@@ -697,30 +698,40 @@ const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
 renderAuth();
 
-/* Utloggad: ingen katalogdata hämtas (se gatade anrop nedan) - books_public
-   är borttagen (den läckte, och kunde skrivas till av vem som helst med
-   anon-nyckeln, se PR 2). Visa en inloggningsskärm istället för appen.
-   Resten av uppstarten (funktionsdefinitioner, onclick-export) körs ändå
-   som vanligt - annars saknas de när inloggningen sedan laddar om sidan. */
+/* Utloggad: logga in anonymt automatiskt (PR 5a) så en ny besökare kan
+   bygga sin hylla direkt, utan att först skapa konto. Ett eget, tomt
+   bibliotek skapas av databasen (se migrering pr5a_auto_library_on_signup)
+   precis som för ett riktigt konto - resten av appen ser ingen skillnad,
+   eftersom en anonym session är en riktig inloggad session (rollen
+   "authenticated"). Inloggningsskärmen (view-login) finns kvar, men bara
+   för den som aktivt vill logga in på ett befintligt konto - t.ex. på en
+   ny enhet. Den nås via "Logga in"-länken som läggs till i nästa steg
+   (PR 5b), inte automatiskt här. */
 if(!sbUser){
-  const hemEl=document.getElementById("view-hem"),tabbar=document.querySelector(".tabbar"),loginEl=document.getElementById("view-login");
-  if(hemEl)hemEl.style.display="none";
-  if(tabbar)tabbar.style.display="none";
-  if(loginEl)loginEl.style.display="";
-  const loginForm=document.getElementById("loginForm");
-  if(loginForm)loginForm.addEventListener("submit",async e=>{
-    e.preventDefault();
-    const errEl=document.getElementById("loginErr"),btn=document.getElementById("loginBtn");
-    const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
-    errEl.textContent="";btn.disabled=true;btn.textContent="Loggar in…";
-    const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";btn.disabled=false;btn.textContent="Logga in";return}
-    sbUser=res.user;location.reload();
-  });
-  const forgotBtn=document.getElementById("loginForgot");
-  if(forgotBtn)forgotBtn.addEventListener("click",()=>toast("Glömt lösenord kommer snart."));
-  const signupBtn=document.getElementById("loginSignup");
-  if(signupBtn)signupBtn.addEventListener("click",()=>toast("Skapa konto kommer snart."));
+  const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously();
+  if(anonErr){
+    console.warn("anonym inloggning",anonErr);
+    const hemEl=document.getElementById("view-hem"),tabbar=document.querySelector(".tabbar"),loginEl=document.getElementById("view-login");
+    if(hemEl)hemEl.style.display="none";
+    if(tabbar)tabbar.style.display="none";
+    if(loginEl)loginEl.style.display="";
+    const loginForm=document.getElementById("loginForm");
+    if(loginForm)loginForm.addEventListener("submit",async e=>{
+      e.preventDefault();
+      const errEl=document.getElementById("loginErr"),btn=document.getElementById("loginBtn");
+      const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
+      errEl.textContent="";btn.disabled=true;btn.textContent="Loggar in…";
+      const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";btn.disabled=false;btn.textContent="Logga in";return}
+      sbUser=res.user;location.reload();
+    });
+    const forgotBtn=document.getElementById("loginForgot");
+    if(forgotBtn)forgotBtn.addEventListener("click",()=>toast("Glömt lösenord kommer snart."));
+    const signupBtn=document.getElementById("loginSignup");
+    if(signupBtn)signupBtn.addEventListener("click",()=>toast("Skapa konto kommer snart."));
+  } else {
+    sbUser=anonRes.user;
+  }
 }
 
 if(sbUser){
