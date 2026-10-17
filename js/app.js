@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261017114034";
+const DV="?v=20261017195051";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -74,23 +74,46 @@ function fadeSplash(){
 if(splashEl){splashEl.addEventListener("click",fadeSplash);playSplash()}
 
 /* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books).
-   Endast photos.json (hyllfotons metadata) laser vi fortfarande fran fil -
-   photos.json arkiveras i Fas 3a. BOOK_INFO fylls nu av loadManualBooks,
-   inte fran fil. */
-const photos=await fetch("data/photos.json"+DV).then(r=>r.json());
+   BOOK_INFO fylls nu av loadManualBooks, inte fran fil. */
 const BOOK_INFO={};
-const SHELF_IMGS=[];
-photos.forEach(p=>{
-  let g=SHELF_IMGS.find(x=>x.bc===p.bc&&x.label===p.label);
-  if(!g){g={bc:p.bc,label:p.label,imgs:[]};SHELF_IMGS.push(g)}
-  g.imgs.push({cap:p.cap,shelves:p.shelves,src:p.src,thumb:p.thumb});
-});
 const DEFAULT_BC={1:"Bokhylla 1 – vardagsrummet",2:"Bokhylla 2",3:"Bokskåpet",4:"Köket",5:"Sovrummet – vid sängen",6:"Sovrummet – gröna skåpet",7:"Sovrummet – fönsterbrädan",8:"Soffan"};
 let bcNames={...DEFAULT_BC};
-const FLAT=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>FLAT.push({src:im.src,cap:(g.bc?bcNames[g.bc]+" · ":"")+im.cap})));
+/* Platsfotona (tidigare data/photos.json + img/) flyttade till databasen -
+   filen och mappen låg okrypterade och publikt nåbara i det publicerade
+   repot oavsett inloggning. Miniatyrer sparas som base64 direkt i
+   bc_photos-raden (litet, visas i varje rutnät-render); fullstora fotot
+   ligger i den privata gap-photos-bucketen och hämtas som en
+   tidsbegränsad signerad länk först när man faktiskt öppnar det stort (se
+   signedPhotoUrl, loadBcPhotos). Tomma tills loadBcPhotos() körts efter
+   inloggning. */
+let SHELF_IMGS=[],FLAT=[],PH=[];
 function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
-/* Alla foton i en platt lista, i samma ordning som helskärmsvyn (FLAT). */
-const PH=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>PH.push({bc:g.bc,cap:im.cap,src:im.src,thumb:im.thumb,shelves:im.shelves||[],fi:PH.length})));
+function buildPhotoIndexes(rows){
+  SHELF_IMGS=[];
+  (rows||[]).forEach(p=>{
+    let g=SHELF_IMGS.find(x=>x.bc===p.bc&&x.label===p.label);
+    if(!g){g={bc:p.bc,label:p.label,imgs:[]};SHELF_IMGS.push(g)}
+    g.imgs.push({cap:p.cap,shelves:p.shelves||[],thumb:p.thumb_data,path:p.storage_path});
+  });
+  FLAT=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>FLAT.push({path:im.path,thumb:im.thumb,cap:(g.bc?(bcNames[g.bc]||"")+" · ":"")+im.cap})));
+  /* Alla foton i en platt lista, i samma ordning som helskärmsvyn (FLAT). */
+  PH=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>PH.push({bc:g.bc,cap:im.cap,thumb:im.thumb,path:im.path,shelves:im.shelves||[],fi:PH.length})));
+}
+async function loadBcPhotos(){
+  const {data:rows,error}=await sb.from("bc_photos").select("*");
+  if(error){console.warn("bc_photos",error);return}
+  buildPhotoIndexes(rows);
+}
+/* Hämtar en tidsbegränsad länk till originalfotot i den privata lagringen.
+   Anropas bara när ett foto faktiskt ska visas i fullstorlek - miniatyren
+   (ovan) räcker för rutnät och tumnagelrad. */
+async function signedPhotoUrl(path,seconds){
+  if(!path||!sbUser)return null;
+  try{
+    const {data,error}=await sb.storage.from("gap-photos").createSignedUrl(path,seconds||3600);
+    return error?null:data.signedUrl;
+  }catch(e){return null}
+}
 let curView="hem";
 /* Platser kan grupperas (parent_bc) och tas bort (hidden). En grupperad
    plats visas som hyllor inuti sin förälder; hyllkoderna ändras aldrig. */
@@ -381,8 +404,7 @@ function placeList(){
     const mem=membersOf(bc);
     const ph=PH.filter(p=>mem.includes(p.bc)&&!p.replaced)
       .sort((a,b)=>cmpKey(photoKey(a,mem),photoKey(b,mem)));
-    const big=ph.find(p=>p.src);
-    return {bc,members:mem,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:big?big.src:(ph[0]?ph[0].thumb:""),
+    return {bc,members:mem,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:ph[0]?ph[0].thumb:"",
             count:data.filter(d=>d.shelf&&mem.includes(d.shelf.split(":")[0])).length};
   });
 }
@@ -412,7 +434,7 @@ function renderPlace(){
      sammanslagen plats har fotona de gamla platsernas nummer. */
   const sel=PH[curPhoto]&&p.members.includes(PH[curPhoto].bc)?PH[curPhoto]:p.photos[0];
   const prevStrip=el.querySelector(".thumbs"),keepX=prevStrip&&prevStrip.dataset.place===p.bc?prevStrip.scrollLeft:0;
-  const coverSrc=sel?(sel.src||sel.thumb):p.cover;
+  const coverSrc=sel?sel.thumb:p.cover;
   const inPlace=data.filter(d=>d.shelf&&p.members.includes(d.shelf.split(":")[0]));
   const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
   const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
@@ -567,7 +589,12 @@ function zoomAt(clientX,clientY,ns){
 }
 function lbShow(i){
   lbIdx=(i+FLAT.length)%FLAT.length;
-  lbImg.src=FLAT[lbIdx].src;lbCap.textContent=FLAT[lbIdx].cap;markFrac=null;
+  const f=FLAT[lbIdx];
+  /* Visa miniatyren direkt, hämta en signerad länk till originalet i
+     bakgrunden och byt upp när den kommer - bara om man inte redan
+     bläddrat vidare till ett annat foto under tiden. */
+  lbImg.src=f.thumb||"";lbCap.textContent=f.cap;markFrac=null;
+  if(f.path)signedPhotoUrl(f.path).then(url=>{if(url&&lbIdx===(i+FLAT.length)%FLAT.length)lbImg.src=url});
   scale=1;tx=0;ty=0;lbImg.style.transition="";lbImg.style.transform="none";
   lbImg.onload=()=>{measureBase();applyT()};
 }
@@ -737,6 +764,7 @@ if(!sbUser){
 if(sbUser){
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
+  try{await loadBcPhotos();renderHome();if(curView==="place")renderPlace()}catch(e){console.warn("bcPhotos",e)}
   buildShelfOptions();
   try{await loadStatuses()}catch(e){console.warn("statuses",e)}
   sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
@@ -1085,7 +1113,6 @@ async function gapUpload(id,input){
   const path=`${id}-${Date.now()}.jpg`;
   const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
   if(error){alert("Kunde inte ladda upp: "+error.message);return}
-  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
   let dataUrl=null;
   try{dataUrl=await shrinkToDataURL(f,1100,0.62)}
   catch(e){
@@ -1094,8 +1121,11 @@ async function gapUpload(id,input){
     catch(e2){console.warn("kunde inte läsa filen",e2)}
   }
   if(!dataUrl){alert("Varning: bilden kunde inte förberedas för avläsning. Prova igen eller välj bild ur biblioteket.");}
-  gapState[id]={state:"waiting",photo:pub.publicUrl};
-  await sb.from("gap_status").upsert({gap_id:id,state:"waiting",photo_path:pub.publicUrl,
+  /* photo_path sparas numera som sökväg i den privata lagringen, inte en
+     publik länk - visningen använder ändå photo_data (nedskalade kopian)
+     överallt, så fältet är bara en referens till originalet. */
+  gapState[id]={state:"waiting",photo:path};
+  await sb.from("gap_status").upsert({gap_id:id,state:"waiting",photo_path:path,
     photo_data:dataUrl,updated_at:new Date().toISOString(),updated_by:sbUser.id});
   updateGapCount();renderGaps();
   alert("Foto skickat! Luckan står kvar i listan.\n\nJag läser av bilden och fyller i böckerna – sedan kontrollerar du dem och trycker ✓ Klar.");
@@ -1482,7 +1512,14 @@ async function loadCoverOverrides(){
   if(rows)rows.forEach(r=>coverOverrides[r.book_id]=r.url);
 }
 async function findCover(d){
-  if(coverOverrides[d.id])return coverOverrides[d.id];
+  /* coverOverrides sparar en sökväg i den privata lagringen (inte en
+     publik länk) sedan "bildlagring-privat" - hämta en tidsbegränsad
+     signerad länk varje gång, i stället för att spara den (den hade gått
+     ut nästa gång man öppnade bokinfo). */
+  if(coverOverrides[d.id]){
+    const url=await signedPhotoUrl(coverOverrides[d.id],3600);
+    if(url)return url;
+  }
   const key=d.title+"|"+(d.author||"");
   if(key in coverCache)return coverCache[key];
   try{
@@ -1502,11 +1539,11 @@ async function uploadCover(id,input){
   const path=`cover-${id}-${Date.now()}.jpg`;
   const {error}=await sb.storage.from("gap-photos").upload(path,f,{upsert:true});
   if(error){alert("Kunde inte ladda upp: "+error.message);return}
-  const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);
-  coverOverrides[id]=pub.publicUrl;
-  await sb.from("book_cover").upsert({book_id:id,url:pub.publicUrl});
+  coverOverrides[id]=path;
+  await sb.from("book_cover").upsert({book_id:id,url:path});
   const slot=document.getElementById("ibCover");
-  if(slot)slot.innerHTML=`<img src="${pub.publicUrl}" alt="Omslag">`;
+  const shown=await signedPhotoUrl(path,3600);
+  if(slot&&shown)slot.innerHTML=`<img src="${shown}" alt="Omslag">`;
 }
 
 
@@ -1630,7 +1667,7 @@ async function uploadShelfPhoto({bc,name,code,label,file,dataUrl,i}){
   try{
     const path=`shelf-${bc}-${Date.now()}-${i||0}.jpg`;
     const {error}=await sb.storage.from("gap-photos").upload(path,file,{upsert:true});
-    if(!error){const {data:pub}=sb.storage.from("gap-photos").getPublicUrl(path);url=pub.publicUrl}
+    if(!error)url=path;
   }catch(e){console.warn("storage",e)}
   const {data:rows,error}=await sb.from("new_shelves").insert({
     name, bc, shelf_code:code||null, label:label||null,
