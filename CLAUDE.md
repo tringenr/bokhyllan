@@ -49,11 +49,21 @@ publiceringar. Vänta på grön bock i Actions mellan varje push.
 
 ## Migreringar
 
-Varje migrering som körs mot produktionsdatabasen ska finnas som en `.sql`-fil
-under `supabase/migrations/` med samma versionsnummer som raden i
-`supabase_migrations.schema_migrations`. Körs den via MCP eller dashboarden
+Körs numera alltid direkt mot produktionsdatabasen via Supabase-kopplingen
+(Claudes `mcp__Supabase__apply_migration`), inte via en automatisk
+GitHub Actions-körning. Ett tidigare workflow (`supabase-migrate.yml`) skulle
+köra `supabase db push` automatiskt vid push till `main`, men gick aldrig
+grönt någon av sina 16 körningar — bytt lösenord på `SUPABASE_DB_URL` löste
+inte heller det, och grundorsaken är okänd (loggen gick inte att läsa i
+Claudes körningsmiljö). Togs bort 2026-10-19 istället för att jaga felet
+vidare.
+
+Varje migrering som körs mot produktionsdatabasen ska ändå finnas som en
+`.sql`-fil under `supabase/migrations/` med samma versionsnummer som raden i
+`supabase_migrations.schema_migrations` — annars stämmer inte repots
+migrationshistorik med verkligheten. Körs den via MCP eller dashboarden
 registreras versionen automatiskt — döp då om den lokala filen så numren
-matchar, annars körs den om vid nästa deploy.
+matchar.
 
 ## Branchdisciplin
 
