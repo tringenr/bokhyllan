@@ -150,22 +150,47 @@ därför inte längre här.
 
 ---
 
-## Öppet just nu (17 oktober 2026)
+## Säljlistan har samma glapp som bildlagringen hade
 
-1. **Bildlagringen** (ovan) — störst, inte påbörjad.
-2. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
-   identifierad idag, inte åtgärdad.
-3. **PR #30** (DEFAULT_BC-fixen) — byggd, väntar på klartecken att mergas.
-4. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
+Upptäckt 20/10 (Thomas märkte att säljlistan syns utloggad). `data/sell.json`
+är en delad fil i repot, läst med vanlig `fetch("data/sell.json"+DV)`
+(~rad 944 i `js/app.js`) helt utanför Supabase/RLS — ingen inloggningskoppling
+alls, samma mönster som fotofilen hade. Fungerar obemärkt så länge det bara
+finns en användare (idag), men Thomas bekräftar: är tänkt att vara **privat
+per bibliotek**, inte publik eller delad mellan användare. Rätt fix: flytta
+säljdatan till en databastabell med `library_id` + RLS (samma mönster som
+`manual_books` m.fl.), skriv om `renderSell()`/hämtningen, migrera in
+nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
+
+---
+
+## Öppet just nu (20 oktober 2026)
+
+1. **Storage-bucketens bibliotekshål** (`gap-photos`, se ovan) — upptäckt
+   19/10. Ofarligt idag (ett bibliotek), måste fixas innan cykel 3
+   (självregistrering för främlingar). Inte påbörjat.
+2. **Säljlistans glapp** (ovan) — upptäckt 20/10, samma allvarsgrad som
+   Storage-hålet. Inte påbörjat.
+3. **De 36 gamla fotona** i `data/photos.json`/`img/` — kräver att de laddas
+   upp till Storage och `bc_photos`-tabellen fylls innan filen kan tas bort.
+   Inte påbörjat.
+4. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
+   identifierad 17/10, inte åtgärdad.
+5. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
    merge inte bekräftad på nytt efter att den byggdes.
-5. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
+6. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
    glömt lösenord. Inte påbörjad.
-6. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
+7. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
    kommentarer i koden antyder att den skulle fyllas — verkar vara ett dött
    spår, inte undersökt vidare.
+
+**Klart sedan 17/10** (för historiken): bildlagringens kodsida och
+bucket-sekretess (PR #32, #36, direktändring 19/10), DEFAULT_BC-fixen
+(PR #36), den trasiga auto-migrate-CI:n borttagen och ersatt med direkta
+migreringar via Claude (PR #35).
 
 ---
 
 *Sammanställd ur koden i `tringenr/bokhyllan` (grepp över `js/app.js`, samtliga
 filer i `supabase/migrations/`, och `supabase/functions/analysera/index.ts`)
-samt produktionsdatabasen `zuesxdqifsnvhleiukum`, 17 oktober 2026.*
+samt produktionsdatabasen `zuesxdqifsnvhleiukum`, uppdaterad 20 oktober 2026.*
