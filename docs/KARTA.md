@@ -91,39 +91,41 @@ löpnummer) någonsin blir gissningsbara eller läcker ut. **Inte åtgärdat.**
 
 ---
 
-## Bildlagring — det stora öppna glappet
+## Bildlagring — delvis åtgärdat 19/10
 
-Tre ställen i `js/app.js` laddar upp foton, alla till samma Supabase
-Storage-bucket `gap-photos`, alla via `getPublicUrl` (ingen `createSignedUrl`
-någonstans i koden):
+**Klart (PR #32, #36, och direktändring i Storage 19/10):**
+- Alla tre uppladdningsställena (`uploadShelfPhoto`, gap-foto, omslag) och
+  Hem-rutnätets läsning går nu via `createSignedUrl`, ingen `getPublicUrl`
+  kvar i den riktiga koden.
+- `gap-photos`-bucketen är satt till privat (`public: false`), ändrat direkt
+  i Storage 19/10. De 18 foton som redan laddats upp via appen (sedan 26/8)
+  påverkades inte — de läses redan via signerade länkar.
+- `DEFAULT_BC` (Thomas riktiga rumsnamn hårdkodade i publicerad JS) är tom
+  (PR #36, mergad 19/10).
 
-- `uploadShelfPhoto` (~rad 1639, "Ny hylla"-guiden)
-- gap-foto-uppladdningen (~rad 1094)
-- omslags-uppladdningen (~rad 1511)
+**Kvarstår 1 — nytt bibliotekshål i Storage, upptäckt 19/10:** RLS-policyn
+`gap photo read` på `storage.objects` tillåter läsning av **alla** objekt i
+`gap-photos`-bucketen för vilken inloggad användare som helst
+(`bucket_id = 'gap-photos'`, inget bibliotekskrav). Filnamnen har heller
+ingen bibliotekskoppling (`shelf-<tidsstämpel>.jpg`, `b2p2V-1-<tidsstämpel>.jpg`
+— bara hyllkod, ingen `library_id`). Ofarligt så länge det bara finns ett
+riktigt bibliotek (idag), men blir ett verkligt läckage så fort ett andra
+bibliotek skapar konto och laddar upp — **bör fixas innan cykel 3
+(självregistrering för främlingar) går live**. Rätt fix: döp om filerna med
+ett `library_id/`-prefix och byt policyn att matcha mot
+`storage.foldername(name)[1]`, enligt samma mönster som redan finns för
+`uh-inlamningar`-bucketen.
 
-**`gap-photos`-bucketen är satt till publik** (`public: true` i
-`storage.buckets`, skapad 2026-08-26). Det betyder att varje foto som någonsin
-laddats upp genom appens normala funktioner ligger på en publikt nåbar URL,
-oavsett inloggning — inte bara gamla data, utan allt som laddas upp även
-framöver om inget ändras.
-
-**Dessutom**, separat från bucketen: `data/photos.json` + `img/` (36 foton,
-80 filer, 8 MB) är committade i repot och publiceras okrypterat via GitHub
-Pages — reda bekräftat nåbart på
-`https://tringenr.github.io/bokhyllan/data/photos.json`. Det här är den
-**enda källan** till omslagsfoto i Hem-rutnätet idag (`placeList()` bygger
-`cover` uteslutande ur `PH`-arrayen som fylls från den filen) — så den går
-inte att bara ta bort utan att först ersätta den funktionen.
-
-Ingen av de två är åtgärdad än. Rätt fix är densamma för båda: gör
-`gap-photos` privat, byt alla fyra läs/skrivställen (tre uppladdningar + Hem-
-rutnätets omslagsvisning) till signerade länkar, och migrera in de 36 gamla
-fotona i samma system innan filen och `img/`-mappen tas bort ur repot.
-
-**`DEFAULT_BC`** (Thomas riktiga rumsnamn hårdkodade i den publicerade JS-
-koden) är redan åtgärdad i kod (tom `{}`, faller tillbaka på "Plats N" /
-riktiga namn laddas från databasen) men ligger i en opushad/omergad gren,
-`teknik/dolj-riktiga-rumsnamn-i-kod` (PR #30) — väntar på klartecken.
+**Kvarstår 2 — gamla foton i repot:** `data/photos.json` + `img/` (36 foton,
+80 filer, 8 MB) är fortfarande committade och publiceras okrypterat via
+GitHub Pages — bekräftat nåbart på
+`https://tringenr.github.io/bokhyllan/data/photos.json`. Det är fortfarande
+den **enda källan** till omslagsfoto i Hem-rutnätet (`placeList()` bygger
+`cover` uteslutande ur `PH`-arrayen som fylls från den filen), så filen går
+inte att ta bort utan att först migrera in fotona i `bc_photos`-tabellen
+(skapad i migrationen `bc_photos_privat_lagring`, 0 rader hittills) och
+ersätta `placeList()`:s källa. Kräver att originalfotona laddas upp till
+Storage — ett separat steg, inte påbörjat.
 
 ---
 
