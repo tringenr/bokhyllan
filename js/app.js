@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261017195051";
+const DV="?v=20261019220528";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -76,7 +76,13 @@ if(splashEl){splashEl.addEventListener("click",fadeSplash);playSplash()}
 /* Efter Fas 2.6: bocker och beskrivningar bor i databasen (manual_books).
    BOOK_INFO fylls nu av loadManualBooks, inte fran fil. */
 const BOOK_INFO={};
-const DEFAULT_BC={1:"Bokhylla 1 – vardagsrummet",2:"Bokhylla 2",3:"Bokskåpet",4:"Köket",5:"Sovrummet – vid sängen",6:"Sovrummet – gröna skåpet",7:"Sovrummet – fönsterbrädan",8:"Soffan"};
+/* Innehöll tidigare Thomas riktiga rumsnamn hårdkodade här - synliga för
+   alla i den publicerade JS-koden oavsett inloggning. Koden faller redan
+   tillbaka på "Plats "+bc överallt där bcNames saknar ett namn
+   (se t.ex. shortName/placeList), och de riktiga namnen laddas från
+   databasen (loadBcNames) inom en sekund för en inloggad användare - så
+   den här tomma startgissningen kostar ingenting i praktiken. */
+const DEFAULT_BC={};
 let bcNames={...DEFAULT_BC};
 /* Platsfotona (tidigare data/photos.json + img/) flyttade till databasen -
    filen och mappen låg okrypterade och publikt nåbara i det publicerade
