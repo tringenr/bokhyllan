@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261020144327";
+const DV="?v=20261020161045";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -686,11 +686,33 @@ toTop.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
 addEventListener("scroll",()=>toTop.classList.toggle("show",scrollY>600),{passive:true});
 
 
+/* PR 5: en anonym session (PR5a) har inget e-postkonto att visa eller logga
+   ut från - att logga ut skulle bara göra det tillfälliga biblioteket
+   onåtkomligt för gott, utan något sätt att komma tillbaka till det. Den
+   som är anonymt inloggad ska istället kunna "spara sin hylla" genom att
+   lägga på e-post + lösenord på exakt samma session (sb.auth.updateUser) -
+   samma library_id, samma data, bara en riktig inloggning runt den. */
 function renderAuth(){
   const el=document.getElementById("authBar");if(!el)return;
   const sub=document.getElementById("setAuthSub");
-  if(sub)sub.textContent=sbUser?("Inloggad: "+sbUser.email):(sbOnline?"Inte inloggad · logga in för att ändra":"Servern går inte att nå");
-  if(sbUser){el.innerHTML=`<span class="who">Inloggad som <b>${esc(sbUser.email)}</b></span><button id="btnOut">Logga ut</button>`;
+  if(sub)sub.textContent=sbUser?(sbUser.is_anonymous?"Tillfälligt bibliotek · spara det med ett konto":"Inloggad: "+sbUser.email):(sbOnline?"Inte inloggad · logga in för att ändra":"Servern går inte att nå");
+  if(sbUser&&sbUser.is_anonymous){
+    el.innerHTML=`<p class="fine">Du har ett tillfälligt bibliotek. Lägg till e-post och lösenord för att spara det och kunna logga in på en annan enhet.</p>
+      <input id="saEmail" type="email" placeholder="E-post" autocomplete="username">
+      <input id="saPass" type="password" placeholder="Lösenord (minst 6 tecken)" autocomplete="new-password">
+      <button id="btnSaveAcc">Skapa konto</button><span class="err" id="saErr"></span>`;
+    const doSave=async()=>{
+      const email=el.querySelector("#saEmail").value.trim(),pass=el.querySelector("#saPass").value;
+      const errEl=el.querySelector("#saErr");errEl.textContent="";
+      if(!email||pass.length<6){errEl.textContent="Fyll i e-post och ett lösenord på minst 6 tecken.";return}
+      const btn=el.querySelector("#btnSaveAcc");btn.disabled=true;btn.textContent="Sparar…";
+      const {data:res,error}=await sb.auth.updateUser({email,password:pass});
+      if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";btn.disabled=false;btn.textContent="Skapa konto";return}
+      sbUser=res.user;toast("Kontot är skapat - biblioteket är sparat.");renderAuth();};
+    el.querySelector("#btnSaveAcc").onclick=doSave;
+    el.querySelector("#saPass").addEventListener("keydown",e=>{if(e.key==="Enter")doSave()});
+  }
+  else if(sbUser){el.innerHTML=`<span class="who">Inloggad som <b>${esc(sbUser.email)}</b></span><button id="btnOut">Logga ut</button>`;
     el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();location.reload()};}
   else if(!sbOnline){el.innerHTML='<span class="who">Inloggningen går inte att nå just nu. Ladda om sidan.</span>'}
   else{el.innerHTML=`<input id="aEmail" type="email" placeholder="E-post" autocomplete="username"><input id="aPass" type="password" placeholder="Lösenord" autocomplete="current-password"><button id="btnIn">Logga in</button><span class="err" id="aErr"></span>`;
@@ -744,6 +766,22 @@ const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
 renderAuth();
 
+/* PR 5: länken i återställningsmejlet landar här med en färdig
+   "recovery"-session - Supabase-klienten läser token ur URL:en automatiskt
+   och skickar det här eventet. Enda sättet att faktiskt byta lösenord är
+   att fånga det och fråga efter det nya, en gång. */
+if(sb.auth.onAuthStateChange)sb.auth.onAuthStateChange((event,recSess)=>{
+  if(event!=="PASSWORD_RECOVERY")return;
+  sbUser=recSess&&recSess.user;
+  const np=prompt("Ange ditt nya lösenord (minst 6 tecken):");
+  if(!np)return;
+  if(np.length<6){alert("Lösenordet måste vara minst 6 tecken. Prova igen via länken i mejlet.");return}
+  sb.auth.updateUser({password:np}).then(({error})=>{
+    if(error){alert("Kunde inte byta lösenord: "+error.message);return}
+    toast("Nytt lösenord sparat.");location.reload();
+  });
+});
+
 /* Utloggad: logga in anonymt automatiskt (PR 5a) så en ny besökare kan
    bygga sin hylla direkt, utan att först skapa konto. Ett eget, tomt
    bibliotek skapas av databasen (se migrering pr5a_auto_library_on_signup)
@@ -762,19 +800,48 @@ if(!sbUser){
     if(tabbar)tabbar.style.display="none";
     if(loginEl)loginEl.style.display="";
     const loginForm=document.getElementById("loginForm");
+    const errEl=document.getElementById("loginErr"),submitBtn=document.getElementById("loginBtn");
+    const forgotBtn=document.getElementById("loginForgot"),signupBtn=document.getElementById("loginSignup");
+    const passField=document.getElementById("loginPass");
+    /* PR 5: "glömt lösenord" och "skapa konto" växlar om samma
+       inloggningsformulär istället för att öppna en ny vy - det finns ingen
+       annan inloggningsskärm att visa dem i. Den här hela grenen körs bara
+       när den automatiska anonyma inloggningen själv har misslyckats (se
+       ovan), t.ex. på en ny enhet utan nätverk till den anonyma sessionen -
+       den vanliga vägen in är istället "spara din hylla" i Inställningar
+       (renderAuth, ovan). */
+    let loginMode="in";
+    function setLoginMode(mode){
+      loginMode=mode;errEl.textContent="";
+      if(mode==="forgot"){passField.style.display="none";passField.required=false;submitBtn.textContent="Skicka återställningslänk";forgotBtn.textContent="Tillbaka till inloggning";signupBtn.style.display="none"}
+      else if(mode==="signup"){passField.style.display="";passField.required=true;passField.autocomplete="new-password";submitBtn.textContent="Skapa konto";forgotBtn.style.display="none";signupBtn.textContent="Jag har redan ett konto"}
+      else{passField.style.display="";passField.required=true;passField.autocomplete="current-password";submitBtn.textContent="Logga in";forgotBtn.textContent="Glömt lösenordet?";forgotBtn.style.display="";signupBtn.textContent="Skapa ett";signupBtn.style.display=""}
+    }
+    if(forgotBtn)forgotBtn.addEventListener("click",()=>setLoginMode(loginMode==="forgot"?"in":"forgot"));
+    if(signupBtn)signupBtn.addEventListener("click",()=>setLoginMode(loginMode==="signup"?"in":"signup"));
     if(loginForm)loginForm.addEventListener("submit",async e=>{
       e.preventDefault();
-      const errEl=document.getElementById("loginErr"),btn=document.getElementById("loginBtn");
-      const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
-      errEl.textContent="";btn.disabled=true;btn.textContent="Loggar in…";
+      const email=document.getElementById("loginEmail").value.trim(),pass=passField.value;
+      errEl.textContent="";submitBtn.disabled=true;
+      if(loginMode==="forgot"){
+        submitBtn.textContent="Skickar…";
+        const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+        submitBtn.disabled=false;submitBtn.textContent="Skicka återställningslänk";
+        if(error){errEl.textContent=error.message||"Kunde inte skicka länken.";return}
+        toast("Länk skickad - kolla din e-post.");setLoginMode("in");return;
+      }
+      if(loginMode==="signup"){
+        submitBtn.textContent="Skapar konto…";
+        if(pass.length<6){errEl.textContent="Lösenordet måste vara minst 6 tecken.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
+        const {data:res,error}=await sb.auth.signUp({email,password:pass});
+        if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
+        sbUser=res.user;location.reload();return;
+      }
+      submitBtn.textContent="Loggar in…";
       const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
-      if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";btn.disabled=false;btn.textContent="Logga in";return}
+      if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";submitBtn.disabled=false;submitBtn.textContent="Logga in";return}
       sbUser=res.user;location.reload();
     });
-    const forgotBtn=document.getElementById("loginForgot");
-    if(forgotBtn)forgotBtn.addEventListener("click",()=>toast("Glömt lösenord kommer snart."));
-    const signupBtn=document.getElementById("loginSignup");
-    if(signupBtn)signupBtn.addEventListener("click",()=>toast("Skapa konto kommer snart."));
   } else {
     sbUser=anonRes.user;
   }
