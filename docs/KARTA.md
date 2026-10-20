@@ -91,32 +91,31 @@ löpnummer) någonsin blir gissningsbara eller läcker ut. **Inte åtgärdat.**
 
 ---
 
-## Bildlagring — delvis åtgärdat 19/10
+## Bildlagring — klart 20/10 (utom de gamla repo-fotona)
 
-**Klart (PR #32, #36, och direktändring i Storage 19/10):**
+**Klart (PR #32, #36, #39, och direktändringar i Storage 19–20/10):**
 - Alla tre uppladdningsställena (`uploadShelfPhoto`, gap-foto, omslag) och
   Hem-rutnätets läsning går nu via `createSignedUrl`, ingen `getPublicUrl`
   kvar i den riktiga koden.
 - `gap-photos`-bucketen är satt till privat (`public: false`), ändrat direkt
-  i Storage 19/10. De 18 foton som redan laddats upp via appen (sedan 26/8)
-  påverkades inte — de läses redan via signerade länkar.
+  i Storage 19/10.
 - `DEFAULT_BC` (Thomas riktiga rumsnamn hårdkodade i publicerad JS) är tom
   (PR #36, mergad 19/10).
+- **PR 4.5 (mergad 20/10):** Storage-bibliotekshålet (se nedan, historik)
+  är stängt. `js/app.js` har en ny `myLibraryId()`-hjälpare; alla nya
+  uppladdningar läggs under `<library_id>/` i bucketen. RLS-policyn på
+  `storage.objects` (`gap photo read v2`/`write v2`) kräver numera
+  medlemskap i biblioteket, samma mönster som `uh-inlamningar`-bucketen.
+  De 18 befintliga objekten flyttades till rätt mapp i Storage-gränssnittet,
+  och en sidoeffekt hittades och fixades samtidigt: 9 av dem låg i databasen
+  som hela gamla publika webblänkar (kvarleva från innan bucketen blev
+  privat 19/10) och gick därför inte att visa i fullskärm — uppdaterade till
+  rätt sökvägsformat i samma SQL-körning.
+- Lokalt verifierat innan produktion rördes (samma metod som PR 1–4): två
+  bibliotek i testdatabasen, varsin medlem, varsitt foto — korskoppling
+  blockerades av RLS på både läsning och skrivning.
 
-**Kvarstår 1 — nytt bibliotekshål i Storage, upptäckt 19/10:** RLS-policyn
-`gap photo read` på `storage.objects` tillåter läsning av **alla** objekt i
-`gap-photos`-bucketen för vilken inloggad användare som helst
-(`bucket_id = 'gap-photos'`, inget bibliotekskrav). Filnamnen har heller
-ingen bibliotekskoppling (`shelf-<tidsstämpel>.jpg`, `b2p2V-1-<tidsstämpel>.jpg`
-— bara hyllkod, ingen `library_id`). Ofarligt så länge det bara finns ett
-riktigt bibliotek (idag), men blir ett verkligt läckage så fort ett andra
-bibliotek skapar konto och laddar upp — **bör fixas innan cykel 3
-(självregistrering för främlingar) går live**. Rätt fix: döp om filerna med
-ett `library_id/`-prefix och byt policyn att matcha mot
-`storage.foldername(name)[1]`, enligt samma mönster som redan finns för
-`uh-inlamningar`-bucketen.
-
-**Kvarstår 2 — gamla foton i repot:** `data/photos.json` + `img/` (36 foton,
+**Kvarstår — gamla foton i repot:** `data/photos.json` + `img/` (36 foton,
 80 filer, 8 MB) är fortfarande committade och publiceras okrypterat via
 GitHub Pages — bekräftat nåbart på
 `https://tringenr.github.io/bokhyllan/data/photos.json`. Det är fortfarande
@@ -166,28 +165,30 @@ nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
 
 ## Öppet just nu (20 oktober 2026)
 
-1. **Storage-bucketens bibliotekshål** (`gap-photos`, se ovan) — upptäckt
-   19/10. Ofarligt idag (ett bibliotek), måste fixas innan cykel 3
-   (självregistrering för främlingar). Inte påbörjat.
-2. **Säljlistans glapp** (ovan) — upptäckt 20/10, samma allvarsgrad som
-   Storage-hålet. Inte påbörjat.
-3. **De 36 gamla fotona** i `data/photos.json`/`img/` — kräver att de laddas
+1. **Säljlistans glapp** (ovan) — upptäckt 20/10, samma allvarsgrad som
+   Storage-hålet hade. Inte påbörjat.
+2. **De 36 gamla fotona** i `data/photos.json`/`img/` — kräver att de laddas
    upp till Storage och `bc_photos`-tabellen fylls innan filen kan tas bort.
    Inte påbörjat.
-4. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
+3. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
    identifierad 17/10, inte åtgärdad.
-5. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
+4. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
    merge inte bekräftad på nytt efter att den byggdes.
-6. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
-   glömt lösenord. Inte påbörjad.
-7. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
+5. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
+   glömt lösenord. Nästa i kön (kallas PR 5 i teknik-tråden).
+6. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
    kommentarer i koden antyder att den skulle fyllas — verkar vara ett dött
    spår, inte undersökt vidare.
+7. **Sex extra, tomma "Mitt bibliotek"** upptäcktes i produktionsdatabasen
+   under PR 4.5-arbetet (20/10) — troligen Claudes egna testinloggningar via
+   den automatiska `signInAnonymously`-sessionen. Ofarligt, inte undersökt
+   vidare.
 
 **Klart sedan 17/10** (för historiken): bildlagringens kodsida och
 bucket-sekretess (PR #32, #36, direktändring 19/10), DEFAULT_BC-fixen
 (PR #36), den trasiga auto-migrate-CI:n borttagen och ersatt med direkta
-migreringar via Claude (PR #35).
+migreringar via Claude (PR #35), Storage-bucketens bibliotekskoppling
+(PR #39, 20/10).
 
 ---
 
