@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261021214530";
+const DV="?v=20261021220110";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -437,14 +437,11 @@ function renderHome(){
   const guide=document.getElementById("homeEmptyGuide");
   const firstRun=sbUser&&places.length===0;
   if(guide)guide.style.display=firstRun?"":"none";
-  /* Första gången (ingen hylla än): bara bilden + knapparna i guiden ska
-     synas. Sök, platsgrid, statistik och boklistan döljs tills det finns
-     något att söka i, välja mellan eller räkna - annars tävlar de om
-     uppmärksamheten med "Lägg till din första hylla". */
-  const hs=document.querySelector(".hs");if(hs)hs.style.display=firstRun?"none":"";
-  el.style.display=firstRun?"none":"";
-  const sum=document.querySelector(".summary");if(sum)sum.style.display=firstRun?"none":"";
-  const bl=document.getElementById("blCard");if(bl)bl.style.display=firstRun?"none":"";
+  /* Första gången (ingen hylla än) tar guiden över hela skärmen (se
+     .eg-card i style.css, position:fixed över rubrik och fliklist) -
+     bara bilden, rubriken och de två knapparna syns. body.eg-lock
+     stänger av bakgrundsscroll medan den täcker skärmen. */
+  document.body.classList.toggle("eg-lock",!!firstRun);
   el.innerHTML=places.map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
       ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
       <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("")+`<button class="tile tile-add" onclick="addShelf()"><span class="ta-plus">${ic("plus")}</span><span class="ta-t">Lägg till hylla</span></button>`;
@@ -879,6 +876,7 @@ const VIEWS=["hem","place","delade","salj","gaps","set"];
 function go(v,opts){
   curView=v;
   VIEWS.forEach(k=>{const el=document.getElementById("view-"+k);if(el)el.style.display=(k===v?"":"none")});
+  if(v!=="hem")document.body.classList.remove("eg-lock");
   const homeish=["hem","place","gaps","set"].includes(v);
   document.querySelectorAll(".tabbar [data-tab]").forEach(t=>{
     const k=t.dataset.tab;t.classList.toggle("active",k==="hem"?homeish:k===v)});
