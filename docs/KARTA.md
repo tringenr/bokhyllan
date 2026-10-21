@@ -33,8 +33,23 @@ undantag**, se glapp 1 nedan.
   ingenstans att skriva.
 - E-postbekräftelse är avstängd i Supabase-inställningarna (Thomas stängde av
   den under arbetet med PR5a).
-- **Ej byggt än:** vägen från anonymt konto till riktigt konto ("spara din
-  hylla", namnge biblioteket, glömt lösenord) — det är PR5b, inte påbörjad.
+- **Klart sedan PR 5 (21/10):** vägen från anonymt konto till riktigt konto.
+  I Inställningar kan en anonym session lägga på e-post + lösenord på exakt
+  samma session (`sb.auth.updateUser`) — samma `library_id`, samma data.
+  Glömt lösenord (`view-login`, visas bara om den automatiska anonyma
+  inloggningen själv misslyckas) skickar en återställningslänk och fångar
+  den med en lyssnare på `PASSWORD_RECOVERY`-eventet. Bekräftat fungerande
+  live, från mejl till nytt lösenord, 21/10.
+- **E-postutskick går via Resend**, inte Supabases inbyggda (vars
+  gratisnivå har en mycket låg gräns) — kopplat via egen SMTP mot domänen
+  `cointelligence.se`, 21/10. Viktigt: Supabases "Redirect URLs" i
+  Auth-inställningarna måste innehålla `https://tringenr.github.io/bokhyllan*`
+  (med asterisk) — utan den matchade inte appens egen
+  `location.origin+location.pathname` (som har ett avslutande snedstreck)
+  den gamla posten utan asterisk, och återställningslänken landade då på
+  bara `tringenr.github.io` utan sökväg.
+- Namnge biblioteket är fortfarande inte byggt — ingår i PR 6
+  (tomt-läge-guiden), inte påbörjat.
 
 ### Databasmodellen (efter PR4)
 
@@ -163,7 +178,7 @@ nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
 
 ---
 
-## Öppet just nu (20 oktober 2026)
+## Öppet just nu (21 oktober 2026)
 
 1. **Säljlistans glapp** (ovan) — upptäckt 20/10, samma allvarsgrad som
    Storage-hålet hade. Inte påbörjat.
@@ -174,8 +189,9 @@ nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
    identifierad 17/10, inte åtgärdad.
 4. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
    merge inte bekräftad på nytt efter att den byggdes.
-5. **PR5b** — spara-din-hylla/claim-flödet för anonyma konton, biblioteksnamn,
-   glömt lösenord. Nästa i kön (kallas PR 5 i teknik-tråden).
+5. **PR 6** — tomt läge för ny användare: bibliotek skapas automatiskt vid
+   signup (redan klart sedan PR5a), guide för första plats/foto, möjlighet
+   att namnge biblioteket. Nästa i kön.
 6. **`shelves`-tabellen (Fas 2.4) har 0 rader i produktion** trots att
    kommentarer i koden antyder att den skulle fyllas — verkar vara ett dött
    spår, inte undersökt vidare.
@@ -188,10 +204,11 @@ nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
 bucket-sekretess (PR #32, #36, direktändring 19/10), DEFAULT_BC-fixen
 (PR #36), den trasiga auto-migrate-CI:n borttagen och ersatt med direkta
 migreringar via Claude (PR #35), Storage-bucketens bibliotekskoppling
-(PR #39, 20/10).
+(PR #39, 20/10), skapa konto + glömt lösenord (PR #41, 20/10) med Resend
+som e-posttjänst och rätt Redirect URL i Supabase (21/10).
 
 ---
 
 *Sammanställd ur koden i `tringenr/bokhyllan` (grepp över `js/app.js`, samtliga
 filer i `supabase/migrations/`, och `supabase/functions/analysera/index.ts`)
-samt produktionsdatabasen `zuesxdqifsnvhleiukum`, uppdaterad 20 oktober 2026.*
+samt produktionsdatabasen `zuesxdqifsnvhleiukum`, uppdaterad 21 oktober 2026.*
