@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261020161045";
+const DV="?v=20261021161145";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -427,13 +427,19 @@ function placeList(){
             count:data.filter(d=>d.shelf&&mem.includes(d.shelf.split(":")[0])).length};
   });
 }
+/* PR 6: tomt läge för ny användare. Ett nytt bibliotek (anonymt eller
+   nyss skapat via signup) har varken platser, foton eller böcker - utan
+   den här guiden var Hem bara en enda "+"-ruta med ingen förklaring. */
 function renderHome(){
   const el=document.getElementById("placeGrid");if(!el)return;
   const known=data.some(d=>d.shelf);
-  el.innerHTML=placeList().map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
+  const places=placeList();
+  const guide=document.getElementById("homeEmptyGuide");
+  if(guide)guide.style.display=(sbUser&&places.length===0)?"":"none";
+  el.innerHTML=places.map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
       ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
       <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("")+`<button class="tile tile-add" onclick="addShelf()"><span class="ta-plus">${ic("plus")}</span><span class="ta-t">Lägg till hylla</span></button>`;
-  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=placeList().length+" platser · byt namn, slå ihop, ta bort";
+  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=places.length+" platser · byt namn, slå ihop, ta bort";
 }
 let curPlace=null,curPhoto=null;
 function openPlace(bc,fi){
@@ -880,6 +886,8 @@ function closePanel(){panel.classList.remove("open");panelScrim.classList.remove
 document.getElementById("gearBtn").addEventListener("click",openPanel);
 document.getElementById("panelClose").addEventListener("click",closePanel);
 panelScrim.addEventListener("click",closePanel);
+const homeEmptyStart=document.getElementById("homeEmptyStart");
+if(homeEmptyStart)homeEmptyStart.addEventListener("click",addShelf);
 if(sbUser)go("hem",{keepScroll:true});
 function openSet(page){
   document.querySelectorAll("#view-set .set-page").forEach(el=>el.classList.toggle("on",el.dataset.page===page));
