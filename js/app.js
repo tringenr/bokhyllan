@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261021213051";
+const DV="?v=20261021214530";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -435,7 +435,16 @@ function renderHome(){
   const known=data.some(d=>d.shelf);
   const places=placeList();
   const guide=document.getElementById("homeEmptyGuide");
-  if(guide)guide.style.display=(sbUser&&places.length===0)?"":"none";
+  const firstRun=sbUser&&places.length===0;
+  if(guide)guide.style.display=firstRun?"":"none";
+  /* Första gången (ingen hylla än): bara bilden + knapparna i guiden ska
+     synas. Sök, platsgrid, statistik och boklistan döljs tills det finns
+     något att söka i, välja mellan eller räkna - annars tävlar de om
+     uppmärksamheten med "Lägg till din första hylla". */
+  const hs=document.querySelector(".hs");if(hs)hs.style.display=firstRun?"none":"";
+  el.style.display=firstRun?"none":"";
+  const sum=document.querySelector(".summary");if(sum)sum.style.display=firstRun?"none":"";
+  const bl=document.getElementById("blCard");if(bl)bl.style.display=firstRun?"none":"";
   el.innerHTML=places.map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
       ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
       <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("")+`<button class="tile tile-add" onclick="addShelf()"><span class="ta-plus">${ic("plus")}</span><span class="ta-t">Lägg till hylla</span></button>`;
@@ -893,8 +902,12 @@ function openSet(page){
   document.querySelectorAll("#view-set .set-page").forEach(el=>el.classList.toggle("on",el.dataset.page===page));
   go("set");
 }
-document.querySelectorAll("[data-set]").forEach(b=>b.addEventListener("click",()=>openSet(b.dataset.set)));
-document.querySelectorAll("[data-back-settings]").forEach(b=>b.addEventListener("click",()=>{go("hem");openPanel()}));
+/* "Vad är Bokhyllan?" i guiden för tom hylla leder till samma undersida
+   som Inställningar > Om appen, men man kom inte via panelen - då ska
+   tillbaka-knappen föra hem utan att öppna panelen i onödan. */
+let setFromGuide=false;
+document.querySelectorAll("[data-set]").forEach(b=>b.addEventListener("click",()=>{setFromGuide=!!b.closest("#homeEmptyGuide");openSet(b.dataset.set)}));
+document.querySelectorAll("[data-back-settings]").forEach(b=>b.addEventListener("click",()=>{go("hem");if(!setFromGuide)openPanel();setFromGuide=false}));
 document.getElementById("replaySplash").addEventListener("click",()=>{closePanel();playSplash()});
 /* Dela länken till appen - viktigt när appen är installerad som webapp på
    hemskärmen, för då finns ingen vanlig "dela"-knapp i webbläsaren att
