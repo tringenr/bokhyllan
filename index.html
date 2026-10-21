@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261021212602">
+<link rel="stylesheet" href="css/style.css?v=20261021213051">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261021212602";
+  var MY="20261021213051";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -307,6 +307,7 @@
     <button data-set="platser"><i data-ic="map-pin"></i><span><b>Platser</b><small id="setPlacesSub">byt namn eller lägg till</small></span></button>
     <button data-set="kategorier"><i data-ic="folder"></i><span><b>Kategorier</b><small id="setCatsSub">byt namn eller slå ihop</small></span></button>
     <button data-set="konto"><i data-ic="user"></i><span><b>Konto</b><small id="setAuthSub">Inte inloggad</small></span></button>
+    <button id="shareAppBtn"><i data-ic="link"></i><span><b>Dela appen</b><small>Skicka länken till någon annan</small></span></button>
     <button id="replaySplash"><i data-ic="play"></i><span><b>Visa startsidan igen</b><small>Förhandsvisa startskärmen</small></span></button>
     <button data-set="om"><i data-ic="info"></i><span><b>Om appen</b><small>Vad Bokhyllan är och vad som är på gång</small></span></button>
   </div>
@@ -344,6 +345,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261021212602"></script>
+<script src="js/app.js?v=20261021213051"></script>
 </body>
 </html>
