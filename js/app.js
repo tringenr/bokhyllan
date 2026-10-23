@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261023162604";
+const DV="?v=20261023163537";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1725,6 +1725,8 @@ function nsRender(){
            ? "Ett foto per sektion och plan. Plan 1 är nederst."
            : "Ett foto per hyllplan. Hyllplan 1 är nederst.")
         : "Ta ett foto rakt framifrån så att ryggarna syns."}</p>
+      <details class="ns-tips"><summary>Vad räknas som ett hyllplan?</summary>
+        <p class="fine">Allt räknas — så länge det går att fota i ett svep: ett vanligt hyllplan, en trave böcker, eller bara en enda bok som ligger löst.</p></details>
       <div class="ns-shots" id="nsShots"></div>
       <button class="ghost ns-add" onclick="nsAddShot()">➕ Lägg till foto</button>
       <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
