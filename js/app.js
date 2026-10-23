@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261023225039";
+const DV="?v=20261024002511";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -712,7 +712,9 @@ function renderAuth(){
     el.innerHTML=`<p class="fine">Du har ett tillfälligt bibliotek. Lägg till e-post och lösenord för att spara det och kunna logga in på en annan enhet.</p>
       <input id="saEmail" type="email" placeholder="E-post" autocomplete="username">
       <input id="saPass" type="password" placeholder="Lösenord (minst 6 tecken)" autocomplete="new-password">
-      <button id="btnSaveAcc">Skapa konto</button><span class="err" id="saErr"></span>`;
+      <button id="btnSaveAcc">Skapa konto</button><span class="err" id="saErr"></span>
+      <p class="fine" style="margin-top:12px">Har du redan ett konto? <button class="link-btn" id="btnGotoLogin" type="button">Logga in på det istället</button></p>
+      <button class="btn-outline" id="btnAnonOut" type="button" style="margin-top:4px">Logga ut</button>`;
     const doSave=async()=>{
       const email=el.querySelector("#saEmail").value.trim(),pass=el.querySelector("#saPass").value;
       const errEl=el.querySelector("#saErr");errEl.textContent="";
@@ -723,6 +725,11 @@ function renderAuth(){
       sbUser=res.user;toast("Kontot är skapat - biblioteket är sparat.");renderAuth();};
     el.querySelector("#btnSaveAcc").onclick=doSave;
     el.querySelector("#saPass").addEventListener("keydown",e=>{if(e.key==="Enter")doSave()});
+    el.querySelector("#btnGotoLogin").onclick=()=>{if(typeof window.showLoginScreen==="function")window.showLoginScreen()};
+    el.querySelector("#btnAnonOut").onclick=async()=>{
+      if(!confirm("Det tillfälliga biblioteket försvinner för gott om du loggar ut utan att först spara det som konto ovan. Logga ut ändå?"))return;
+      await sb.auth.signOut();location.reload();
+    };
   }
   else if(sbUser){el.innerHTML=`<span class="who">Inloggad som <b>${esc(sbUser.email)}</b></span><button id="btnOut">Logga ut</button>`;
     el.querySelector("#btnOut").onclick=async()=>{await sb.auth.signOut();location.reload()};}
@@ -776,7 +783,6 @@ window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
 const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
-renderAuth();
 
 /* PR 5: länken i återställningsmejlet landar här med en färdig
    "recovery"-session - Supabase-klienten läser token ur URL:en automatiskt
@@ -794,72 +800,84 @@ if(sb.auth.onAuthStateChange)sb.auth.onAuthStateChange((event,recSess)=>{
   });
 });
 
-/* Utloggad: logga in anonymt automatiskt (PR 5a) så en ny besökare kan
-   bygga sitt bibliotek direkt, utan att först skapa konto. Ett eget, tomt
-   bibliotek skapas av databasen (se migrering pr5a_auto_library_on_signup)
-   precis som för ett riktigt konto - resten av appen ser ingen skillnad,
-   eftersom en anonym session är en riktig inloggad session (rollen
-   "authenticated"). Inloggningsskärmen (view-login) finns kvar, men bara
-   för den som aktivt vill logga in på ett befintligt konto - t.ex. på en
-   ny enhet. Den nås via "Logga in"-länken som läggs till i nästa steg
-   (PR 5b), inte automatiskt här. */
-if(!sbUser){
-  const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously();
-  if(anonErr){
-    console.warn("anonym inloggning",anonErr);
-    const hemEl=document.getElementById("view-hem"),tabbar=document.querySelector(".tabbar"),loginEl=document.getElementById("view-login");
-    if(hemEl)hemEl.style.display="none";
-    if(tabbar)tabbar.style.display="none";
-    if(loginEl)loginEl.style.display="";
-    const loginForm=document.getElementById("loginForm");
-    const errEl=document.getElementById("loginErr"),submitBtn=document.getElementById("loginBtn");
-    const forgotBtn=document.getElementById("loginForgot"),signupBtn=document.getElementById("loginSignup");
-    const passField=document.getElementById("loginPass");
-    /* PR 5: "glömt lösenord" och "skapa konto" växlar om samma
-       inloggningsformulär istället för att öppna en ny vy - det finns ingen
-       annan inloggningsskärm att visa dem i. Den här hela grenen körs bara
-       när den automatiska anonyma inloggningen själv har misslyckats (se
-       ovan), t.ex. på en ny enhet utan nätverk till den anonyma sessionen -
-       den vanliga vägen in är istället "spara ditt bibliotek" i Inställningar
-       (renderAuth, ovan). */
-    let loginMode="in";
-    function setLoginMode(mode){
-      loginMode=mode;errEl.textContent="";
-      if(mode==="forgot"){passField.style.display="none";passField.required=false;submitBtn.textContent="Skicka återställningslänk";forgotBtn.textContent="Tillbaka till inloggning";signupBtn.style.display="none"}
-      else if(mode==="signup"){passField.style.display="";passField.required=true;passField.autocomplete="new-password";submitBtn.textContent="Skapa konto";forgotBtn.style.display="none";signupBtn.textContent="Jag har redan ett konto"}
-      else{passField.style.display="";passField.required=true;passField.autocomplete="current-password";submitBtn.textContent="Logga in";forgotBtn.textContent="Glömt lösenordet?";forgotBtn.style.display="";signupBtn.textContent="Skapa ett";signupBtn.style.display=""}
-    }
-    if(forgotBtn)forgotBtn.addEventListener("click",()=>setLoginMode(loginMode==="forgot"?"in":"forgot"));
-    if(signupBtn)signupBtn.addEventListener("click",()=>setLoginMode(loginMode==="signup"?"in":"signup"));
-    if(loginForm)loginForm.addEventListener("submit",async e=>{
-      e.preventDefault();
-      const email=document.getElementById("loginEmail").value.trim(),pass=passField.value;
-      errEl.textContent="";submitBtn.disabled=true;
-      if(loginMode==="forgot"){
-        submitBtn.textContent="Skickar…";
-        const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-        submitBtn.disabled=false;submitBtn.textContent="Skicka återställningslänk";
-        if(error){errEl.textContent=error.message||"Kunde inte skicka länken.";return}
-        toast("Länk skickad - kolla din e-post.");setLoginMode("in");return;
-      }
-      if(loginMode==="signup"){
-        submitBtn.textContent="Skapar konto…";
-        if(pass.length<6){errEl.textContent="Lösenordet måste vara minst 6 tecken.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
-        const {data:res,error}=await sb.auth.signUp({email,password:pass});
-        if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
-        sbUser=res.user;location.reload();return;
-      }
-      submitBtn.textContent="Loggar in…";
-      const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
-      if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";submitBtn.disabled=false;submitBtn.textContent="Logga in";return}
-      sbUser=res.user;location.reload();
-    });
-  } else {
-    sbUser=anonRes.user;
-  }
+/* Utloggad: fråga istället för att gissa (PR 5b). Den som inte har en
+   sparad session ser ett vägval - "Kom igång" (samma automatiska anonyma
+   inloggning som innan, PR 5a: ett tomt bibliotek skapas direkt utan
+   konto) eller "Logga in" (det befintliga formuläret nedan, nu den
+   vanliga vägen för den som redan har ett konto, inte bara en
+   undanskymd nödutgång). Samma formulär nås också från Inställningar →
+   Konto (renderAuth) via showLoginScreen, t.ex. om man vill byta konto
+   eller hamnade i ett anonymt bibliotek av misstag. */
+function hideAppChrome(){
+  const hemEl=document.getElementById("view-hem"),tabbar=document.querySelector(".tabbar");
+  const panelEl=document.getElementById("panel"),panelScrimEl=document.getElementById("panelScrim");
+  if(hemEl)hemEl.style.display="none";
+  if(tabbar)tabbar.style.display="none";
+  if(panelEl)panelEl.classList.remove("open");
+  if(panelScrimEl)panelScrimEl.classList.remove("open");
 }
+function wireLoginForm(){
+  const loginForm=document.getElementById("loginForm");
+  const errEl=document.getElementById("loginErr"),submitBtn=document.getElementById("loginBtn");
+  const forgotBtn=document.getElementById("loginForgot"),signupBtn=document.getElementById("loginSignup");
+  const passField=document.getElementById("loginPass");
+  if(!loginForm)return;
+  let loginMode="in";
+  function setLoginMode(mode){
+    loginMode=mode;errEl.textContent="";
+    if(mode==="forgot"){passField.style.display="none";passField.required=false;submitBtn.textContent="Skicka återställningslänk";forgotBtn.textContent="Tillbaka till inloggning";signupBtn.style.display="none"}
+    else if(mode==="signup"){passField.style.display="";passField.required=true;passField.autocomplete="new-password";submitBtn.textContent="Skapa konto";forgotBtn.style.display="none";signupBtn.textContent="Jag har redan ett konto"}
+    else{passField.style.display="";passField.required=true;passField.autocomplete="current-password";submitBtn.textContent="Logga in";forgotBtn.textContent="Glömt lösenordet?";forgotBtn.style.display="";signupBtn.textContent="Skapa ett";signupBtn.style.display=""}
+  }
+  setLoginMode("in");
+  /* .onclick/.onsubmit istället för addEventListener - skärmen kan visas
+     flera gånger under samma sidvisning (från vägvalet och från
+     Inställningar), och en assignment skriver bara över förra
+     handlern istället för att stapla flera. */
+  if(forgotBtn)forgotBtn.onclick=()=>setLoginMode(loginMode==="forgot"?"in":"forgot");
+  if(signupBtn)signupBtn.onclick=()=>setLoginMode(loginMode==="signup"?"in":"signup");
+  loginForm.onsubmit=async e=>{
+    e.preventDefault();
+    const email=document.getElementById("loginEmail").value.trim(),pass=passField.value;
+    errEl.textContent="";submitBtn.disabled=true;
+    if(loginMode==="forgot"){
+      submitBtn.textContent="Skickar…";
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+      submitBtn.disabled=false;submitBtn.textContent="Skicka återställningslänk";
+      if(error){errEl.textContent=error.message||"Kunde inte skicka länken.";return}
+      toast("Länk skickad - kolla din e-post.");setLoginMode("in");return;
+    }
+    if(loginMode==="signup"){
+      submitBtn.textContent="Skapar konto…";
+      if(pass.length<6){errEl.textContent="Lösenordet måste vara minst 6 tecken.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
+      const {data:res,error}=await sb.auth.signUp({email,password:pass});
+      if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
+      sbUser=res.user;location.reload();return;
+    }
+    submitBtn.textContent="Loggar in…";
+    const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";submitBtn.disabled=false;submitBtn.textContent="Logga in";return}
+    sbUser=res.user;location.reload();
+  };
+}
+function showLoginScreen(){
+  hideAppChrome();
+  const choiceEl=document.getElementById("view-choice"),loginEl=document.getElementById("view-login");
+  if(choiceEl)choiceEl.style.display="none";
+  if(loginEl)loginEl.style.display="";
+  wireLoginForm();
+}
+window.showLoginScreen=showLoginScreen;
 
-if(sbUser){
+/* Resten av filen (ikonrendering, onclick-exports, knapplyssnare) ska
+   köra oavsett inloggningsläge - precis som innan - så inget här får
+   blockera huvudtråden på en await som väntar in en klick-interaktion.
+   Datainläsningen som kräver sbUser läggs därför i en egen funktion och
+   startas antingen direkt (sparad session) eller efter att vägvalet/
+   inloggningen löst sig (klick-styrt, inte await-styrt). */
+async function afterAuthReady(){
+  renderAuth();
+  if(!sbUser)return;
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
   try{await loadBcPhotos();renderHome();if(curView==="place")renderPlace()}catch(e){console.warn("bcPhotos",e)}
@@ -869,6 +887,29 @@ if(sbUser){
     const r=p.new;if(!r)return;const d=data.find(x=>x.id===r.book_id);
     if(d){d.status=r.status;d.lentTo=r.lent_to||"";d.ts=r.seen_date||null;render()}
   }).subscribe();
+}
+
+async function startAnon(){
+  const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously();
+  if(anonErr){console.warn("anonym inloggning",anonErr);showLoginScreen();return}
+  sbUser=anonRes.user;
+  await afterAuthReady();
+}
+
+if(sbUser){
+  afterAuthReady();
+} else {
+  const choiceEl=document.getElementById("view-choice");
+  if(choiceEl){
+    hideAppChrome();
+    choiceEl.style.display="";
+    const btnStart=document.getElementById("choiceStart"),btnLogin=document.getElementById("choiceLogin");
+    if(btnStart)btnStart.onclick=()=>{choiceEl.style.display="none";startAnon()};
+    if(btnLogin)btnLogin.onclick=()=>{choiceEl.style.display="none";showLoginScreen()};
+  } else {
+    /* Reservläge om väljarmarkeringen saknas: samma automatik som innan. */
+    startAnon();
+  }
 }
 
 /* ---------- Navigering ---------- */
