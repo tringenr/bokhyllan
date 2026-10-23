@@ -617,9 +617,42 @@ body.splashing{overflow:hidden}
 .ns-done summary{font:600 13px var(--font-body);color:var(--text-secondary);padding:8px 0;cursor:pointer}
 .ns-done[open]{display:flex;flex-direction:column;gap:8px}
 .ns-done .ns-item{opacity:.85}
-.ns-tips{margin:2px 0 10px}
-.ns-tips summary{font:600 13px var(--font-body);color:var(--accent);cursor:pointer;padding:4px 0}
-.ns-tips p{margin:4px 0 0}
+
+/* ===== Fotosteget i Ny hylla-guiden: mörkt helskärmsläge (designpaketets
+   kamerasökare). En rund avtryckarknapp öppnar kameran/galleriet direkt,
+   en miniatyrrad visar redan tagna hyllplan. ===== */
+.ns-cam{position:fixed;inset:0;z-index:90;background:#231A1E;color:#FDFBF9;
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0);
+  padding-bottom:env(safe-area-inset-bottom,0)}
+.ns-cam-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px;flex-shrink:0}
+.ns-cam-back{border:none;background:none;color:inherit;width:34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0}
+.ns-cam-back svg{width:22px;height:22px}
+.ns-cam-flip{display:flex;transform:scaleX(-1)}
+.ns-cam-count{font:600 13px var(--font-body);opacity:.85}
+.ns-cam-done{border:none;background:none;color:var(--pink-500);font:700 14px var(--font-body);padding:6px 4px}
+.ns-cam-strip{display:flex;gap:10px;padding:10px 16px 0;overflow-x:auto;flex-shrink:0}
+.ns-cam-strip .ns-shot{display:flex;flex-direction:column;gap:6px;flex:0 0 72px}
+.ns-cam-strip .ns-thumb{position:relative;width:72px;height:72px;border-radius:10px;overflow:hidden;
+  background:#382E32;display:flex;align-items:center;justify-content:center;font-size:22px;
+  border:1px solid rgba(255,255,255,.18)}
+.ns-cam-strip .ns-shot.has .ns-thumb{border-color:rgba(255,255,255,.18)}
+.ns-cam-strip .ns-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ns-cam-strip .ns-thumb .ns-x{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;
+  background:rgba(35,26,30,.75);color:#fff;border:none;font-size:11px;line-height:1;padding:0}
+.ns-cam-strip .ns-lbl{width:72px;font-size:10px;text-align:center;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:4px 2px}
+.ns-cam-stage{flex:1;display:flex;align-items:center;justify-content:center}
+.ns-cam-shot{width:72px;height:72px;border-radius:50%;background:#FDFBF9;border:4px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;color:#231A1E;cursor:pointer}
+.ns-cam-shot svg{width:28px;height:28px}
+.ns-cam-hint{text-align:center;font-size:13px;opacity:.72;margin:0 0 4px}
+.ns-cam-tips{display:block;margin:0 auto 18px;border:none;background:none;color:var(--pink-500);
+  font:700 12px var(--font-body);padding:8px}
+.ns-cam-sheet-scrim{position:fixed;inset:0;background:rgba(35,26,30,.6);z-index:95}
+.ns-cam-sheet{position:fixed;left:0;right:0;bottom:0;z-index:96;background:var(--card);color:var(--ink);
+  width:100%;border-radius:18px 18px 0 0;padding:18px 20px 32px;display:flex;flex-direction:column;gap:10px}
+.ns-cam-sheet .grip{width:38px;height:4px;border-radius:2px;background:var(--line);align-self:center;margin-bottom:4px}
+.ns-cam-sheet h3{font:700 18px var(--font-display);margin:0}
 
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}

@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261023173634";
+const DV="?v=20261023225039";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1680,8 +1680,11 @@ function nextFreeBc(){
   let n=1; while(used.has(n)) n++; return String(n);
 }
 function nsRender(){
-  const el=document.getElementById("nsWizard");if(!el)return;
-  if(!nsState){el.innerHTML="";el.classList.remove("open");return}
+  const el=document.getElementById("nsWizard");const cam=document.getElementById("nsCam");
+  if(!el||!cam)return;
+  if(!nsState){el.innerHTML="";el.classList.remove("open");cam.style.display="none";cam.innerHTML="";return}
+  if(nsState.step===4){el.classList.remove("open");el.innerHTML="";cam.style.display="";nsRenderCam();return}
+  cam.style.display="none";cam.innerHTML="";
   el.classList.add("open");
   const S=nsState;
   let html=`<div class="ns-head"><strong>${S.mode==="new"?"Ny hylla":"Nytt foto"}</strong>
@@ -1718,35 +1721,62 @@ function nsRender(){
       </div>
       <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button></div>`;
   }
-  else if(S.step===4){
-    html+=`<p class="ns-q">Fota ${S.mode==="new"?"varje hyllplan":"hyllplanet"}</p>
-      <p class="ns-hint">${S.mode==="new"
-        ? (S.type==="VH"
-           ? "Ett foto per sektion och plan. Plan 1 är nederst."
-           : "Ett foto per hyllplan. Hyllplan 1 är nederst.")
-        : "Ta ett foto rakt framifrån så att ryggarna syns."}</p>
-      <details class="ns-tips"><summary>Vad räknas som ett hyllplan?</summary>
-        <p class="fine">Allt räknas — så länge det går att fota i ett svep: ett vanligt hyllplan, en trave böcker, eller bara en enda bok som ligger löst.</p></details>
-      <div class="ns-shots" id="nsShots"></div>
-      <button class="ghost ns-add" onclick="nsAddShot()">➕ Lägg till foto</button>
-      <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
-        <button onclick="nsFinish()">✓ Skicka <span id="nsCount"></span></button></div>`;
-  }
   el.innerHTML=html;
-  if(S.step===4)nsRenderShots();
+}
+/* Fotosteget (steg 4) — eget mörkt helskärmsläge, som designpaketets
+   kamerasökare: en rund avtryckarknapp öppnar kameran/galleriet direkt och
+   lägger till fotot, en miniatyrrad visar redan tagna hyllplan. */
+function nsRenderCam(){
+  const cam=document.getElementById("nsCam");if(!cam)return;
+  const S=nsState;
+  const n=S.shots.filter(s=>s.dataUrl).length;
+  cam.innerHTML=`
+    <div class="ns-cam-bar">
+      <button class="ns-cam-back" onclick="nsBack()" aria-label="Tillbaka"><span class="ns-cam-flip">${ic("chevron-right")}</span></button>
+      <div class="ns-cam-count">${n} hyllplan</div>
+      <button class="ns-cam-done" onclick="nsFinish()">Skicka</button>
+    </div>
+    <div class="ns-cam-strip" id="nsShots"></div>
+    <div class="ns-cam-stage">
+      <label class="ns-cam-shot" aria-label="Ta foto">${ic("camera")}
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="nsCamShot(this)"></label>
+    </div>
+    <p class="ns-cam-hint">1 foto = 1 hyllplan</p>
+    <button class="ns-cam-tips" onclick="nsToggleTips()">Vad räknas som ett hyllplan?</button>
+    ${S.tips?`<div class="ns-cam-sheet-scrim" onclick="nsToggleTips()"></div>
+    <div class="ns-cam-sheet">
+      <span class="grip"></span>
+      <h3>Vad räknas som ett hyllplan?</h3>
+      <p class="fine">Allt räknas — så länge det går att fota i ett svep: ett vanligt hyllplan, en trave böcker, eller bara en enda bok som ligger löst.</p>
+      <button class="btn btn-primary" onclick="nsToggleTips()">Jag fattar</button>
+    </div>`:""}`;
+  nsRenderShots();
+}
+function nsToggleTips(){nsState.tips=!nsState.tips;nsRenderCam()}
+async function nsCamShot(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  input.value="";
+  const shot={label:nsState.shots.length?"":(nsState.defLabel||""),dataUrl:null,file};
+  nsState.shots.push(shot);
+  try{shot.dataUrl=await shrinkToDataURL(file,1100,0.62)}
+  catch(e){
+    try{shot.dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+    catch(e2){alert("Kunde inte läsa bilden. Prova en annan.");nsState.shots.pop();nsRenderShots();return}
+  }
+  nsRenderShots();
+  const c=document.querySelector(".ns-cam-count");if(c)c.textContent=nsState.shots.filter(s=>s.dataUrl).length+" hyllplan";
 }
 function nsRenderShots(){
   const wrap=document.getElementById("nsShots");if(!wrap)return;
   const S=nsState;
   wrap.innerHTML=S.shots.map((s,i)=>`
     <div class="ns-shot${s.dataUrl?" has":""}">
-      <label class="ns-thumb">
+      <div class="ns-thumb">
         ${s.dataUrl?`<img src="${s.dataUrl}" alt="">`:`<span>📷</span>`}
-        <input type="file" accept="image/*" style="display:none" onchange="nsShotFile(${i},this)">
-      </label>
+        <button class="ns-x" onclick="nsDelShot(${i})">✕</button>
+      </div>
       <input class="ns-lbl" placeholder="${S.type==="VH"?"T.ex. Vänster plan 3":"T.ex. Hyllplan 2"}"
              value="${(s.label||"").replace(/"/g,'&quot;')}" onchange="nsShotLabel(${i},this.value)">
-      <button class="ns-x" onclick="nsDelShot(${i})">✕</button>
     </div>`).join("");
   const n=S.shots.filter(s=>s.dataUrl).length;
   const c=document.getElementById("nsCount");
@@ -1770,23 +1800,13 @@ function nsPickExisting(){
   const code=(document.getElementById("nsCodeInp").value||"").trim();
   nsState.bc=bc;nsState.name=bcNames[bc];nsState.code=code;
   nsState.type=code&&/^\d+:[VH]/.test(code)?"VH":"S";
-  nsState.step=4;nsState.shots=[{label:code||"",dataUrl:null,file:null}];nsRender();
+  nsState.step=4;nsState.shots=[];nsState.defLabel=code||"";nsRender();
 }
 function nsType(t){nsState.type=t;nsState.step=4;
-  nsState.shots=[{label:"",dataUrl:null,file:null}];nsRender()}
-function nsAddShot(){nsState.shots.push({label:"",dataUrl:null,file:null});nsRenderShots()}
-function nsDelShot(i){nsState.shots.splice(i,1);if(!nsState.shots.length)nsAddShot();else nsRenderShots()}
+  nsState.shots=[];nsState.defLabel="";nsRender()}
+function nsDelShot(i){nsState.shots.splice(i,1);nsRenderShots();
+  const c=document.querySelector(".ns-cam-count");if(c)c.textContent=nsState.shots.filter(s=>s.dataUrl).length+" hyllplan"}
 function nsShotLabel(i,v){nsState.shots[i].label=v}
-async function nsShotFile(i,input){
-  const f=input.files[0];if(!f)return;
-  nsState.shots[i].file=f;
-  try{nsState.shots[i].dataUrl=await shrinkToDataURL(f,1100,0.62)}
-  catch(e){
-    try{nsState.shots[i].dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
-    catch(e2){alert("Kunde inte läsa bilden. Prova en annan.");return}
-  }
-  nsRenderShots();
-}
 /* Laddar upp ett hyllfoto: originalet till lagringen (om det går) och en
    nedskalad kopia i raden, som avläsningen använder. Returnerar raden. */
 async function uploadShelfPhoto({bc,name,code,label,file,dataUrl,i}){
@@ -1810,7 +1830,7 @@ async function nsFinish(){
   const S=nsState;
   const shots=S.shots.filter(s=>s.dataUrl);
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
-  const btn=document.querySelector("#nsWizard .ns-nav button:last-child");
+  const btn=document.querySelector("#nsCam .ns-cam-done");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
   try{
     if(S.mode==="new"&&!bcNames[S.bc]){
@@ -2164,8 +2184,8 @@ async function nsReopen(id,quiet){
 const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
-window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsAddShot=nsAddShot;
-window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;window.nsShotFile=nsShotFile;
+window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
+window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 
 /* ---------- Dela ---------- */
