@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261024002511">
+<link rel="stylesheet" href="css/style.css?v=20261024004149">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261024002511";
+  var MY="20261024004149";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -132,12 +132,16 @@
 <div class="safe-top" aria-hidden="true"></div>
 
 <!-- ================= VÄLJ: LOGGA IN ELLER KOM IGÅNG ================= -->
-<section id="view-choice" class="login-screen" style="display:none">
-  <div class="login-card card">
-    <h1 class="login-title">Min Bokhylla</h1>
-    <p class="fine login-sub">Fota dina hyllor. Sök bland dina böcker var du än är, och se exakt var de står.</p>
-    <button class="btn btn-primary" id="choiceStart" type="button">Kom igång</button>
-    <button class="btn btn-outline" id="choiceLogin" type="button" style="margin-top:10px;width:100%">Jag har redan ett konto — logga in</button>
+<!-- Samma hero-stil som startsidans tomma läge (.eg-card m.fl. i style.css) -->
+<section id="view-choice" style="display:none">
+  <div class="card eg-card">
+    <img class="eg-hero" src="img/onboarding/hylla.jpg" alt="" onerror="this.closest('.eg-card').classList.add('eg-noimg');this.remove()">
+    <div class="eg-scrim"></div>
+    <div class="eg-content">
+      <h2 class="eg-title">Hitta, Dela, <em>Värdera</em> dina böcker</h2>
+      <button class="btn btn-primary" id="choiceStart" type="button">Kom igång</button>
+      <button class="link-btn eg-about" id="choiceLogin" type="button">Jag har redan ett konto — logga in</button>
+    </div>
   </div>
 </section>
 
@@ -352,6 +356,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261024002511"></script>
+<script src="js/app.js?v=20261024004149"></script>
 </body>
 </html>
