@@ -617,6 +617,9 @@ body.splashing{overflow:hidden}
 .ns-done summary{font:600 13px var(--font-body);color:var(--text-secondary);padding:8px 0;cursor:pointer}
 .ns-done[open]{display:flex;flex-direction:column;gap:8px}
 .ns-done .ns-item{opacity:.85}
+.ns-tips{margin:2px 0 10px}
+.ns-tips summary{font:600 13px var(--font-body);color:var(--accent);cursor:pointer;padding:4px 0}
+.ns-tips p{margin:4px 0 0}
 
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}
