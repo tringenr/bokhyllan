@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024004149";
+const DV="?v=20261024004429";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -435,7 +435,7 @@ function renderHome(){
   const known=data.some(d=>d.shelf);
   const places=placeList();
   const guide=document.getElementById("homeEmptyGuide");
-  const firstRun=sbUser&&places.length===0;
+  const firstRun=!sbUser||places.length===0;
   if(guide)guide.style.display=firstRun?"":"none";
   /* Första gången (ingen hylla än) tar guiden över hela skärmen (se
      .eg-card i style.css, position:fixed över rubrik och fliklist) -
@@ -862,8 +862,7 @@ function wireLoginForm(){
 }
 function showLoginScreen(){
   hideAppChrome();
-  const choiceEl=document.getElementById("view-choice"),loginEl=document.getElementById("view-login");
-  if(choiceEl)choiceEl.style.display="none";
+  const loginEl=document.getElementById("view-login");
   if(loginEl)loginEl.style.display="";
   wireLoginForm();
 }
@@ -873,10 +872,12 @@ window.showLoginScreen=showLoginScreen;
    köra oavsett inloggningsläge - precis som innan - så inget här får
    blockera huvudtråden på en await som väntar in en klick-interaktion.
    Datainläsningen som kräver sbUser läggs därför i en egen funktion och
-   startas antingen direkt (sparad session) eller efter att vägvalet/
+   startas antingen direkt (sparad session) eller efter att "Kom igång"/
    inloggningen löst sig (klick-styrt, inte await-styrt). */
 async function afterAuthReady(){
   renderAuth();
+  const loginLink=document.getElementById("homeEmptyLogin");
+  if(loginLink)loginLink.style.display=sbUser?"none":"";
   if(!sbUser)return;
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
@@ -896,20 +897,24 @@ async function startAnon(){
   await afterAuthReady();
 }
 
+/* "Kom igång" på startsidan: utan session loggas man in anonymt först
+   (samma bibliotek man sedan kan spara som konto), sedan öppnas
+   hylla-guiden direkt - allt på samma startsida, ingen separat skärm. */
+async function startFromGuide(){
+  if(!sbUser)await startAnon();
+  addShelf();
+}
+window.startFromGuide=startFromGuide;
+
 if(sbUser){
   afterAuthReady();
 } else {
-  const choiceEl=document.getElementById("view-choice");
-  if(choiceEl){
-    hideAppChrome();
-    choiceEl.style.display="";
-    const btnStart=document.getElementById("choiceStart"),btnLogin=document.getElementById("choiceLogin");
-    if(btnStart)btnStart.onclick=()=>{choiceEl.style.display="none";startAnon()};
-    if(btnLogin)btnLogin.onclick=()=>{choiceEl.style.display="none";showLoginScreen()};
-  } else {
-    /* Reservläge om väljarmarkeringen saknas: samma automatik som innan. */
-    startAnon();
-  }
+  /* Ingen sparad session: startsidans tomma läge (samma .eg-card som
+     annars visas när biblioteket är tomt) visas direkt, med en extra
+     "Har du redan ett konto? Logga in"-länk - ingen separat väljarskärm. */
+  renderHome();
+  const loginLink=document.getElementById("homeEmptyLogin");
+  if(loginLink){loginLink.style.display="";loginLink.onclick=showLoginScreen}
 }
 
 /* ---------- Navigering ---------- */
@@ -935,7 +940,7 @@ document.getElementById("gearBtn").addEventListener("click",openPanel);
 document.getElementById("panelClose").addEventListener("click",closePanel);
 panelScrim.addEventListener("click",closePanel);
 const homeEmptyStart=document.getElementById("homeEmptyStart");
-if(homeEmptyStart)homeEmptyStart.addEventListener("click",addShelf);
+if(homeEmptyStart)homeEmptyStart.addEventListener("click",startFromGuide);
 if(sbUser)go("hem",{keepScroll:true});
 function openSet(page){
   document.querySelectorAll("#view-set .set-page").forEach(el=>el.classList.toggle("on",el.dataset.page===page));
