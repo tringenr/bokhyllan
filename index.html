@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261021220110">
+<link rel="stylesheet" href="css/style.css?v=20261023162604">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261021220110";
+  var MY="20261023162604";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -187,7 +187,7 @@
     <img class="eg-hero" src="img/onboarding/hylla.jpg" alt="" onerror="this.closest('.eg-card').classList.add('eg-noimg');this.remove()">
     <div class="eg-scrim"></div>
     <div class="eg-content">
-      <h2 class="eg-title">Din hylla väntar</h2>
+      <h2 class="eg-title">Ditt bibliotek väntar</h2>
       <button class="btn btn-primary" id="homeEmptyStart">Lägg till din första hylla</button>
       <button class="link-btn eg-about" data-set="om">Vad är Bokhyllan?</button>
     </div>
@@ -221,7 +221,7 @@
   <div class="card share-card">
     <div class="share-who"><span class="avatar avatar-48" id="shareAvatar"></span>
       <div><b id="shareName">Min Bokhylla</b><small class="mono" id="shareMeta"></small></div></div>
-    <p>Dela din hylla med vänner och bekanta. De kan bläddra bland dina böcker och se vad som går att låna.</p>
+    <p>Dela ditt bibliotek med vänner och bekanta. De kan bläddra bland dina böcker och se vad som går att låna.</p>
     <div class="btn-row">
       <button class="btn btn-primary btn-sm" id="shareBtn">Bjud in</button>
       <button class="btn btn-outline btn-sm" id="copyLink">Kopiera länk</button>
@@ -229,7 +229,7 @@
     <p class="fine" id="shareMsg">Mottagaren ser titlar, författare och kategorier. Var böckerna står och vem som lånat dem syns bara för inloggade.</p>
   </div>
   <h2 class="sub-h">Delat med dig</h2>
-  <div class="empty">Ingen har delat en hylla med dig än.</div>
+  <div class="empty">Ingen har delat ett bibliotek med dig än.</div>
 </section>
 
 <!-- ================= SÄLJ ================= -->
@@ -252,7 +252,7 @@
 <section id="view-set" class="view" style="display:none">
   <button class="back-link" data-back-settings>← Inställningar</button>
   <div class="set-page" data-page="platser">
-    <div class="page-head"><h1>Platser</h1></div>
+    <div class="page-head"><h1>Hyllor</h1></div>
     <p class="fine">Tryck på ett namn för att byta det. Namnen delas med familjen när du är inloggad.</p>
     <div id="bcEditorIns" class="bc-editor"></div>
     <div class="pl-photos">
@@ -272,12 +272,12 @@
   </div>
   <div class="set-page" data-page="konto">
     <div class="page-head"><h1>Konto</h1></div>
-    <p class="fine">Logga in för att se var böckerna står, ändra status och lägga till böcker. Konton skapas av den som administrerar hyllan.</p>
+    <p class="fine">Logga in för att se var böckerna står, ändra status och lägga till böcker. Konton skapas av den som administrerar biblioteket.</p>
     <div id="authBar" class="auth-bar card"></div>
   </div>
   <div class="set-page" data-page="om">
     <div class="page-head"><h1>Om appen</h1></div>
-    <div class="card note">Bokhyllan är familjens katalog över böckerna hemma, avlästa från foton av hyllorna. Status och ändringar sparas i en delad databas och syns direkt för alla som är inloggade.<br><br>Bokbeskrivningarna är skrivna av Claude och kan innehålla fel.<br><br><b>På önskelistan:</b> exakta bokmarkeringar på fotona, Arbetsrummet och barnens rum, kökets nedersta hylla, jämförelse mot katalogen när en hylla fotas om.</div>
+    <div class="card note">Bokhyllan är familjens katalog över böckerna hemma, avlästa från foton av hyllplanen. Status och ändringar sparas i en delad databas och syns direkt för alla som är inloggade.<br><br>Bokbeskrivningarna är skrivna av Claude och kan innehålla fel.<br><br><b>På önskelistan:</b> exakta bokmarkeringar på fotona, Arbetsrummet och barnens rum, kökets nedersta hyllplan, jämförelse mot katalogen när ett hyllplan fotas om.</div>
   </div>
 </section>
 
@@ -299,8 +299,8 @@
     <span class="progress"><span id="gapCardProg"></span></span>
   </button>
   <div class="set-list">
-    <button data-edit><i data-ic="pencil"></i><span><b>Hyllans namn och bild</b><small id="setNameSub">Min Bokhylla</small></span></button>
-    <button data-set="platser"><i data-ic="map-pin"></i><span><b>Platser</b><small id="setPlacesSub">byt namn eller lägg till</small></span></button>
+    <button data-edit><i data-ic="pencil"></i><span><b>Bibliotekets namn och bild</b><small id="setNameSub">Min Bokhylla</small></span></button>
+    <button data-set="platser"><i data-ic="map-pin"></i><span><b>Hyllor</b><small id="setPlacesSub">byt namn eller lägg till</small></span></button>
     <button data-set="kategorier"><i data-ic="folder"></i><span><b>Kategorier</b><small id="setCatsSub">byt namn eller slå ihop</small></span></button>
     <button data-set="konto"><i data-ic="user"></i><span><b>Konto</b><small id="setAuthSub">Inte inloggad</small></span></button>
     <button id="shareAppBtn"><i data-ic="link"></i><span><b>Dela appen</b><small>Skicka länken till någon annan</small></span></button>
@@ -320,9 +320,9 @@
 
 <!-- ================= REDIGERA HYLLA ================= -->
 <div class="scrim scrim-top" id="editScrim"></div>
-<div class="sheet" id="editSheet" role="dialog" aria-label="Din hylla">
+<div class="sheet" id="editSheet" role="dialog" aria-label="Ditt bibliotek">
   <span class="grip"></span>
-  <h2>Din hylla</h2>
+  <h2>Ditt bibliotek</h2>
   <div class="ed-row">
     <span class="avatar avatar-84" id="edAvatar"></span>
     <div class="ed-acts">
@@ -331,9 +331,9 @@
     </div>
   </div>
   <div class="field"><span class="lbl">Eller välj ett av dina hyllfoton</span><div class="ed-picks" id="edPicks"></div></div>
-  <div class="field"><span class="lbl">Namn på hyllan</span>
+  <div class="field"><span class="lbl">Namn på biblioteket</span>
     <input id="edName" class="inp inp-lg" placeholder="Min Bokhylla" maxlength="40">
-    <span class="fine">Namn och bild syns när du delar din hylla.</span></div>
+    <span class="fine">Namn och bild syns när du delar ditt bibliotek.</span></div>
   <div class="btn-row"><button class="btn btn-primary" id="edSave">Spara</button><button class="btn btn-ghost" id="edCancel">Avbryt</button></div>
 </div>
 
@@ -341,6 +341,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261021220110"></script>
+<script src="js/app.js?v=20261023162604"></script>
 </body>
 </html>

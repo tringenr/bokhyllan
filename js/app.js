@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261021220110";
+const DV="?v=20261023162604";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -47,7 +47,7 @@ function catColor(c){let h=0;for(const ch of String(c||""))h=(h*31+ch.charCodeAt
 const fmtN=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"\u2009");
 let toastT=null;
 function toast(msg){const t=document.getElementById("toast");if(!t)return;t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)}
-/* Hyllans namn och bild. Sparas i webbläsaren tills vidare - i databasen
+/* Bibliotekets namn och bild. Sparas i webbläsaren tills vidare - i databasen
    behövs en egen tabell (per konto) innan det kan följa med vid delning. */
 const PROFILE_KEY="minbokhylla-profile";
 let profile={name:"Min Bokhylla",avatar:null};
@@ -91,13 +91,13 @@ if(splashEl){splashEl.addEventListener("click",fadeSplash);playSplash()}
 const BOOK_INFO={};
 /* Innehöll tidigare Thomas riktiga rumsnamn hårdkodade här - synliga för
    alla i den publicerade JS-koden oavsett inloggning. Koden faller redan
-   tillbaka på "Plats "+bc överallt där bcNames saknar ett namn
+   tillbaka på "Hylla "+bc överallt där bcNames saknar ett namn
    (se t.ex. shortName/placeList), och de riktiga namnen laddas från
    databasen (loadBcNames) inom en sekund för en inloggad användare - så
    den här tomma startgissningen kostar ingenting i praktiken. */
 const DEFAULT_BC={};
 let bcNames={...DEFAULT_BC};
-/* Platsfotona (tidigare data/photos.json + img/) flyttade till databasen -
+/* Hyllfotona (tidigare data/photos.json + img/) flyttade till databasen -
    filen och mappen låg okrypterade och publikt nåbara i det publicerade
    repot oavsett inloggning. Miniatyrer sparas som base64 direkt i
    bc_photos-raden (litet, visas i varje rutnät-render); fullstora fotot
@@ -134,40 +134,40 @@ async function signedPhotoUrl(path,seconds){
   }catch(e){return null}
 }
 let curView="hem";
-/* Platser kan grupperas (parent_bc) och tas bort (hidden). En grupperad
-   plats visas som hyllor inuti sin förälder; hyllkoderna ändras aldrig. */
+/* Hyllor kan grupperas (parent_bc) och tas bort (hidden). En grupperad
+   hylla visas som underhyllor inuti sin förälder; hyllkoderna ändras aldrig. */
 let bcParent={},bcHidden=new Set();
-let pmMerge=null; /* {sel:Set, name} när du väljer platser att slå ihop */
+let pmMerge=null; /* {sel:Set, name} när du väljer hyllor att slå ihop */
 async function loadBcNames(){const {data:rows}=await sb.from("bc_names").select("*");
   if(rows)rows.forEach(r=>{bcNames[r.bc]=r.name;
     if(r.parent_bc)bcParent[r.bc]=String(r.parent_bc);else delete bcParent[r.bc];
     if(r.hidden)bcHidden.add(r.bc);else bcHidden.delete(r.bc)})}
 function topBc(bc){let b=String(bc),n=0;while(bcParent[b]&&n++<10)b=bcParent[b];return b}
-/* Platsen själv plus allt som ligger inuti den, utan borttagna. */
+/* Hyllan själv plus allt som ligger inuti den, utan borttagna. */
 function membersOf(bc){const out=[String(bc)];for(let i=0;i<out.length;i++)
   Object.keys(bcParent).forEach(k=>{if(bcParent[k]===out[i]&&!out.includes(k))out.push(k)});
   return out.filter(b=>!bcHidden.has(b))}
 /* "Sovrummet – vid sängen" inuti "Sovrummet" visas som "vid sängen". */
-function shortName(bc){const nm=bcNames[bc]||("Plats "+bc),par=bcParent[bc];
+function shortName(bc){const nm=bcNames[bc]||("Hylla "+bc),par=bcParent[bc];
   if(!par)return nm;const pn=(bcNames[par]||"").trim();
   const re=new RegExp("^"+pn.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*[–—-]\\s*","i");
   const t=nm.replace(re,"").trim();return t?t.charAt(0).toUpperCase()+t.slice(1):nm}
 const topPlaces=()=>{const bcs=new Set([...Object.keys(bcNames),...PH.map(p=>p.bc),...data.filter(d=>d.shelf).map(d=>d.shelf.split(":")[0])]);
   return [...bcs].filter(b=>!bcParent[b]&&!bcHidden.has(b)).sort((a,b)=>Number(a)-Number(b))};
-/* Losa platser: bocker som ligger utanfor ett hyllplan. Kod <bc>:L<n>. */
+/* Lösa hyllplan: bocker som ligger utanfor ett vanligt hyllplan. Kod <bc>:L<n>. */
 let spotNames={};
 async function loadSpotNames(){
   const {data:rows}=await sb.from("spot_names").select("*");
   if(rows)rows.forEach(r=>spotNames[r.code]=r.name);
 }
-const SEC={V:"vänster",H:"höger",S:"hylla",K:"hylla"};
+const SEC={V:"vänster",H:"höger",S:"hyllplan",K:"hyllplan"};
 function locLabel(shelf){
-  if(!shelf)return "plats dold – logga in för att se";
+  if(!shelf)return "hylla dold – logga in för att se";
   const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
   if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
   const place=bcParent[bc]?`${bcNames[topBc(bc)]} · ${shortName(bc)}`:bcNames[bc];
   if(sec==="L")return `${place} · ${spotNames[shelf]||"löst"}`;
-  return (sec==="S"||sec==="K")?`${place} · hylla ${plan}`:`${place} · ${SEC[sec]} · plan ${plan}`}
+  return (sec==="S"||sec==="K")?`${place} · hyllplan ${plan}`:`${place} · ${SEC[sec]} · plan ${plan}`}
 /* Efter Fas 2.6: alla bocker kommer fran databasen via loadManualBooks. */
 let data=[];
 async function loadStatuses(){
@@ -180,7 +180,7 @@ async function loadStatuses(){
 const $=s=>document.querySelector(s);
 let fs="",fShelf="",fCat="",q="";
 function buildShelfOptions(){
-  const sel=$("#fShelf");sel.innerHTML='<option value="">Alla platser</option>';
+  const sel=$("#fShelf");sel.innerHTML='<option value="">Alla hyllor</option>';
   const shelves=[...new Set(data.map(d=>d.shelf).filter(Boolean))].sort();
   let lastBc="";
   let grp=null;
@@ -232,8 +232,8 @@ function renderSummary(){
   if(bar)bar.innerHTML=segs.filter(x=>x[0]>0).map(([v,c])=>`<span style="flex:${v};background:${c}"></span>`).join("");
   $("#stTot").textContent=fmtN(data.length);
   const np=placeList().length;
-  const sp=document.getElementById("stPlaces");if(sp)sp.textContent=`böcker på ${np} platser`;
-  const sm=document.getElementById("shareMeta");if(sm)sm.textContent=`${fmtN(data.length)} böcker · ${np} platser`;
+  const sp=document.getElementById("stPlaces");if(sp)sp.textContent=`böcker på ${np} hyllor`;
+  const sm=document.getElementById("shareMeta");if(sm)sm.textContent=`${fmtN(data.length)} böcker · ${np} hyllor`;
 }
 function render(){
   const norm=s=>s.toLowerCase();
@@ -256,18 +256,18 @@ $("#fShelf").addEventListener("change",e=>{fShelf=e.target.value;render()});
 $("#fCat").addEventListener("change",e=>{fCat=e.target.value;render();updateList()});
 document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");fs=c.dataset.s;render();if(typeof updateList==="function")updateList()}));
 render();
-/* ---------- Platser: byt namn, slå ihop, dela upp, ta bort ---------- */
+/* ---------- Hyllor: byt namn, slå ihop, dela upp, ta bort ---------- */
 function booksIn(bcs){return data.filter(d=>d.shelf&&bcs.includes(d.shelf.split(":")[0]))}
 function shelvesIn(bcs){return [...new Set(booksIn(bcs).map(d=>d.shelf))]}
 function renderBcEditor(){
   const el=$("#bcEditorIns");if(!el)return;
   const tops=topPlaces();
   if(pmMerge){
-    el.innerHTML=`<div class="card pm-merge"><b>Slå ihop platser</b>
-      <span class="fine">Välj två eller fler. De blir hyllor inuti en ny plats, och böckerna står kvar där de står.</span>
+    el.innerHTML=`<div class="card pm-merge"><b>Slå ihop hyllor</b>
+      <span class="fine">Välj två eller fler. De blir underhyllor inuti en ny hylla, och böckerna står kvar där de står.</span>
       ${tops.map(bc=>`<label class="pm-check"><input type="checkbox" data-mbc="${bc}" ${pmMerge.sel.has(bc)?"checked":""}><span>${esc(bcNames[bc])}</span>
         <small class="mono">${booksIn(membersOf(bc)).length}</small></label>`).join("")}
-      <span class="lbl">Namn på den nya platsen</span>
+      <span class="lbl">Namn på den nya hyllan</span>
       <input class="inp inp-lg" id="pmName" placeholder="T.ex. Sovrummet" value="${esc(pmMerge.name)}">
       <div class="btn-row"><button class="btn btn-primary" id="pmDoMerge">Slå ihop</button><button class="btn btn-ghost" id="pmCancel">Avbryt</button></div></div>`;
     el.querySelectorAll("[data-mbc]").forEach(c=>c.addEventListener("change",()=>{
@@ -278,7 +278,7 @@ function renderBcEditor(){
     el.querySelector("#pmDoMerge").addEventListener("click",placeMerge);
     return;
   }
-  el.innerHTML=`<button class="btn btn-outline" id="pmStartMerge">Slå ihop platser</button>`+tops.map(bc=>{
+  el.innerHTML=`<button class="btn btn-outline" id="pmStartMerge">Slå ihop hyllor</button>`+tops.map(bc=>{
     const mem=membersOf(bc),kids=mem.filter(b=>b!==bc),n=booksIn(mem).length;
     return `<div class="pm-place">
       <div class="pm-row"><button class="bc-name" data-bc="${bc}">${ic("pencil")}<span>${esc(bcNames[bc])}</span></button><small class="mono">${n}</small></div>
@@ -310,13 +310,13 @@ function commonPrefix(names){
   const parts=names.map(n=>n.split(/\s[–—-]\s/)[0].trim());
   return parts.every(x=>x.toLowerCase()===parts[0].toLowerCase())?parts[0]:"";
 }
-/* Sparar ändringar i bc_names. Tar alltid med namnet, så att en plats som
+/* Sparar ändringar i bc_names. Tar alltid med namnet, så att en hylla som
    bara har ett standardnamn i appen också får en rad i databasen. */
 async function placeSave(rows){
   /* Alla rader i en upsert måste ha samma fält - fyll i det som inte
      ändras med nuvarande värde. */
   const full=rows.map(r=>({bc:r.bc,
-    name:("name" in r)?r.name:(bcNames[r.bc]||("Plats "+r.bc)),
+    name:("name" in r)?r.name:(bcNames[r.bc]||("Hylla "+r.bc)),
     parent_bc:("parent_bc" in r)?r.parent_bc:(bcParent[r.bc]||null),
     hidden:("hidden" in r)?r.hidden:bcHidden.has(r.bc)}));
   const {error}=await sb.from("bc_names").upsert(full);
@@ -324,14 +324,14 @@ async function placeSave(rows){
   return true;
 }
 function placesChanged(){buildShelfOptions();render();renderBcEditor();if(curPlace&&!topPlaces().includes(curPlace))curPlace=null}
-function needLogin(){if(sbUser)return false;alert("Logga in för att ändra platser.");return true}
+function needLogin(){if(sbUser)return false;alert("Logga in för att ändra hyllor.");return true}
 async function placeMerge(){
   if(needLogin())return;
   const sel=[...pmMerge.sel],name=(pmMerge.name||"").trim();
-  if(sel.length<2){alert("Välj minst två platser att slå ihop.");return}
-  if(!name){alert("Skriv ett namn på den nya platsen.");return}
-  const ok=await ask({title:"Slå ihop platser?",
-    text:`${sel.map(b=>bcNames[b]).join(", ")} blir hyllor i den nya platsen "${name}". Böckerna står kvar där de står, och du kan dela upp platsen igen.`,
+  if(sel.length<2){alert("Välj minst två hyllor att slå ihop.");return}
+  if(!name){alert("Skriv ett namn på den nya hyllan.");return}
+  const ok=await ask({title:"Slå ihop hyllor?",
+    text:`${sel.map(b=>bcNames[b]).join(", ")} blir underhyllor i den nya hyllan "${name}". Böckerna står kvar där de står, och du kan dela upp hyllan igen.`,
     buttons:[{label:"Slå ihop",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
   if(!ok)return;
   const nb=nextFreeBc();
@@ -344,19 +344,19 @@ async function placeSplit(bc){
   if(needLogin())return;
   const kids=membersOf(bc).filter(b=>bcParent[b]===bc);
   const own=booksIn([bc]).length+PH.filter(p=>p.bc===bc).length;
-  const ok=await ask({title:"Dela upp platsen?",
-    text:`${kids.map(k=>bcNames[k]).join(", ")} blir egna platser igen.${own?"":` "${bcNames[bc]}" har inga egna hyllor och försvinner.`}`,
+  const ok=await ask({title:"Dela upp hyllan?",
+    text:`${kids.map(k=>bcNames[k]).join(", ")} blir egna hyllor igen.${own?"":` "${bcNames[bc]}" har inga egna underhyllor och försvinner.`}`,
     buttons:[{label:"Dela upp",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
   if(!ok)return;
   const rows=kids.map(k=>({bc:k,parent_bc:null}));
   if(!own)rows.push({bc,hidden:true});
   if(!await placeSave(rows))return;
   kids.forEach(k=>delete bcParent[k]);if(!own)bcHidden.add(bc);
-  placesChanged();toast("Platsen är uppdelad");
+  placesChanged();toast("Hyllan är uppdelad");
 }
 async function placeMoveOut(bc){
   if(needLogin())return;
-  const ok=await ask({title:"Flytta ut?",text:`"${bcNames[bc]}" blir en egen plats igen.`,
+  const ok=await ask({title:"Flytta ut?",text:`"${bcNames[bc]}" blir en egen hylla igen.`,
     buttons:[{label:"Flytta ut",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
   if(!ok||!await placeSave([{bc,parent_bc:null}]))return;
   delete bcParent[bc];placesChanged();toast("Flyttad");
@@ -366,22 +366,22 @@ async function placeDelete(bc){
   const mem=membersOf(bc),n=booksIn(mem).length,sh=shelvesIn(mem).length,name=bcNames[bc];
   const others=topPlaces().filter(b=>b!==bc);
   const choice=await ask({title:`Ta bort "${name}"?`,
-    text:n?`Platsen har ${n} böcker på ${sh} ${sh===1?"hylla":"hyllor"}. Vad ska hända med hyllorna?`:"Platsen har inga böcker.",
-    buttons:(n&&others.length?[{label:"Flytta hyllorna till en annan plats",value:"move",kind:"primary"}]:[])
-      .concat([{label:n?"Ta bort hyllorna med platsen":"Ta bort platsen",value:"delete",kind:n?"danger":"primary"},{label:"Avbryt",value:false}])});
+    text:n?`Hyllan har ${n} böcker på ${sh} ${sh===1?"hyllplan":"hyllplan"}. Vad ska hända med dem?`:"Hyllan har inga böcker.",
+    buttons:(n&&others.length?[{label:"Flytta böckerna till en annan hylla",value:"move",kind:"primary"}]:[])
+      .concat([{label:n?"Ta bort böckerna med hyllan":"Ta bort hyllan",value:"delete",kind:n?"danger":"primary"},{label:"Avbryt",value:false}])});
   if(!choice)return;
   if(choice==="move"){
-    const target=await ask({title:"Flytta till vilken plats?",text:`Hyllorna i "${name}" hamnar inuti platsen du väljer. Böckerna står kvar där de står.`,
+    const target=await ask({title:"Flytta till vilken hylla?",text:`Innehållet i "${name}" hamnar inuti hyllan du väljer. Böckerna står kvar där de står.`,
       select:others.map(b=>({value:b,label:bcNames[b]})),
       buttons:[{label:"Flytta",value:"__sel",kind:"primary"},{label:"Avbryt",value:false}]});
     if(!target)return;
-    const ok=await ask({title:"Är du säker?",text:`${n} böcker på ${sh} ${sh===1?"hylla":"hyllor"} flyttas till "${bcNames[target]}", och "${name}" försvinner som egen plats.`,
+    const ok=await ask({title:"Är du säker?",text:`${n} böcker på ${sh} ${sh===1?"hyllplan":"hyllplan"} flyttas till "${bcNames[target]}", och "${name}" försvinner som egen hylla.`,
       buttons:[{label:"Ja, flytta",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
     if(!ok||!await placeSave([{bc,parent_bc:target}]))return;
     bcParent[bc]=target;placesChanged();toast(`Flyttat till ${bcNames[target]}`);return;
   }
   if(n){
-    const ok=await ask({title:"Är du säker?",text:`${n} böcker tas bort ur katalogen för gott, tillsammans med platsen "${name}". Det går inte att ångra.`,
+    const ok=await ask({title:"Är du säker?",text:`${n} böcker tas bort ur katalogen för gott, tillsammans med hyllan "${name}". Det går inte att ångra.`,
       buttons:[{label:"Ja, ta bort",value:true,kind:"danger"},{label:"Avbryt",value:false}]});
     if(!ok)return;
     for(const b of mem){
@@ -389,7 +389,7 @@ async function placeDelete(bc){
       if(error){alert("Kunde inte ta bort böckerna: "+error.message);return}
     }
     for(let i=data.length-1;i>=0;i--)if(data[i].shelf&&mem.includes(data[i].shelf.split(":")[0]))data.splice(i,1);
-    /* Luckor på platsen går inte längre att fylla - markera dem klara. */
+    /* Luckor på hyllan går inte längre att fylla - markera dem klara. */
     const deadGaps=GAPS.filter(g=>g.shelf&&mem.includes(g.shelf.split(":")[0])&&gapStateOf(g.id)!=="done");
     for(const g of deadGaps){await sb.from("gap_status").upsert({gap_id:g.id,state:"done",updated_at:new Date().toISOString(),updated_by:sbUser.id});gapState[g.id]={state:"done"}}
     updateGapCount();
@@ -423,12 +423,12 @@ function placeList(){
     const mem=membersOf(bc);
     const ph=PH.filter(p=>mem.includes(p.bc)&&!p.replaced)
       .sort((a,b)=>cmpKey(photoKey(a,mem),photoKey(b,mem)));
-    return {bc,members:mem,name:bcNames[bc]||("Plats "+bc),photos:ph,cover:ph[0]?ph[0].thumb:"",
+    return {bc,members:mem,name:bcNames[bc]||("Hylla "+bc),photos:ph,cover:ph[0]?ph[0].thumb:"",
             count:data.filter(d=>d.shelf&&mem.includes(d.shelf.split(":")[0])).length};
   });
 }
 /* PR 6: tomt läge för ny användare. Ett nytt bibliotek (anonymt eller
-   nyss skapat via signup) har varken platser, foton eller böcker - utan
+   nyss skapat via signup) har varken hyllor, foton eller böcker - utan
    den här guiden var Hem bara en enda "+"-ruta med ingen förklaring. */
 function renderHome(){
   const el=document.getElementById("placeGrid");if(!el)return;
@@ -445,7 +445,7 @@ function renderHome(){
   el.innerHTML=places.map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
       ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
       <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("")+`<button class="tile tile-add" onclick="addShelf()"><span class="ta-plus">${ic("plus")}</span><span class="ta-t">Lägg till hylla</span></button>`;
-  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=places.length+" platser · byt namn, slå ihop, ta bort";
+  const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=places.length+" hyllor · byt namn, slå ihop, ta bort";
 }
 let curPlace=null,curPhoto=null;
 function openPlace(bc,fi){
@@ -461,8 +461,8 @@ function pickPhoto(fi){curPhoto=fi;renderPlace()}
 function renderPlace(){
   const el=document.getElementById("view-place");if(!el)return;
   const p=placeList().find(x=>x.bc===curPlace);if(!p){el.innerHTML="";return}
-  /* Valt foto måste höra till platsen eller någon av dess hyllor - i en
-     sammanslagen plats har fotona de gamla platsernas nummer. */
+  /* Valt foto måste höra till hyllan eller någon av dess underhyllor - i en
+     sammanslagen hylla har fotona de gamla hyllornas nummer. */
   const sel=PH[curPhoto]&&p.members.includes(PH[curPhoto].bc)?PH[curPhoto]:p.photos[0];
   const prevStrip=el.querySelector(".thumbs"),keepX=prevStrip&&prevStrip.dataset.place===p.bc?prevStrip.scrollLeft:0;
   const coverSrc=sel?sel.thumb:p.cover;
@@ -483,7 +483,7 @@ function renderPlace(){
     <div class="pl-books">
       ${sel?`<div class="pl-sel"><span>${esc(capOf(sel))}${books.length?" · tryck på status för att byta":""}</span><button onclick="showPhoto(${sel.fi})">Visa foto</button></div>`:""}
       <div class="booklist">${loggedOut?`<p class="pl-empty">Logga in för att se vilka böcker som står här.</p>`
-        :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.${sel&&sel.db?" Läs av det under Inställningar → Platser.":""}</p>`)}</div>
+        :(books.length?books.map(d=>bookRow(d,{noLoc:true})).join(""):`<p class="pl-empty">Inga böcker registrerade för det här fotot ännu.${sel&&sel.db?" Läs av det under Inställningar → Hyllor.":""}</p>`)}</div>
     </div>`;
   /* Bildraden ritas om vid varje val - behåll var du var, och se till att
      det valda fotot syns. Utan detta hoppade raden tillbaka till början. */
@@ -492,9 +492,9 @@ function renderPlace(){
     if(on){const l=on.offsetLeft-strip.offsetLeft,r=l+on.offsetWidth;
       if(l<strip.scrollLeft||r>strip.scrollLeft+strip.clientWidth)strip.scrollLeft=Math.max(0,l-20)}}
 }
-/* ---------- Byt bild / Ny bild direkt i platsvyn ----------
-   Byt bild: nytt foto av den valda hyllan; det ersätter det gamla när det
-   klarmarkeras. Ny bild: foto av en hylla som inte är fotad än. Efter
+/* ---------- Byt bild / Ny bild direkt i hyllvyn ----------
+   Byt bild: nytt foto av det valda hyllplanet; det ersätter det gamla när det
+   klarmarkeras. Ny bild: foto av ett hyllplan som inte är fotat än. Efter
    uppladdning erbjuds avläsning, och efter avläsning klarmarkering. */
 let ppMode=null,psFromPlace=null;
 function placePhoto(mode){
@@ -512,14 +512,14 @@ async function onPlaceFile(input){
       buttons:[{label:"Ladda upp",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
     if(!ok)return;
   }else{
-    /* Den del av platsen du tittar på står först (förvald). */
+    /* Den del av hyllan du tittar på står först (förvald). */
     const first=sel?sel.bc:p.bc;
     const opts=p.members.length>1?[first].concat(p.members.filter(b=>b!==first)).map(b=>({value:b,label:b===p.bc?bcNames[b]:shortName(b)})):null;
-    const r=await ask({title:"Ny bild",text:"Vad heter hyllan på fotot? Till exempel \"Plan 5\", \"Vänster plan 2\" eller \"Skrivbord\".",
-      select:opts,input:{placeholder:"Hyllans namn"},
+    const r=await ask({title:"Ny bild",text:"Vad heter hyllplanet på fotot? Till exempel \"Plan 5\", \"Vänster plan 2\" eller \"Skrivbord\".",
+      select:opts,input:{placeholder:"Hyllplanets namn"},
       buttons:[{label:"Ladda upp",value:"__form",kind:"primary"},{label:"Avbryt",value:false}]});
     if(!r)return;
-    label=(r.input||"").trim();if(!label){alert("Skriv vad hyllan heter.");return}
+    label=(r.input||"").trim();if(!label){alert("Skriv vad hyllplanet heter.");return}
     bc=r.sel||p.bc;
   }
   toast("Laddar upp…");
@@ -537,7 +537,7 @@ async function onPlaceFile(input){
 }
 window.placePhoto=placePhoto;
 document.getElementById("ppFile").addEventListener("change",e=>onPlaceFile(e.target));
-/* Äldre ingång: öppna ett foto ur SHELF_IMGS - leder nu till platsvyn. */
+/* Äldre ingång: öppna ett foto ur SHELF_IMGS - leder nu till hyllvyn. */
 function openShelfView(gi,j){const g=SHELF_IMGS[gi];if(!g)return;openPlace(g.bc,flatIndex(gi,j))}
 renderBcEditor();
 
@@ -701,7 +701,7 @@ addEventListener("scroll",()=>toTop.classList.toggle("show",scrollY>600),{passiv
 /* PR 5: en anonym session (PR5a) har inget e-postkonto att visa eller logga
    ut från - att logga ut skulle bara göra det tillfälliga biblioteket
    onåtkomligt för gott, utan något sätt att komma tillbaka till det. Den
-   som är anonymt inloggad ska istället kunna "spara sin hylla" genom att
+   som är anonymt inloggad ska istället kunna "spara sitt bibliotek" genom att
    lägga på e-post + lösenord på exakt samma session (sb.auth.updateUser) -
    samma library_id, samma data, bara en riktig inloggning runt den. */
 function renderAuth(){
@@ -795,7 +795,7 @@ if(sb.auth.onAuthStateChange)sb.auth.onAuthStateChange((event,recSess)=>{
 });
 
 /* Utloggad: logga in anonymt automatiskt (PR 5a) så en ny besökare kan
-   bygga sin hylla direkt, utan att först skapa konto. Ett eget, tomt
+   bygga sitt bibliotek direkt, utan att först skapa konto. Ett eget, tomt
    bibliotek skapas av databasen (se migrering pr5a_auto_library_on_signup)
    precis som för ett riktigt konto - resten av appen ser ingen skillnad,
    eftersom en anonym session är en riktig inloggad session (rollen
@@ -820,7 +820,7 @@ if(!sbUser){
        annan inloggningsskärm att visa dem i. Den här hela grenen körs bara
        när den automatiska anonyma inloggningen själv har misslyckats (se
        ovan), t.ex. på en ny enhet utan nätverk till den anonyma sessionen -
-       den vanliga vägen in är istället "spara din hylla" i Inställningar
+       den vanliga vägen in är istället "spara ditt bibliotek" i Inställningar
        (renderAuth, ovan). */
     let loginMode="in";
     function setLoginMode(mode){
@@ -923,7 +923,7 @@ if(shareAppBtn)shareAppBtn.addEventListener("click",async()=>{
   (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
     .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
 });
-/* ---------- Redigera hylla (namn och bild) ---------- */
+/* ---------- Redigera bibliotek (namn och bild) ---------- */
 const sheet=document.getElementById("editSheet"),sheetScrim=document.getElementById("editScrim");
 let draft={name:"",avatar:null};
 function renderDraft(){
@@ -1014,7 +1014,7 @@ function renderRecent(){
   el.innerHTML=recent.length?`${ic("history")}<span>${recent.map((t,i)=>`<button data-r="${i}">${esc(t)}</button>`).join(" · ")}</span>`:"";
   el.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{q=recent[+b.dataset.r];$("#q").value=q;render();updateList()}));
 }
-/* "Lägg till hylla" sist bland platserna: samma flöde som i Platser. */
+/* "Lägg till hylla" sist bland hyllorna: samma flöde som i Hyllor. */
 function addShelf(){openSet("platser");setTimeout(()=>{const b=document.getElementById("nsStart");if(b)b.click();
   const w=document.getElementById("nsWizard");if(w)w.scrollIntoView({behavior:"smooth",block:"start"})},60)}
 window.addShelf=addShelf;
@@ -1360,7 +1360,7 @@ function renderAnalys(kind,id){
     </div>`:""}<div class="ab-list"><p class="gap-help">${st.books.length} böcker avlästa. Rätta det som blivit fel, stryk det som inte är en bok, och spara. Gulmarkerade rader var osäkra.${kanda?` <b>${kanda} finns redan i katalogen</b> och är förvalt bortvalda.`:""}</p>
     <div class="ab-place">
       <label>Hyllkod <input class="ab-code" value="${(st.shelf||"").replace(/"/g,'&quot;')}" onchange="analysSetCode('${kind}','${id}',this.value)"></label>
-      ${isSpot?`<label>Platsens namn <input class="ab-spot" value="${(st.spotLabel||"").replace(/"/g,'&quot;')}" onchange="analysSetSpot('${kind}','${id}',this.value)" placeholder="T.ex. Skrivbordet"></label>`:""}
+      ${isSpot?`<label>Hyllplanets namn <input class="ab-spot" value="${(st.spotLabel||"").replace(/"/g,'&quot;')}" onchange="analysSetSpot('${kind}','${id}',this.value)" placeholder="T.ex. Skrivbordet"></label>`:""}
     </div>
     <div class="ab-rows">${st.books.map((b,i)=>{
       const known=knownBook(b.title,b.author,st.shelf);
@@ -1444,7 +1444,7 @@ async function insertBooks(payload){
   });
   return {inserted,skipped};
 }
-const skippedTxt=sk=>sk.length?` ${sk.length} fanns redan på hyllan och hoppades över.`:"";
+const skippedTxt=sk=>sk.length?` ${sk.length} fanns redan i katalogen och hoppades över.`:"";
 async function analysSave(kind,id,btn){
   const key=analysKey(kind,id),st=analysBooks[key];
   if(!st)return;
@@ -1472,12 +1472,12 @@ async function analysSave(kind,id,btn){
     analysClose(kind,id);
     buildShelfOptions();rebuildCatFilter();render();
     if(kind==="gap")renderGaps();else await loadNewShelves();
-    /* Uppmana bara till klarmarkering om hyllan inte redan är klar -
-       en klar hylla har ingen Klar-knapp, och då blir uppmaningen förvirrande. */
+    /* Uppmana bara till klarmarkering om hyllplanet inte redan är klart -
+       ett klart hyllplan har ingen Klar-knapp, och då blir uppmaningen förvirrande. */
     const nsRow=kind==="shelf"?(window.__nsRows||[]).find(x=>String(x.id)===String(id)):null;
     const tail=kind!=="shelf"?"\n\nKontrollera dem i boklistan."
-      :(nsRow&&nsRow.state==="done")?"\n\nHyllan är redan klarmarkerad, så du behöver inte göra något mer."
-      :"\n\nKontrollera dem i boklistan och tryck Klar på hyllan när du är nöjd.";
+      :(nsRow&&nsRow.state==="done")?"\n\nHyllplanet är redan klarmarkerat, så du behöver inte göra något mer."
+      :"\n\nKontrollera dem i boklistan och tryck Klar på hyllplanet när du är nöjd.";
     alert(`${ins.length} ${ins.length===1?"bok":"böcker"} inlagda på ${locLabel(shelf)}.${skippedTxt(skipped)}${tail}`);
   }catch(e){
     alert("Kunde inte spara: "+(e.message||e));
@@ -1684,26 +1684,26 @@ function nsRender(){
   if(!nsState){el.innerHTML="";el.classList.remove("open");return}
   el.classList.add("open");
   const S=nsState;
-  let html=`<div class="ns-head"><strong>${S.mode==="new"?"Ny plats":"Nytt foto"}</strong>
+  let html=`<div class="ns-head"><strong>${S.mode==="new"?"Ny hylla":"Nytt foto"}</strong>
     <button class="ns-x" onclick="nsCancel()">✕</button></div>`;
 
   if(S.step===1){
     html+=`<p class="ns-q">Vad vill du göra?</p>
       <div class="ns-choices">
-        <button onclick="nsPick('new')">🆕 Lägg till en ny plats<small>En bokhylla eller ett rum som inte finns i appen</small></button>
-        <button onclick="nsPick('update')">🔄 Nytt foto av en hylla som finns<small>Hyllan har ändrats sedan sist</small></button>
+        <button onclick="nsPick('new')">🆕 Lägg till en ny hylla<small>En bokhylla eller ett rum som inte finns i appen</small></button>
+        <button onclick="nsPick('update')">🔄 Nytt foto av ett hyllplan som finns<small>Hyllplanet har ändrats sedan sist</small></button>
       </div>`;
   }
   else if(S.step===2&&S.mode==="new"){
-    html+=`<p class="ns-q">Vad heter platsen?</p>
+    html+=`<p class="ns-q">Vad heter hyllan?</p>
       <input id="nsNameInp" class="ns-inp" placeholder="T.ex. Arbetsrummet" value="${(S.name||"").replace(/"/g,'&quot;')}">
-      <p class="ns-hint">Får platsnummer <strong>${S.bc}</strong> — används i hyllkoderna, t.ex. <code>${S.bc}:V3</code>.</p>
+      <p class="ns-hint">Får hyllnummer <strong>${S.bc}</strong> — används i hyllplankoderna, t.ex. <code>${S.bc}:V3</code>.</p>
       <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button>
         <button onclick="nsSaveName()">Nästa →</button></div>`;
   }
   else if(S.step===2&&S.mode==="update"){
     const places=Object.keys(bcNames).filter(b=>!bcHidden.has(b)).sort((a,b)=>Number(a)-Number(b));
-    html+=`<p class="ns-q">Vilken hylla gäller det?</p>
+    html+=`<p class="ns-q">Vilket hyllplan gäller det?</p>
       <select id="nsBcSel" class="ns-inp">${places.map(b=>`<option value="${b}">${bcParent[b]?esc(bcNames[topBc(b)]+" · "+shortName(b)):esc(bcNames[b])}</option>`).join("")}</select>
       <input id="nsCodeInp" class="ns-inp" placeholder="Hyllkod, t.ex. 1:V3 (valfritt)">
       <p class="ns-hint">Plan räknas nedifrån. Lämnar du koden tom listar jag ut den från fotot.</p>
@@ -1714,16 +1714,16 @@ function nsRender(){
     html+=`<p class="ns-q">Hur är ${S.name} uppbyggd?</p>
       <div class="ns-choices">
         <button onclick="nsType('VH')">📚 Sektioner + hyllplan<small>Som Bokhylla 1–2: vänster och höger sektion, flera plan. Koder som <code>${S.bc}:V3</code></small></button>
-        <button onclick="nsType('S')">🗄 Enkla hyllor<small>Som Bokskåpet: bara hyllplan utan sektioner. Koder som <code>${S.bc}:S1</code></small></button>
+        <button onclick="nsType('S')">🗄 Enkla hyllplan<small>Som Bokskåpet: bara hyllplan utan sektioner. Koder som <code>${S.bc}:S1</code></small></button>
       </div>
       <div class="ns-nav"><button class="ghost" onclick="nsBack()">← Tillbaka</button></div>`;
   }
   else if(S.step===4){
-    html+=`<p class="ns-q">Fota ${S.mode==="new"?"varje hyllplan":"hyllan"}</p>
+    html+=`<p class="ns-q">Fota ${S.mode==="new"?"varje hyllplan":"hyllplanet"}</p>
       <p class="ns-hint">${S.mode==="new"
         ? (S.type==="VH"
            ? "Ett foto per sektion och plan. Plan 1 är nederst."
-           : "Ett foto per hylla. Hylla 1 är nederst.")
+           : "Ett foto per hyllplan. Hyllplan 1 är nederst.")
         : "Ta ett foto rakt framifrån så att ryggarna syns."}</p>
       <div class="ns-shots" id="nsShots"></div>
       <button class="ghost ns-add" onclick="nsAddShot()">➕ Lägg till foto</button>
@@ -1742,7 +1742,7 @@ function nsRenderShots(){
         ${s.dataUrl?`<img src="${s.dataUrl}" alt="">`:`<span>📷</span>`}
         <input type="file" accept="image/*" style="display:none" onchange="nsShotFile(${i},this)">
       </label>
-      <input class="ns-lbl" placeholder="${S.type==="VH"?"T.ex. Vänster plan 3":"T.ex. Hylla 2"}"
+      <input class="ns-lbl" placeholder="${S.type==="VH"?"T.ex. Vänster plan 3":"T.ex. Hyllplan 2"}"
              value="${(s.label||"").replace(/"/g,'&quot;')}" onchange="nsShotLabel(${i},this.value)">
       <button class="ns-x" onclick="nsDelShot(${i})">✕</button>
     </div>`).join("");
@@ -1760,7 +1760,7 @@ function nsBack(){if(!nsState)return;
 function nsPick(mode){nsState.mode=mode;nsState.step=2;nsRender()}
 function nsSaveName(){
   const v=(document.getElementById("nsNameInp").value||"").trim();
-  if(!v){alert("Skriv ett namn på platsen.");return}
+  if(!v){alert("Skriv ett namn på hyllan.");return}
   nsState.name=v;nsState.step=3;nsRender();
 }
 function nsPickExisting(){
@@ -1804,7 +1804,7 @@ async function uploadShelfPhoto({bc,name,code,label,file,dataUrl,i}){
   return (rows||[])[0]||null;
 }
 async function nsFinish(){
-  if(!sbUser){alert("Logga in för att skicka hyllan.");return}
+  if(!sbUser){alert("Logga in för att skicka hyllplanet.");return}
   const S=nsState;
   const shots=S.shots.filter(s=>s.dataUrl);
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
@@ -1841,7 +1841,7 @@ function nsDaysLeft(r){
   if(!r.done_at)return 0;
   return Math.ceil(NS_KEEP_DAYS-(Date.now()-new Date(r.done_at).getTime())/864e5);
 }
-/* ---------- Platser → Foton: kort per inskickat foto ---------- */
+/* ---------- Hyllor → Foton: kort per inskickat foto ---------- */
 let nsOpenId=null,nsMsg=null; /* nsMsg: {text, undo:id|null} */
 let nsRot={};try{nsRot=JSON.parse(localStorage.getItem("bokhyllan-rot")||"{}")}catch(e){}
 const rotCss=id=>{const r=nsRot[id]||0;return `rotate(${r}deg) scale(${r%180?0.62:1})`};
@@ -1895,10 +1895,10 @@ function renderNsList(){
   if(!rows.length){el.innerHTML=`<div class="empty">Inga inskickade foton än.</div>`;return}
   const byTime=rows.slice().sort((a,b)=>String(a.created_at||"").localeCompare(String(b.created_at||""))||(a.id-b.id));
   const open=byTime.filter(r=>r.state!=="done"),done=byTime.filter(r=>r.state==="done"&&nsDaysLeft(r)>0);
-  /* Grupper per plats (sammanslagna platser samlas under sin förälder). */
+  /* Grupper per hylla (sammanslagna hyllor samlas under sin förälder). */
   const groups=[];open.forEach(r=>{const top=topBc(String(r.bc));let g=groups.find(x=>x.bc===top);
     if(!g){g={bc:top,rows:[]};groups.push(g)}g.rows.push(r)});
-  el.innerHTML=(groups.length?groups.map(g=>`<div class="pl-group"><div class="pl-gh"><b>${esc(bcNames[g.bc]||("Plats "+g.bc))}</b><span class="mono">${g.rows.length} kvar</span></div>
+  el.innerHTML=(groups.length?groups.map(g=>`<div class="pl-group"><div class="pl-gh"><b>${esc(bcNames[g.bc]||("Hylla "+g.bc))}</b><span class="mono">${g.rows.length} kvar</span></div>
       ${g.rows.map(nsItem).join("")}</div>`).join("")
       :`<div class="empty">Alla foton är klara.</div>`)+
     (done.length?`<details class="ns-done"${nsDoneOpen?" open":""}><summary>Klarmarkerade (${done.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>${done.map(nsItem).join("")}</details>`:"");
@@ -1906,7 +1906,7 @@ function renderNsList(){
     .sort((a,b)=>b.replacedAt-a.replacedAt);
   if(rep.length)el.insertAdjacentHTML("beforeend",`<details class="ns-done ns-replaced"${nsRepOpen?" open":""}>
     <summary>Ersatta foton (${rep.length}) · ligger kvar i ${NS_KEEP_DAYS} dagar</summary>
-    <p class="fine">Fotona har ersatts av nyare foton av samma hylla. Vill du ha tillbaka ett gammalt foto: öppna det nya igen under Klarmarkerade.</p>
+    <p class="fine">Fotona har ersatts av nyare foton av samma hyllplan. Vill du ha tillbaka ett gammalt foto: öppna det nya igen under Klarmarkerade.</p>
     ${rep.map(x=>{const left=Math.ceil(NS_KEEP_DAYS-(Date.now()-x.replacedAt)/864e5);
       return `<div class="ns-item"><div class="ns-head-row">
         <img class="ns-thumb-img" src="${x.thumb}" alt="" onclick="showPhoto(${x.fi})">
@@ -1918,11 +1918,11 @@ function renderNsList(){
   const rdet=el.querySelector(".ns-replaced");if(rdet)rdet.addEventListener("toggle",()=>nsRepOpen=rdet.open);
 }
 /* Foton som laddats upp via "Ny hylla" bor i databasen, inte i photos.json.
-   Lägg in dem i fotolistan så att platsvyn visar dem. Den nedskalade
+   Lägg in dem i fotolistan så att hyllvyn visar dem. Den nedskalade
    kopian (photo_data) används - originalet i lagringen kan vara flera MB. */
-/* Ett foto ersätts när ett NYARE, klarmarkerat foto täcker alla dess hyllor.
+/* Ett foto ersätts när ett NYARE, klarmarkerat foto täcker alla dess hyllplan.
    Fotona ur repot räknas som äldst. Det ersatta fotot försvinner ur
-   platsvyn och ligger i 30 dagar under "Ersatta foton" i Platser.
+   hyllvyn och ligger i 30 dagar under "Ersatta foton" i Hyllor.
    Tidpunkten är när det nya fotot klarmarkerades; saknas den (klart innan
    done_at fanns) räknas ersättningen som gammal. */
 function markReplaced(){
@@ -1937,8 +1937,8 @@ function markReplaced(){
     x.replacedBy=newer.find(y=>y.doneAt===x.replacedAt)||newer[0];
   });
 }
-/* Sortering i platsvyn: översta planet först, vänster före höger, lösa
-   platser sist - samma ordning som fotona i photos.json har. */
+/* Sortering i hyllvyn: översta planet först, vänster före höger, lösa
+   hyllplan sist - samma ordning som fotona i photos.json har. */
 function photoKey(ph,members){
   const codes=ph.shelves.length?ph.shelves:[ph.bc+":L0"];
   const loose=codes.every(c=>/:L\d+$/.test(c)||c==="4:K3");
@@ -2004,7 +2004,7 @@ function renderPS(){
         <p class="fine ps-help">Rätta det som blivit fel och stryk det som inte är en bok. Orange rader var osäkra. Böcker som redan finns i katalogen är bortvalda.</p>`
         :`<p class="fine ps-help">Böckerna på hyllan. Ändra det som är fel. Kryssa ur eller tryck ✕ för att ta bort en bok ur katalogen.</p>`}
       <div class="ps-code"><span>Hyllkod</span><input value="${esc(PS.code)}" oninput="PS.code=this.value.trim().toUpperCase()" ${isA?"":"disabled"}>
-        ${isA&&isSpot?`<input class="ps-spot" value="${esc(PS.spot)}" placeholder="Platsens namn" oninput="PS.spot=this.value">`:""}</div>
+        ${isA&&isSpot?`<input class="ps-spot" value="${esc(PS.spot)}" placeholder="Hyllplanets namn" oninput="PS.spot=this.value">`:""}</div>
       <div class="ps-rows">${newRows.map(x=>row(x)).join("")||(isA?"":`<p class="fine">Inga böcker på den här hyllan än.</p>`)}</div>
       ${exRows.length?`<div class="ps-ex"><button class="ps-exh" onclick="PS.showEx=!PS.showEx;renderPS()"><span><b class="mono">${exRows.length}</b> finns redan i katalogen</span><span class="pc-chev${PS.showEx?" up":""}">${ic("chevron-down")}</span></button>
         ${PS.showEx?`<div class="ps-rows">${exRows.map(x=>row(x,true)).join("")}</div>`:""}</div>`:""}
@@ -2071,7 +2071,7 @@ async function psSave(btn){
     nsOpenId=PS.id;psClose();
     buildShelfOptions();rebuildCatFilter();render();renderNsList();
     if(doneId!=null){psFromPlace=null;
-      const ok=await ask({title:"Klarmarkera fotot?",text:"Då räknas hyllan som klar"+(PH.some(x=>x.nsId===doneId&&x.shelves.length)?", och fotot ersätter ett äldre foto av samma hylla.":"."),
+      const ok=await ask({title:"Klarmarkera fotot?",text:"Då räknas hyllplanet som klart"+(PH.some(x=>x.nsId===doneId&&x.shelves.length)?", och fotot ersätter ett äldre foto av samma hyllplan.":"."),
         buttons:[{label:"Klarmarkera",value:true,kind:"primary"},{label:"Senare",value:false}]});
       if(ok){await nsDone(doneId);if(curView==="place")renderPlace()}}
   }catch(e){alert("Kunde inte spara: "+(e.message||e));if(btn)btn.disabled=false}
@@ -2133,7 +2133,7 @@ function nsView(id){
     </div>
     <div class="ab-list">
       <p class="gap-help">${code?`${locLabel(code)} — <b>${list.length} böcker</b> i katalogen.`
-        :"Den här platsen har ingen hyllkod ännu. Läs av fotot så får den en."}</p>
+        :"Det här hyllplanet har ingen hyllkod ännu. Läs av fotot så får det en."}</p>
       ${list.length?`<ul class="ns-booklist">${list.map(d=>
         `<li><a class="var-link" onclick="showInfo(${d.id})">${d.title.replace(/'/g,"’")}</a>
          <span class="bk-cat">${d.cat}</span></li>`).join("")}</ul>`
@@ -2168,7 +2168,7 @@ window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;windo
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
-shareSheet.innerHTML=`<div class="share-box"><h3>Dela hyllan</h3>
+shareSheet.innerHTML=`<div class="share-box"><h3>Dela ditt bibliotek</h3>
   <textarea id="shareTxt"></textarea>
   <div class="share-acts">
     <button id="shareNative">Dela…</button>
