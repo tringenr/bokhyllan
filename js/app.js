@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024004429";
+const DV="?v=20261024010140";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -898,11 +898,16 @@ async function startAnon(){
 }
 
 /* "Kom igång" på startsidan: utan session loggas man in anonymt först
-   (samma bibliotek man sedan kan spara som konto), sedan öppnas
-   hylla-guiden direkt - allt på samma startsida, ingen separat skärm. */
+   (samma bibliotek man sedan kan spara som konto), sedan går man rakt
+   in i kamerasteget - enligt designflödet ska den som börjar om helt
+   (ingen hylla alls än) aldrig se valet "ny hylla eller befintlig"
+   eller fylla i namn/typ innan hon får fota. Namnet sätts till ett
+   standardvärde ("Min första hylla"), bytbart senare precis som
+   bibliotekets eget namn - inget extra fält i vägen för fotot. */
 async function startFromGuide(){
   if(!sbUser)await startAnon();
-  addShelf();
+  nsState={step:4,mode:"new",shots:[],bc:nextFreeBc(),name:"Min första hylla",type:"S",defLabel:""};
+  nsRender();
 }
 window.startFromGuide=startFromGuide;
 
