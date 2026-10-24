@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024134652";
+const DV="?v=20261024145349";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1543,8 +1543,14 @@ async function analysSave(kind,id,btn){
 
 /* ---------- Analysera foto med Claude (edge function) ---------- */
 const ANALYS_URL=SB_URL.replace(".supabase.co",".functions.supabase.co")+"/analysera";
-async function runAnalys(kind,id,btn){
-  if(!sbUser){alert("Logga in för att analysera.");return}
+/* opts.silent: körs utan att själv larma vid fel eller öppna granskningen
+   vid lyckad avläsning - används av den automatiska analysen efter
+   nsFinish() (se nsRunAnalysisBatch), som vill samla ihop resultaten för
+   alla uppladdade foton innan nåt visas. Returnerar {ok, titles, error}
+   så den som anropar tyst kan räkna böcker och lista titlar själv. */
+async function runAnalys(kind,id,btn,opts){
+  const silent=!!(opts&&opts.silent);
+  if(!sbUser){if(!silent)alert("Logga in för att analysera.");return{ok:false,titles:[],error:"ej inloggad"}}
   const label=btn?btn.textContent:null;
   if(btn){btn.disabled=true;btn.textContent="🤖 Läser av…"}
   try{
@@ -1583,12 +1589,16 @@ async function runAnalys(kind,id,btn){
     }else{
       await loadNewShelves();
     }
-    if(analysBooks[analysKey(kind,id)]){
+    const titles=(out.books||[]).map(b=>b.title).filter(Boolean);
+    if(!silent&&analysBooks[analysKey(kind,id)]){
       if(kind==="shelf")psOpen("analys",id);else renderAnalys(kind,id);
     }
+    return{ok:true,titles,error:null};
   }catch(e){
-    alert("Kunde inte analysera: "+(e.message||e));
+    const msg=e.message||String(e);
+    if(!silent)alert("Kunde inte analysera: "+msg);
     if(btn){btn.disabled=false;btn.textContent=label}
+    return{ok:false,titles:[],error:msg};
   }
 }
 function toggleNote(kind,id){
@@ -1893,20 +1903,74 @@ async function nsFinish(){
       bcNames[S.bc]=S.name;
       await sb.from("bc_names").upsert({bc:S.bc,name:S.name});
     }
+    const rows=[];
     for(let i=0;i<shots.length;i++){
       const s=shots[i];
-      await uploadShelfPhoto({bc:S.bc,name:S.name,code:S.code||null,label:s.label||null,file:s.file,dataUrl:s.dataUrl,i});
+      const row=await uploadShelfPhoto({bc:S.bc,name:S.name,code:S.code||null,label:s.label||null,file:s.file,dataUrl:s.dataUrl,i});
+      if(row)rows.push(row);
     }
     nsState=null;nsRender();
     buildShelfOptions();renderBcEditor();
     await loadNewShelves();
-    alert(`Skickat! ${shots.length} foto${shots.length>1?"n":""} ligger i kö.\n\nJag läser av bokryggarna och lägger in böckerna – sedan kontrollerar du och trycker ✓ Klar.`);
+    await nsRunAnalysisBatch(rows.map(r=>r.id));
   }catch(e){
     alert("Något gick fel: "+(e.message||e));
   }finally{
     const b2=document.querySelector("#nsWizard .ns-nav button:last-child");
     if(b2){b2.disabled=false;b2.style.opacity=""}
   }
+}
+/* ---------- Analys-overlay + landningssida efter nsFinish() ----------
+   Körs automatiskt efter uppladdning: visar en overlay medan varje
+   uppladdat foto analyseras tyst (runAnalys med silent:true), sen en enkel
+   landningssida. Landningssidan är tillfällig - ersätts av "Platsen"
+   (designens steg 4, se docs/KARTA.md) i ett senare jobb. */
+async function nsRunAnalysisBatch(ids){
+  if(!ids||!ids.length){nsShowDone([],0);return}
+  const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
+  const el=document.getElementById("nsAnalys");if(!el){nsShowDone([],ids.length);return}
+  el.style.display="";el.classList.remove("done");
+  const spineN=Math.min(Math.max(ids.length*2,5),9);
+  el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map(()=>`<span class="ns-analys-spine"></span>`).join("")}</div>
+    <div class="ns-analys-count mono" id="nsAnalysCount">0 böcker hittade</div>
+    <p class="ns-analys-hint">Jag läser av bokryggarna …</p>`;
+  const spines=[...el.querySelectorAll(".ns-analys-spine")];
+  const countEl=document.getElementById("nsAnalysCount");
+  let total=0,titles=[],failed=0,si=0;
+  const lightNext=()=>{if(si>=spines.length)return;const s=spines[si++];
+    s.classList.add("on");s.style.height=(28+Math.round(Math.random()*28))+"px";s.style.background="var(--pink-500)"};
+  for(const id of ids){
+    lightNext();
+    const r=await runAnalys("shelf",id,null,{silent:true});
+    if(r&&r.ok){
+      total+=r.titles.length;titles=titles.concat(r.titles);
+      if(countEl)countEl.textContent=`${total} ${total===1?"bok":"böcker"} hittad${total===1?"":"e"}`;
+    }else failed++;
+  }
+  spines.forEach(s=>{s.classList.add("on");s.style.background="var(--pink-500)"});
+  el.classList.add("done");
+  await new Promise(res=>setTimeout(res,650));
+  el.style.display="none";
+  nsShowDone(titles,failed);
+}
+function nsShowDone(titles,failed){
+  const el=document.getElementById("nsDone");if(!el)return;
+  const n=titles.length;
+  el.innerHTML=`<div class="ns-done-head">
+      <h1>Här landar man när man har analyserat</h1>
+      <div class="ns-done-count mono">${n} ${n===1?"bok":"böcker"} hittad${n===1?"":"e"}${failed?` · ${failed} foto${failed>1?"n":""} gick inte att läsa av`:""}</div>
+    </div>
+    ${n?`<ul class="ns-done-list">${titles.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:`<p class="ns-done-empty">Inga böcker hittades den här gången.</p>`}
+    <div class="ns-done-acts">
+      <button class="btn btn-outline" id="nsDoneSet" type="button">Inställningar</button>
+      <button class="btn btn-outline" id="nsDoneOut" type="button">Logga ut</button>
+    </div>`;
+  el.style.display="";
+  el.querySelector("#nsDoneSet").onclick=()=>{el.style.display="none";openSet("platser")};
+  el.querySelector("#nsDoneOut").onclick=async()=>{
+    if(!confirm("Logga ut?"))return;
+    await sb.auth.signOut();location.reload();
+  };
 }
 /* Inskickade hyllfoton. Bara de som inte är klarmarkerade syns i listan;
    klara ligger hopfällda längst ner, så att de ändå går att läsa av igen

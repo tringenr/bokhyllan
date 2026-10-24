@@ -654,6 +654,37 @@ body.splashing{overflow:hidden}
 .ns-cam-sheet .grip{width:38px;height:4px;border-radius:2px;background:var(--line);align-self:center;margin-bottom:4px}
 .ns-cam-sheet h3{font:700 18px var(--font-display);margin:0}
 
+/* ===== Analys-overlay: visas automatiskt efter nsFinish(), medan runAnalys
+   körs tyst per foto. Bakgrunden tonar mörkt -> papper, bokryggarna tänds en
+   i taget, räknaren räknar upp mot antal hittade böcker. Samma fasta
+   helskärmsmönster som .ns-cam (positon:fixed), ligger som syskon till den
+   inuti Inställningar > Hyllor - se openSet-kommentaren i startFromGuide(). ===== */
+.ns-analys{position:fixed;inset:0;z-index:91;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:22px;color:#FDFBF9;text-align:center;
+  padding:0 32px;transition:background 1.1s ease,color 1.1s ease;
+  background:#231A1E}
+.ns-analys.done{background:var(--cream-500);color:var(--ink-900)}
+.ns-analys-spines{display:flex;gap:6px;align-items:flex-end;height:64px}
+.ns-analys-spine{width:12px;height:40px;border-radius:3px 3px 2px 2px;background:rgba(255,255,255,.14);
+  transition:height .35s ease,background .35s ease,opacity .35s ease}
+.ns-analys-spine.on{opacity:1}
+.ns-analys-count{font:700 15px var(--font-mono);letter-spacing:.02em}
+.ns-analys-hint{font:500 13px var(--font-body);opacity:.75;margin:0}
+
+/* ===== Landningssida efter analysen: tillfällig, ersätts av "Platsen"
+   (designens steg 4) i ett senare jobb. ===== */
+.ns-done-page{position:fixed;inset:0;z-index:91;background:var(--page);color:var(--fg);
+  display:flex;flex-direction:column;gap:18px;padding:env(safe-area-inset-top,0) 24px env(safe-area-inset-bottom,0);
+  overflow-y:auto}
+.ns-done-head{padding-top:28px}
+.ns-done-head h1{margin:0 0 6px;font:700 24px var(--font-display)}
+.ns-done-count{font:700 14px var(--font-mono);color:var(--text-secondary)}
+.ns-done-list{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.ns-done-list li{background:var(--surface);border:1px solid var(--border-subtle);border-radius:10px;
+  padding:10px 14px;font:500 14px var(--font-body)}
+.ns-done-empty{font:500 14px var(--font-body);color:var(--text-secondary)}
+.ns-done-acts{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .pl-h h2{margin:0;font:700 22px var(--font-display)}
