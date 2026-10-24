@@ -65,6 +65,24 @@ migrationshistorik med verkligheten. Körs den via MCP eller dashboarden
 registreras versionen automatiskt — döp då om den lokala filen så numren
 matchar.
 
+## Plan- och självgranskningsregel
+
+Gäller varje kodningsinsats, stor som liten.
+
+**Innan kodning påbörjas:**
+1. Lägg fram en plan för steget.
+2. Granska den egna planen själv — leta efter fel, luckor eller problem.
+3. Hittar du något: revidera planen och granska igen. Upprepa tills inget
+   problem kvarstår, eller bara triviala kvarstår.
+4. Meddela Thomas att granskningen är gjord. Börja inte koda förrän han har
+   gett klartecken.
+
+**När kodningen är klar:**
+1. Granska det som faktiskt gjorts mot uppdraget för just det steget — stämmer
+   resultatet mot det som var tänkt?
+2. Om det finns en mismatch: stanna. Meddela Thomas och vänta på hans input
+   innan något mer görs — gissa inte dig fram till en lösning på egen hand.
+
 ## Branchdisciplin
 
 Aldrig commit direkt till `main`. En gren per spår, skapad från färsk
