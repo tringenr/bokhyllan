@@ -209,6 +209,47 @@ som e-posttjänst och rätt Redirect URL i Supabase (21/10).
 
 ---
 
+## Design-flödet vs. byggt läge
+
+*Tillagd 24/10. Facit för varje skärm är
+`Cointelligence Design System 261022/design_handoff_min_bokhylla/README.md`
+(projektdokument) — citat därifrån i "Design säger"-kolumnen, inte min
+tolkning av `flow.html`-koden. Stäm alltid av här innan en skärm märks klar;
+se processen i stycket efter tabellen.*
+
+### Nyanvändarflödet (`flow.html`, steg 1–6)
+
+| # | Skärm | Design säger | Byggt läge |
+|---|---|---|---|
+| 1 | Välkommen | Fullskärms hyllfoto (mörkt), serif-rubrik "Hitta, Dela, Värdera dina böcker", knapp "Kom igång" | **Byggd** (PR #56) — `#homeEmptyGuide`, återanvänder `.eg-hero`/`.eg-scrim` |
+| 2 | Kamera | Mörk sökare, "Vardagsrummet · hylla N", miniatyrer av tagna hyllor, räknare "N hyllor" | **Byggd** (PR #57/#58) — `#nsCam`-steget i wizarden |
+| 3 | Analys | Bokryggarna tänds en i taget medan en räknare räknar upp till antal hittade böcker; bakgrunden tonar från mörkt mot ljust papper | **Inte byggd.** `nsFinish()` visar en vanlig `alert()`-ruta ("Foto skickat! ... Jag läser av bilden...") — ingen animation |
+| 4 | Platsen | Toppen öppnar mörk, bleknar till papper i översta tredjedelen. Platsens namn, antal hyllor/böcker, hyllplan staplade med foto+namn+antal, "Lägg till en hylla". Tre åtgärdslänkar (Sök/Värdera/Dela). CTA "Spara platsen" | **Inte byggd som eget steg.** Man hamnar istället direkt i Inställningar → Hyllor/Foton (skärmen Thomas visade 24/10) — fel yta, inte platsvyn från designen |
+| 5 | Konto | E-post + Apple/Google/BankID, smal remsa av hyllfotot överst | **Delvis.** Inloggning/skapa-konto finns (`view-login`, e-post+lösenord), men inte i detta designade utförande och inte på rätt plats i flödet |
+| 6 | Sparad plats | Som 4 men helt ljus, bekräftelse "Platsen är sparad", bottenmeny synlig | **Inte byggd** |
+| — | Återvändande | Rubrik = Platsens namn+antal. Stort sökfält (58px, tealram) + snabbfilter-chips överst. Hyllplan staplade. CTA "Sälj N böcker". Bottenmeny. (Värdera/Dela nås via bottenmenyn, inte som knappar här) | **Inte byggd.** `renderPlace()`/`view-place` finns men följer inte detta utseende |
+
+### Övriga sidor (`screens-ovriga.html`) — inte del av onboarding, egen spec
+
+| Skärm | Design säger | Byggt läge |
+|---|---|---|
+| Sök i hyllan | Autofokuserat sökfält, filterchips (Alla/Till salu/Het/Kurslitteratur), träfflista med plats+hylla, medelvärde, temperaturbadge | **Inte byggd.** Ingen sökvy i `index.html` |
+| Bokdetalj | Flikar värde/fakta/historik, knappar "Sälj boken"/"Ändra" | **Inte byggd** i detta utförande |
+| Värdering | Grönt totalkort, summa per sajt, böcker sorterbara på värde/temp/titel, CTA "Sälj de 3 hetaste" | **Inte byggd.** `view-salj` är bara en tom rubrik-platshållare |
+| Dela platsen | Hyllfoto, tre synlighetsnivåer, växel "Visa värdering", kopierbar länk | **Inte byggd.** `view-delade` existerar men inte detta utförande |
+
+### Process för att undvika glapp framöver
+
+Innan en skärm markeras klar:
+1. Citera den exakta styckena ur `design_handoff_min_bokhylla/README.md` för
+   just den skärmen (tabellen ovan) i PR-beskrivningen eller i chatten — inte
+   en fri tolkning av `flow.html`.
+2. Jämför skärmdump/produktion mot citatet explicit, punkt för punkt.
+3. Thomas bekräftar matchen innan jobbet räknas som avslutat.
+4. Uppdatera raden i den här tabellen till "Byggd (PR #N)" i samma PR.
+
+---
+
 *Sammanställd ur koden i `tringenr/bokhyllan` (grepp över `js/app.js`, samtliga
 filer i `supabase/migrations/`, och `supabase/functions/analysera/index.ts`)
 samt produktionsdatabasen `zuesxdqifsnvhleiukum`, uppdaterad 21 oktober 2026.*
