@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024010140";
+const DV="?v=20261024134652";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -906,6 +906,11 @@ async function startAnon(){
    bibliotekets eget namn - inget extra fält i vägen för fotot. */
 async function startFromGuide(){
   if(!sbUser)await startAnon();
+  /* #nsCam ligger inuti Inställningar > Hyllor (samma markup som den
+     vanliga guiden återanvänder) - openSet måste köras först, annars
+     förblir kamera-ytan osynlig trots att dess egen display sätts till
+     synlig, eftersom en förälder fortfarande är display:none. */
+  openSet("platser");
   nsState={step:4,mode:"new",shots:[],bc:nextFreeBc(),name:"Min första hylla",type:"S",defLabel:""};
   nsRender();
 }
