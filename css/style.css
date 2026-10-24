@@ -661,13 +661,19 @@ body.splashing{overflow:hidden}
    inuti Inställningar > Hyllor - se openSet-kommentaren i startFromGuide(). ===== */
 .ns-analys{position:fixed;inset:0;z-index:91;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:22px;color:#FDFBF9;text-align:center;
-  padding:0 32px;transition:background 1.1s ease,color 1.1s ease;
+  padding:0 32px;transition:background 1.3s ease,color 1.3s ease;
   background:#231A1E}
+/* Tvådelad tonövergång: mörkt -> varmbrunt (startar direkt, se .mid) ->
+   papper (först när allt är klart, .done). Två steg istället för designens
+   friare bottom-up-gradient, men samma mörkt/varmbrunt/papper-resa. */
+.ns-analys.mid{background:#4A3326}
 .ns-analys.done{background:var(--cream-500);color:var(--ink-900)}
 .ns-analys-spines{display:flex;gap:6px;align-items:flex-end;height:64px}
-.ns-analys-spine{width:12px;height:40px;border-radius:3px 3px 2px 2px;background:rgba(255,255,255,.14);
-  transition:height .35s ease,background .35s ease,opacity .35s ease}
-.ns-analys-spine.on{opacity:1}
+.ns-analys-spine{width:12px;height:40px;border-radius:3px 3px 2px 2px;background:rgba(255,255,255,.16);
+  opacity:.4;transition:height .4s ease,background .4s ease,opacity .4s ease;
+  animation:nsSpinePulse 1.6s ease-in-out infinite}
+.ns-analys-spine.on{opacity:1;animation:none}
+@keyframes nsSpinePulse{0%,100%{opacity:.25}50%{opacity:.55}}
 .ns-analys-count{font:700 15px var(--font-mono);letter-spacing:.02em}
 .ns-analys-hint{font:500 13px var(--font-body);opacity:.75;margin:0}
 

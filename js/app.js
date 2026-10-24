@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024145349";
+const DV="?v=20261024150532";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1929,27 +1929,47 @@ async function nsRunAnalysisBatch(ids){
   if(!ids||!ids.length){nsShowDone([],0);return}
   const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
   const el=document.getElementById("nsAnalys");if(!el){nsShowDone([],ids.length);return}
-  el.style.display="";el.classList.remove("done");
+  el.style.display="";el.classList.remove("done","mid");
   const spineN=Math.min(Math.max(ids.length*2,5),9);
-  el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map(()=>`<span class="ns-analys-spine"></span>`).join("")}</div>
+  el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
+    `<span class="ns-analys-spine" style="animation-delay:${(i*180)%1400}ms"></span>`).join("")}</div>
     <div class="ns-analys-count mono" id="nsAnalysCount">0 böcker hittade</div>
     <p class="ns-analys-hint">Jag läser av bokryggarna …</p>`;
+  /* Tonen börjar glida mot varmbrunt direkt - inte bara i slutet - så den
+     hinner synas under hela väntan, inte bara i det sista klivet mot
+     papper (det klivet görs av .done nedan). */
+  requestAnimationFrame(()=>el.classList.add("mid"));
   const spines=[...el.querySelectorAll(".ns-analys-spine")];
   const countEl=document.getElementById("nsAnalysCount");
   let total=0,titles=[],failed=0,si=0;
-  const lightNext=()=>{if(si>=spines.length)return;const s=spines[si++];
-    s.classList.add("on");s.style.height=(28+Math.round(Math.random()*28))+"px";s.style.background="var(--pink-500)"};
+  const started=Date.now();
+  /* Tänd nästa bokrygg en i taget, med kort stagger mellan varje - aldrig
+     alla på en gång (se mbfade/mbrise-specen: ~0,08s stagger). */
+  const lightOne=()=>{
+    if(si>=spines.length)return;
+    const s=spines[si++];
+    s.style.transitionDelay=((si-1)*85)+"ms";
+    s.style.height=(28+Math.round(Math.random()*28))+"px";
+    s.style.background="var(--pink-500)";
+    s.classList.add("on");
+  };
   for(const id of ids){
-    lightNext();
     const r=await runAnalys("shelf",id,null,{silent:true});
     if(r&&r.ok){
       total+=r.titles.length;titles=titles.concat(r.titles);
       if(countEl)countEl.textContent=`${total} ${total===1?"bok":"böcker"} hittad${total===1?"":"e"}`;
     }else failed++;
+    /* Tänd en klunga ryggar för just det här fotot, en i taget. */
+    const target=Math.min(spines.length,si+Math.max(1,Math.round(spines.length/ids.length)));
+    while(si<target)lightOne();
   }
-  spines.forEach(s=>{s.classList.add("on");s.style.background="var(--pink-500)"});
+  while(si<spines.length)lightOne();
   el.classList.add("done");
-  await new Promise(res=>setTimeout(res,650));
+  /* Garanterad minsta visningstid så animationen hinner synas även när
+     avläsningen själv går snabbt. */
+  const minShow=1500-(Date.now()-started);
+  if(minShow>0)await new Promise(res=>setTimeout(res,minShow));
+  await new Promise(res=>setTimeout(res,500));
   el.style.display="none";
   nsShowDone(titles,failed);
 }
