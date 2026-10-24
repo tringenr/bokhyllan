@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024150532";
+const DV="?v=20261024151013";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1924,52 +1924,52 @@ async function nsFinish(){
    Körs automatiskt efter uppladdning: visar en overlay medan varje
    uppladdat foto analyseras tyst (runAnalys med silent:true), sen en enkel
    landningssida. Landningssidan är tillfällig - ersätts av "Platsen"
-   (designens steg 4, se docs/KARTA.md) i ett senare jobb. */
+   (designens steg 4, se docs/KARTA.md) i ett senare jobb.
+
+   Overlayen återskapar Analyze()/Spine() ur designpaketets flow.html:
+   samma ryggbredder (22-40px), samma höjdcykel (150/138/126), samma
+   färger (bokdatans spine-hex ur shared.jsx), samma scaleY-reveal, samma
+   stora displaytal + progressbar. Bakgrunden tonar inte ända till papper
+   här - det är "Platsen" (steg 4) som gör det, inte byggt än. */
+const NS_SPINE_COLORS=["#C2410C","#1F6F5C","#3B3BAF","#7A5230","#0F766E","#8C1D3F","#2F4858"];
+const NS_SPINE_WIDTHS=[24,32,28,38,26,34,30,22,36,28,32,26];
 async function nsRunAnalysisBatch(ids){
   if(!ids||!ids.length){nsShowDone([],0);return}
   const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
   const el=document.getElementById("nsAnalys");if(!el){nsShowDone([],ids.length);return}
-  el.style.display="";el.classList.remove("done","mid");
-  const spineN=Math.min(Math.max(ids.length*2,5),9);
+  el.style.display="";
+  const spineN=NS_SPINE_WIDTHS.length;
   el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
-    `<span class="ns-analys-spine" style="animation-delay:${(i*180)%1400}ms"></span>`).join("")}</div>
-    <div class="ns-analys-count mono" id="nsAnalysCount">0 böcker hittade</div>
-    <p class="ns-analys-hint">Jag läser av bokryggarna …</p>`;
-  /* Tonen börjar glida mot varmbrunt direkt - inte bara i slutet - så den
-     hinner synas under hela väntan, inte bara i det sista klivet mot
-     papper (det klivet görs av .done nedan). */
-  requestAnimationFrame(()=>el.classList.add("mid"));
-  const spines=[...el.querySelectorAll(".ns-analys-spine")];
+    `<span class="ns-spine" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
+      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("")}</div>
+    <div><div class="ns-analys-count" id="nsAnalysCount">0</div>
+    <p class="ns-analys-hint" id="nsAnalysHint">böcker hittade</p></div>
+    <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>`;
+  const spines=[...el.querySelectorAll(".ns-spine")];
   const countEl=document.getElementById("nsAnalysCount");
-  let total=0,titles=[],failed=0,si=0;
+  const hintEl=document.getElementById("nsAnalysHint");
+  const barEl=document.getElementById("nsAnalysBar");
+  let total=0,titles=[],failed=0,si=0,done=0;
   const started=Date.now();
-  /* Tänd nästa bokrygg en i taget, med kort stagger mellan varje - aldrig
-     alla på en gång (se mbfade/mbrise-specen: ~0,08s stagger). */
-  const lightOne=()=>{
-    if(si>=spines.length)return;
-    const s=spines[si++];
-    s.style.transitionDelay=((si-1)*85)+"ms";
-    s.style.height=(28+Math.round(Math.random()*28))+"px";
-    s.style.background="var(--pink-500)";
-    s.classList.add("on");
-  };
   for(const id of ids){
     const r=await runAnalys("shelf",id,null,{silent:true});
     if(r&&r.ok){
       total+=r.titles.length;titles=titles.concat(r.titles);
-      if(countEl)countEl.textContent=`${total} ${total===1?"bok":"böcker"} hittad${total===1?"":"e"}`;
+      if(countEl)countEl.textContent=String(total);
     }else failed++;
-    /* Tänd en klunga ryggar för just det här fotot, en i taget. */
-    const target=Math.min(spines.length,si+Math.max(1,Math.round(spines.length/ids.length)));
-    while(si<target)lightOne();
+    done++;
+    if(barEl)barEl.style.width=Math.round(done/ids.length*100)+"%";
+    /* Väx upp en klunga ryggar per foto, underifrån - aldrig alla på en
+       gång. */
+    const target=Math.min(spines.length,Math.round(done/ids.length*spines.length));
+    while(si<target){spines[si++].classList.add("on")}
   }
-  while(si<spines.length)lightOne();
-  el.classList.add("done");
+  while(si<spines.length){spines[si++].classList.add("on")}
+  if(hintEl)hintEl.textContent="böcker i din hylla";
   /* Garanterad minsta visningstid så animationen hinner synas även när
      avläsningen själv går snabbt. */
-  const minShow=1500-(Date.now()-started);
+  const minShow=1800-(Date.now()-started);
   if(minShow>0)await new Promise(res=>setTimeout(res,minShow));
-  await new Promise(res=>setTimeout(res,500));
   el.style.display="none";
   nsShowDone(titles,failed);
 }

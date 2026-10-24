@@ -654,28 +654,34 @@ body.splashing{overflow:hidden}
 .ns-cam-sheet .grip{width:38px;height:4px;border-radius:2px;background:var(--line);align-self:center;margin-bottom:4px}
 .ns-cam-sheet h3{font:700 18px var(--font-display);margin:0}
 
-/* ===== Analys-overlay: visas automatiskt efter nsFinish(), medan runAnalys
-   körs tyst per foto. Bakgrunden tonar mörkt -> papper, bokryggarna tänds en
-   i taget, räknaren räknar upp mot antal hittade böcker. Samma fasta
-   helskärmsmönster som .ns-cam (positon:fixed), ligger som syskon till den
-   inuti Inställningar > Hyllor - se openSet-kommentaren i startFromGuide(). ===== */
+/* ===== Analys-overlay: visas automatiskt efter nsFinish(). Återskapar
+   Analyze()/Spine() ur designpaketets flow.html pixelnära:
+   - statisk mörk-till-varmbrun gradient (inte ända till papper - det
+     klivet hör till "Platsen", steg 4, som inte är byggt än)
+   - riktiga bokryggar (inset-skugga + bindningslinjer, 22-40px breda)
+     som växer upp underifrån med en snäpp-easing
+   - stort tal i displaytypsnittet, inte mono
+   - tunn 3px-progressbar
+   Samma fasta helskärmsmönster som .ns-cam (position:fixed), ligger som
+   syskon till den inuti Inställningar > Hyllor - se openSet-kommentaren
+   i startFromGuide(). ===== */
 .ns-analys{position:fixed;inset:0;z-index:91;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:22px;color:#FDFBF9;text-align:center;
-  padding:0 32px;transition:background 1.3s ease,color 1.3s ease;
-  background:#231A1E}
-/* Tvådelad tonövergång: mörkt -> varmbrunt (startar direkt, se .mid) ->
-   papper (först när allt är klart, .done). Två steg istället för designens
-   friare bottom-up-gradient, men samma mörkt/varmbrunt/papper-resa. */
-.ns-analys.mid{background:#4A3326}
-.ns-analys.done{background:var(--cream-500);color:var(--ink-900)}
-.ns-analys-spines{display:flex;gap:6px;align-items:flex-end;height:64px}
-.ns-analys-spine{width:12px;height:40px;border-radius:3px 3px 2px 2px;background:rgba(255,255,255,.16);
-  opacity:.4;transition:height .4s ease,background .4s ease,opacity .4s ease;
-  animation:nsSpinePulse 1.6s ease-in-out infinite}
-.ns-analys-spine.on{opacity:1;animation:none}
-@keyframes nsSpinePulse{0%,100%{opacity:.25}50%{opacity:.55}}
-.ns-analys-count{font:700 15px var(--font-mono);letter-spacing:.02em}
-.ns-analys-hint{font:500 13px var(--font-body);opacity:.75;margin:0}
+  justify-content:center;gap:30px;color:#FDFBF9;text-align:center;padding:0 28px;
+  background:linear-gradient(180deg,#231A1E 0%,#2E2529 42%,#4A3D41 100%)}
+.ns-analys-spines{display:flex;align-items:flex-end;gap:3px;justify-content:center;height:150px}
+.ns-spine{border-radius:3px 3px 2px 2px;position:relative;flex-shrink:0;
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform .45s cubic-bezier(.22,.9,.3,1.2);
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.18),inset 2px 0 0 rgba(255,255,255,.14)}
+.ns-spine.on{transform:scaleY(1)}
+.ns-spine::before,.ns-spine::after{content:"";position:absolute;left:3px;right:3px;height:1px;
+  background:rgba(255,255,255,.35)}
+.ns-spine::before{top:7px}
+.ns-spine::after{bottom:7px}
+.ns-analys-count{font:400 44px/1 var(--font-display)}
+.ns-analys-hint{font:500 14px var(--font-body);opacity:.7;margin-top:4px}
+.ns-analys-bar{height:3px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.ns-analys-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .25s linear}
 
 /* ===== Landningssida efter analysen: tillfällig, ersätts av "Platsen"
    (designens steg 4) i ett senare jobb. ===== */
