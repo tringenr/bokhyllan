@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024182951";
+const DV="?v=20261024183029";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1996,9 +1996,10 @@ async function nsRunAnalysisBatch(ids){
          gången, fel för en förloppsindikator). En hyperbel, inte en
          exponential: avtar mycket långsammare över tid, så den fortsätter
          krypa framåt mätbart även efter lång tid istället för att plana ut
-         hårt. 96*t/(t+5000): ~16% vid 1s, ~40% vid 3,5s (långsam start),
-         ~77% vid 20s, ~89% vid 60s - alltid stigande, aldrig stilla. */
-      if(barEl)barEl.style.width=(96*el2/(el2+5000))+"%";
+         hårt. Högre tidskonstant (10000 istf 5000) = långsammare start,
+         mer sträcka kvar att gå på mot slutet: 96*t/(t+10000): ~9% vid 1s,
+         ~25% vid 3,5s, ~64% vid 20s, ~82% vid 60s - alltid stigande. */
+      if(barEl)barEl.style.width=(96*el2/(el2+10000))+"%";
       if(real.__done){clearInterval(t);resolve()}
     },100);
     real.then(()=>{real.__done=true});
