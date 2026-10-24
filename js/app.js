@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024171346";
+const DV="?v=20261024182140";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1992,9 +1992,14 @@ async function nsRunAnalysisBatch(ids){
            den riktiga avläsningen drar ut på tiden - men inte i oändlighet. */
         if(el2-lastBump>900&&extra<6){extra++;lastBump=el2;if(countEl)countEl.textContent=String(tanda+extra)}
       }
-      const base=90*(1-Math.exp(-el2/4000));
-      const wobble=el2>4000?2.5*Math.sin(el2/700):0;
-      if(barEl)barEl.style.width=Math.max(0,Math.min(96,base+wobble))+"%";
+      /* Långsam, långsiktig klättring (6s tidskonstant - når bara ~70%
+         efter 10s) plus en vaggning som är på HELA tiden, inte bara mot
+         slutet, och tillräckligt stor (±4%, ~3,5s period) för att synas
+         tydligt - annars blir rörelsen omärkbar när kurvan plattar ut
+         efter en lång väntan. */
+      const climb=70*(1-Math.exp(-el2/6000));
+      const wobble=4*Math.sin(el2/550);
+      if(barEl)barEl.style.width=Math.max(2,Math.min(96,10+climb+wobble))+"%";
       if(real.__done){clearInterval(t);resolve()}
     },100);
     real.then(()=>{real.__done=true});
