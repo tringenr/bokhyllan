@@ -683,19 +683,57 @@ body.splashing{overflow:hidden}
 .ns-analys-bar{height:3px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
 .ns-analys-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .12s linear}
 
-/* ===== Landningssida efter analysen: tillfällig, ersätts av "Platsen"
-   (designens steg 4) i ett senare jobb. ===== */
-.ns-done-page{position:fixed;inset:0;z-index:91;background:var(--page);color:var(--fg);
-  display:flex;flex-direction:column;gap:18px;padding:env(safe-area-inset-top,0) 24px env(safe-area-inset-bottom,0);
-  overflow-y:auto}
-.ns-done-head{padding-top:28px}
-.ns-done-head h1{margin:0 0 6px;font:700 24px var(--font-display)}
-.ns-done-count{font:700 14px var(--font-mono);color:var(--text-secondary)}
-.ns-done-list{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
-.ns-done-list li{background:var(--surface);border:1px solid var(--border-subtle);border-radius:10px;
-  padding:10px 14px;font:500 14px var(--font-body)}
-.ns-done-empty{font:500 14px var(--font-body);color:var(--text-secondary)}
-.ns-done-acts{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+/* ===== Hylla-sidan efter analysen (designens steg 4/6 "Platsen", vår
+   "Hylla") - se begreppskommentaren vid nsShowHylla() i app.js.
+   Mörk-till-papper-toning upptill matchar designpaketets flow.html;
+   helt papper när hyllan är sparad (.is-saved). ===== */
+.ns-hylla{position:fixed;inset:0;z-index:91;color:var(--fg);
+  display:flex;flex-direction:column;gap:20px;padding:env(safe-area-inset-top,0) 20px env(safe-area-inset-bottom,0);
+  overflow-y:auto;
+  background:linear-gradient(180deg,#4A3D41 0%,#7D6D72 14%,var(--page) 32%,var(--page) 100%)}
+.ns-hylla.is-saved{background:var(--page)}
+.ns-hylla-head{padding-top:28px}
+.ns-hylla-eyebrow{font:600 12.5px var(--font-body);letter-spacing:.02em;color:rgba(255,255,255,.72)}
+.ns-hylla.is-saved .ns-hylla-eyebrow{color:var(--text-secondary)}
+.ns-hylla-name{margin:6px 0 0;font:400 27px var(--font-display);color:#FDFBF9}
+.ns-hylla.is-saved .ns-hylla-name{color:var(--fg)}
+.ns-hylla-sub{margin-top:4px;font:500 13.5px var(--font-body);color:rgba(255,255,255,.72)}
+.ns-hylla.is-saved .ns-hylla-sub{color:var(--text-secondary)}
+.ns-hylla-planes{display:flex;flex-direction:column;gap:20px}
+.ns-hylla-plane-img{height:150px;border-radius:10px 10px 2px 2px;overflow:hidden;
+  background:var(--surface-2);border:1px solid var(--border-subtle)}
+.ns-hylla-plane-img img{width:100%;height:100%;object-fit:cover;display:block}
+.ns-hylla-plane-cap{margin-top:9px;font:500 12px var(--font-body);color:var(--text-secondary)}
+.ns-hylla.is-saved .ns-hylla-plane-cap{color:var(--text-secondary)}
+.ns-hylla-add{border:1px dashed rgba(255,255,255,.4);background:transparent;border-radius:10px;height:48px;
+  display:flex;align-items:center;justify-content:center;gap:8px;font:600 14px var(--font-body);
+  color:rgba(255,255,255,.85)}
+.ns-hylla.is-saved .ns-hylla-add{border-color:var(--border-default);color:var(--fg)}
+.ns-hylla-add svg{width:16px;height:16px}
+.ns-hylla-cards{display:flex;flex-direction:column;gap:8px}
+.ns-hylla-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border-subtle);text-align:left}
+.ns-hylla-card.is-locked{opacity:.45}
+.ns-hylla-card-ic{color:var(--pink-500);display:flex;flex-shrink:0}
+.ns-hylla-card-ic svg{width:19px;height:19px}
+.ns-hylla-card-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ns-hylla-card-txt b{font:600 14.5px var(--font-body);color:var(--fg)}
+.ns-hylla-card-txt small{font:500 12.5px var(--font-body);color:var(--text-secondary)}
+.ns-hylla-card-chev{color:var(--text-secondary);display:flex;flex-shrink:0}
+.ns-hylla-card-chev svg{width:16px;height:16px}
+.ns-hylla-cta{padding-bottom:4px}
+.ns-hylla-cta .btn-primary{width:100%}
+.ns-hylla-saveform{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.ns-hylla-saveform input{height:48px;border-radius:10px;border:1px solid var(--border-default);
+  background:var(--surface);padding:0 14px;font:500 14px var(--font-body);color:var(--fg)}
+.ns-hylla-saveform .btn-primary{width:100%}
+.ns-hylla-saveform .err{color:var(--danger-500);font-size:12px;min-height:14px;text-align:center}
+.ns-hylla-savedbar{display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border-subtle)}
+.ns-hylla-savedbar-ic{color:var(--pink-500);display:flex;flex-shrink:0}
+.ns-hylla-savedbar-ic svg{width:18px;height:18px}
+.ns-hylla-savedbar span:last-child{font:600 14px var(--font-body);color:var(--fg)}
+.ns-hylla-foot{margin-top:auto;padding-bottom:24px}
 
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}
