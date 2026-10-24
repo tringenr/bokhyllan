@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024134652";
+const DV="?v=20261024183029";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1543,8 +1543,14 @@ async function analysSave(kind,id,btn){
 
 /* ---------- Analysera foto med Claude (edge function) ---------- */
 const ANALYS_URL=SB_URL.replace(".supabase.co",".functions.supabase.co")+"/analysera";
-async function runAnalys(kind,id,btn){
-  if(!sbUser){alert("Logga in för att analysera.");return}
+/* opts.silent: körs utan att själv larma vid fel eller öppna granskningen
+   vid lyckad avläsning - används av den automatiska analysen efter
+   nsFinish() (se nsRunAnalysisBatch), som vill samla ihop resultaten för
+   alla uppladdade foton innan nåt visas. Returnerar {ok, titles, error}
+   så den som anropar tyst kan räkna böcker och lista titlar själv. */
+async function runAnalys(kind,id,btn,opts){
+  const silent=!!(opts&&opts.silent);
+  if(!sbUser){if(!silent)alert("Logga in för att analysera.");return{ok:false,titles:[],error:"ej inloggad"}}
   const label=btn?btn.textContent:null;
   if(btn){btn.disabled=true;btn.textContent="🤖 Läser av…"}
   try{
@@ -1583,12 +1589,16 @@ async function runAnalys(kind,id,btn){
     }else{
       await loadNewShelves();
     }
-    if(analysBooks[analysKey(kind,id)]){
+    const titles=(out.books||[]).map(b=>b.title).filter(Boolean);
+    if(!silent&&analysBooks[analysKey(kind,id)]){
       if(kind==="shelf")psOpen("analys",id);else renderAnalys(kind,id);
     }
+    return{ok:true,titles,error:null};
   }catch(e){
-    alert("Kunde inte analysera: "+(e.message||e));
+    const msg=e.message||String(e);
+    if(!silent)alert("Kunde inte analysera: "+msg);
     if(btn){btn.disabled=false;btn.textContent=label}
+    return{ok:false,titles:[],error:msg};
   }
 }
 function toggleNote(kind,id){
@@ -1888,25 +1898,141 @@ async function nsFinish(){
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
   const btn=document.querySelector("#nsCam .ns-cam-done");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
+  /* Overlayen tar över skärmen direkt - den ligger redan ovanpå kameran
+     (z-index 91 mot 90), så den täcker allt utan att vi behöver vänta på
+     att kameran döljs. Annars hinner Hyllor/Foton-listan blinka till
+     under tiden det tar att ladda upp bilderna och ladda om listan
+     (nsRender/buildShelfOptions/loadNewShelves nedan). */
+  const nsOverlay=document.getElementById("nsAnalys");
+  if(nsOverlay){nsOverlay.style.display="";nsOverlay.innerHTML=`<p class="ns-analys-hint">Laddar upp foto …</p>`}
   try{
     if(S.mode==="new"&&!bcNames[S.bc]){
       bcNames[S.bc]=S.name;
       await sb.from("bc_names").upsert({bc:S.bc,name:S.name});
     }
+    const rows=[];
     for(let i=0;i<shots.length;i++){
       const s=shots[i];
-      await uploadShelfPhoto({bc:S.bc,name:S.name,code:S.code||null,label:s.label||null,file:s.file,dataUrl:s.dataUrl,i});
+      const row=await uploadShelfPhoto({bc:S.bc,name:S.name,code:S.code||null,label:s.label||null,file:s.file,dataUrl:s.dataUrl,i});
+      if(row)rows.push(row);
     }
     nsState=null;nsRender();
     buildShelfOptions();renderBcEditor();
     await loadNewShelves();
-    alert(`Skickat! ${shots.length} foto${shots.length>1?"n":""} ligger i kö.\n\nJag läser av bokryggarna och lägger in böckerna – sedan kontrollerar du och trycker ✓ Klar.`);
+    await nsRunAnalysisBatch(rows.map(r=>r.id));
   }catch(e){
+    if(nsOverlay)nsOverlay.style.display="none";
     alert("Något gick fel: "+(e.message||e));
   }finally{
     const b2=document.querySelector("#nsWizard .ns-nav button:last-child");
     if(b2){b2.disabled=false;b2.style.opacity=""}
   }
+}
+/* ---------- Analys-overlay + landningssida efter nsFinish() ----------
+   Körs automatiskt efter uppladdning: visar en overlay medan varje
+   uppladdat foto analyseras tyst (runAnalys med silent:true), sen en enkel
+   landningssida. Landningssidan är tillfällig - ersätts av "Platsen"
+   (designens steg 4, se docs/KARTA.md) i ett senare jobb.
+
+   Overlayen återskapar Analyze()/Spine() ur designpaketets flow.html:
+   samma ryggbredder (22-40px), samma höjdcykel (150/138/126), samma
+   färger (bokdatans spine-hex ur shared.jsx), samma scaleY-reveal, samma
+   stora displaytal + progressbar. Bakgrunden tonar inte ända till papper
+   här - det är "Platsen" (steg 4) som gör det, inte byggt än. */
+const NS_SPINE_COLORS=["#C2410C","#1F6F5C","#3B3BAF","#7A5230","#0F766E","#8C1D3F","#2F4858"];
+const NS_SPINE_WIDTHS=[24,32,28,38,26,34,30,22,36,28,32,26];
+async function nsRunAnalysisBatch(ids){
+  if(!ids||!ids.length){nsShowDone([],0);return}
+  const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
+  const el=document.getElementById("nsAnalys");if(!el){nsShowDone([],ids.length);return}
+  el.style.display="";
+  const spineN=NS_SPINE_WIDTHS.length;
+  el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
+    `<span class="ns-spine" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
+      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("")}</div>
+    <div><div class="ns-analys-count" id="nsAnalysCount">0</div>
+    <p class="ns-analys-hint" id="nsAnalysHint">böcker hittade</p></div>
+    <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>`;
+  const spines=[...el.querySelectorAll(".ns-spine")];
+  const countEl=document.getElementById("nsAnalysCount");
+  const hintEl=document.getElementById("nsAnalysHint");
+  const barEl=document.getElementById("nsAnalysBar");
+  let tanda=0;
+  const setTanda=n=>{n=Math.max(tanda,Math.min(spines.length,n));while(tanda<n)spines[tanda++].classList.add("on")};
+  /* Den riktiga avläsningen körs i bakgrunden, oberoende av animationen -
+     annars syns ingenting alls under den riktiga väntan (som kan ta flera
+     sekunder för en AI-avläsning). Samma princip som Analyze() i
+     flow.html: en simulerad uppräkning (fas A) medan det riktiga svaret
+     hämtas, som sen landar exakt rätt (fas B) när svaret är klart. */
+  const real=(async()=>{
+    let total=0,titles=[],failed=0;
+    for(const id of ids){
+      const r=await runAnalys("shelf",id,null,{silent:true});
+      if(r&&r.ok){total+=r.titles.length;titles=titles.concat(r.titles)}else failed++;
+    }
+    return{total,titles,failed};
+  })();
+  /* Stapeln drivs av en egen, obruten kurva från start till att svaret
+     kommer - aldrig en fast gräns den fastnar vid. Den närmar sig 90%
+     asymptotiskt (långsammare i början än förut) och vaggar sen lite kring
+     toppen om väntan drar ut på tiden, så den aldrig ser helt stilla ut.
+     Ryggarna/räknaren fylls separat, över ~3,5s som innan. */
+  const started=Date.now();
+  let extra=0,lastBump=0;
+  await new Promise(resolve=>{
+    const t=setInterval(()=>{
+      const el2=Date.now()-started;
+      const spineTarget=Math.min(spines.length,Math.round(el2/3500*spines.length));
+      setTanda(spineTarget);
+      if(spineTarget<spines.length){
+        if(countEl)countEl.textContent=String(tanda);
+      }else{
+        if(hintEl&&hintEl.textContent!=="Analyserar böckerna …")hintEl.textContent="Analyserar böckerna …";
+        /* Räkna lite till, i små steg, så siffran inte heller fryser om
+           den riktiga avläsningen drar ut på tiden - men inte i oändlighet. */
+        if(el2-lastBump>900&&extra<6){extra++;lastBump=el2;if(countEl)countEl.textContent=String(tanda+extra)}
+      }
+      /* Strikt monoton - går ALDRIG bakåt (en vaggning gjorde det förra
+         gången, fel för en förloppsindikator). En hyperbel, inte en
+         exponential: avtar mycket långsammare över tid, så den fortsätter
+         krypa framåt mätbart även efter lång tid istället för att plana ut
+         hårt. Högre tidskonstant (10000 istf 5000) = långsammare start,
+         mer sträcka kvar att gå på mot slutet: 96*t/(t+10000): ~9% vid 1s,
+         ~25% vid 3,5s, ~64% vid 20s, ~82% vid 60s - alltid stigande. */
+      if(barEl)barEl.style.width=(96*el2/(el2+10000))+"%";
+      if(real.__done){clearInterval(t);resolve()}
+    },100);
+    real.then(()=>{real.__done=true});
+  });
+  const{total,titles,failed}=await real;
+  setTanda(spines.length);
+  if(countEl)countEl.textContent=String(total);
+  if(barEl)barEl.style.width="100%";
+  if(hintEl)hintEl.textContent="böcker i din hylla";
+  /* Fast paus innan vi går vidare - samma som flow.html:s 900ms efter att
+     balken är full, oavsett hur lång väntan varit innan dess. */
+  await new Promise(res=>setTimeout(res,900));
+  el.style.display="none";
+  nsShowDone(titles,failed);
+}
+function nsShowDone(titles,failed){
+  const el=document.getElementById("nsDone");if(!el)return;
+  const n=titles.length;
+  el.innerHTML=`<div class="ns-done-head">
+      <h1>Här landar man när man har analyserat</h1>
+      <div class="ns-done-count mono">${n} ${n===1?"bok":"böcker"} hittad${n===1?"":"e"}${failed?` · ${failed} foto${failed>1?"n":""} gick inte att läsa av`:""}</div>
+    </div>
+    ${n?`<ul class="ns-done-list">${titles.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:`<p class="ns-done-empty">Inga böcker hittades den här gången.</p>`}
+    <div class="ns-done-acts">
+      <button class="btn btn-outline" id="nsDoneSet" type="button">Inställningar</button>
+      <button class="btn btn-outline" id="nsDoneOut" type="button">Logga ut</button>
+    </div>`;
+  el.style.display="";
+  el.querySelector("#nsDoneSet").onclick=()=>{el.style.display="none";openSet("platser")};
+  el.querySelector("#nsDoneOut").onclick=async()=>{
+    if(!confirm("Logga ut?"))return;
+    await sb.auth.signOut();location.reload();
+  };
 }
 /* Inskickade hyllfoton. Bara de som inte är klarmarkerade syns i listan;
    klara ligger hopfällda längst ner, så att de ändå går att läsa av igen

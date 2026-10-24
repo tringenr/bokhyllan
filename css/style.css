@@ -654,6 +654,49 @@ body.splashing{overflow:hidden}
 .ns-cam-sheet .grip{width:38px;height:4px;border-radius:2px;background:var(--line);align-self:center;margin-bottom:4px}
 .ns-cam-sheet h3{font:700 18px var(--font-display);margin:0}
 
+/* ===== Analys-overlay: visas automatiskt efter nsFinish(). Återskapar
+   Analyze()/Spine() ur designpaketets flow.html pixelnära:
+   - statisk mörk-till-varmbrun gradient (inte ända till papper - det
+     klivet hör till "Platsen", steg 4, som inte är byggt än)
+   - riktiga bokryggar (inset-skugga + bindningslinjer, 22-40px breda)
+     som växer upp underifrån med en snäpp-easing
+   - stort tal i displaytypsnittet, inte mono
+   - tunn 3px-progressbar
+   Samma fasta helskärmsmönster som .ns-cam (position:fixed), ligger som
+   syskon till den inuti Inställningar > Hyllor - se openSet-kommentaren
+   i startFromGuide(). ===== */
+.ns-analys{position:fixed;inset:0;z-index:91;display:flex;flex-direction:column;
+  justify-content:center;gap:30px;color:#FDFBF9;text-align:center;padding:0 28px;
+  background:linear-gradient(180deg,#231A1E 0%,#2E2529 42%,#4A3D41 100%)}
+.ns-analys-spines{display:flex;align-items:flex-end;gap:3px;justify-content:center;height:150px}
+.ns-spine{border-radius:3px 3px 2px 2px;position:relative;flex-shrink:0;
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform .45s cubic-bezier(.22,.9,.3,1.2);
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.18),inset 2px 0 0 rgba(255,255,255,.14)}
+.ns-spine.on{transform:scaleY(1)}
+.ns-spine::before,.ns-spine::after{content:"";position:absolute;left:3px;right:3px;height:1px;
+  background:rgba(255,255,255,.35)}
+.ns-spine::before{top:7px}
+.ns-spine::after{bottom:7px}
+.ns-analys-count{font:400 44px/1 var(--font-display)}
+.ns-analys-hint{font:500 14px var(--font-body);opacity:.7;margin-top:4px}
+.ns-analys-bar{height:3px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.ns-analys-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .12s linear}
+
+/* ===== Landningssida efter analysen: tillfällig, ersätts av "Platsen"
+   (designens steg 4) i ett senare jobb. ===== */
+.ns-done-page{position:fixed;inset:0;z-index:91;background:var(--page);color:var(--fg);
+  display:flex;flex-direction:column;gap:18px;padding:env(safe-area-inset-top,0) 24px env(safe-area-inset-bottom,0);
+  overflow-y:auto}
+.ns-done-head{padding-top:28px}
+.ns-done-head h1{margin:0 0 6px;font:700 24px var(--font-display)}
+.ns-done-count{font:700 14px var(--font-mono);color:var(--text-secondary)}
+.ns-done-list{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.ns-done-list li{background:var(--surface);border:1px solid var(--border-subtle);border-radius:10px;
+  padding:10px 14px;font:500 14px var(--font-body)}
+.ns-done-empty{font:500 14px var(--font-body);color:var(--text-secondary)}
+.ns-done-acts{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .pl-h h2{margin:0;font:700 22px var(--font-display)}
