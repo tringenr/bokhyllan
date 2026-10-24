@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024153119";
+const DV="?v=20261024154114";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1956,6 +1956,7 @@ async function nsRunAnalysisBatch(ids){
      sekunder för en AI-avläsning). Samma princip som Analyze() i
      flow.html: en simulerad uppräkning (fas A) medan det riktiga svaret
      hämtas, som sen landar exakt rätt (fas B) när svaret är klart. */
+  let realDone=false;
   const real=(async()=>{
     let total=0,titles=[],failed=0;
     for(const id of ids){
@@ -1964,6 +1965,7 @@ async function nsRunAnalysisBatch(ids){
     }
     return{total,titles,failed};
   })();
+  real.then(()=>{realDone=true});
   /* Fas A: klättrar mot spineN på ~3,5s (samma takt som flow.html:
      +2 var 70:e ms), oavsett hur lång den riktiga väntan blir. */
   await new Promise(resolve=>{
@@ -1976,8 +1978,24 @@ async function nsRunAnalysisBatch(ids){
       if(p>=100){clearInterval(t);resolve()}
     },70);
   });
-  /* Fas B: hämta det riktiga resultatet (kan redan vara klart om
-     avläsningen tog längre än fas A) och landa exakt där. */
+  /* Fas C: hyllan är full (alla ryggar tända) men den riktiga avläsningen
+     är inte klar än - fortsätt visa rörelse (stapel + siffra kryper
+     vidare) och byt text, så det syns att nåt fortfarande händer istället
+     för att frysa helt tills svaret kommer. */
+  if(!realDone){
+    if(hintEl)hintEl.textContent="Analyserar böckerna …";
+    await new Promise(resolve=>{
+      let w=70,n=tanda;const nMax=tanda+6; /* räkna lite till, men inte i all oändlighet */
+      const t=setInterval(()=>{
+        if(realDone){clearInterval(t);resolve();return}
+        w=Math.min(93,w+0.6);
+        if(barEl)barEl.style.width=w+"%";
+        if(n<nMax){n+=1;if(countEl)countEl.textContent=String(n)}
+      },220);
+    });
+  }
+  /* Fas B: hämta det riktiga resultatet (redan klart om det var fas C som
+     avslutade väntan) och landa exakt där. */
   const{total,titles,failed}=await real;
   setTanda(spines.length);
   if(countEl)countEl.textContent=String(total);
