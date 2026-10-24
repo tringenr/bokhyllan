@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024182140";
+const DV="?v=20261024182951";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1992,14 +1992,13 @@ async function nsRunAnalysisBatch(ids){
            den riktiga avläsningen drar ut på tiden - men inte i oändlighet. */
         if(el2-lastBump>900&&extra<6){extra++;lastBump=el2;if(countEl)countEl.textContent=String(tanda+extra)}
       }
-      /* Långsam, långsiktig klättring (6s tidskonstant - når bara ~70%
-         efter 10s) plus en vaggning som är på HELA tiden, inte bara mot
-         slutet, och tillräckligt stor (±4%, ~3,5s period) för att synas
-         tydligt - annars blir rörelsen omärkbar när kurvan plattar ut
-         efter en lång väntan. */
-      const climb=70*(1-Math.exp(-el2/6000));
-      const wobble=4*Math.sin(el2/550);
-      if(barEl)barEl.style.width=Math.max(2,Math.min(96,10+climb+wobble))+"%";
+      /* Strikt monoton - går ALDRIG bakåt (en vaggning gjorde det förra
+         gången, fel för en förloppsindikator). En hyperbel, inte en
+         exponential: avtar mycket långsammare över tid, så den fortsätter
+         krypa framåt mätbart även efter lång tid istället för att plana ut
+         hårt. 96*t/(t+5000): ~16% vid 1s, ~40% vid 3,5s (långsam start),
+         ~77% vid 20s, ~89% vid 60s - alltid stigande, aldrig stilla. */
+      if(barEl)barEl.style.width=(96*el2/(el2+5000))+"%";
       if(real.__done){clearInterval(t);resolve()}
     },100);
     real.then(()=>{real.__done=true});
