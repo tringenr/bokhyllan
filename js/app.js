@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024154440";
+const DV="?v=20261024171346";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1964,7 +1964,6 @@ async function nsRunAnalysisBatch(ids){
      sekunder för en AI-avläsning). Samma princip som Analyze() i
      flow.html: en simulerad uppräkning (fas A) medan det riktiga svaret
      hämtas, som sen landar exakt rätt (fas B) när svaret är klart. */
-  let realDone=false;
   const real=(async()=>{
     let total=0,titles=[],failed=0;
     for(const id of ids){
@@ -1973,37 +1972,33 @@ async function nsRunAnalysisBatch(ids){
     }
     return{total,titles,failed};
   })();
-  real.then(()=>{realDone=true});
-  /* Fas A: klättrar mot spineN på ~3,5s (samma takt som flow.html:
-     +2 var 70:e ms), oavsett hur lång den riktiga väntan blir. */
+  /* Stapeln drivs av en egen, obruten kurva från start till att svaret
+     kommer - aldrig en fast gräns den fastnar vid. Den närmar sig 90%
+     asymptotiskt (långsammare i början än förut) och vaggar sen lite kring
+     toppen om väntan drar ut på tiden, så den aldrig ser helt stilla ut.
+     Ryggarna/räknaren fylls separat, över ~3,5s som innan. */
+  const started=Date.now();
+  let extra=0,lastBump=0;
   await new Promise(resolve=>{
-    let p=0;
     const t=setInterval(()=>{
-      p=Math.min(100,p+2);
-      setTanda(Math.round(p/100*spines.length));
-      if(countEl)countEl.textContent=String(tanda);
-      if(barEl)barEl.style.width=Math.min(70,p)+"%";
-      if(p>=100){clearInterval(t);resolve()}
-    },70);
+      const el2=Date.now()-started;
+      const spineTarget=Math.min(spines.length,Math.round(el2/3500*spines.length));
+      setTanda(spineTarget);
+      if(spineTarget<spines.length){
+        if(countEl)countEl.textContent=String(tanda);
+      }else{
+        if(hintEl&&hintEl.textContent!=="Analyserar böckerna …")hintEl.textContent="Analyserar böckerna …";
+        /* Räkna lite till, i små steg, så siffran inte heller fryser om
+           den riktiga avläsningen drar ut på tiden - men inte i oändlighet. */
+        if(el2-lastBump>900&&extra<6){extra++;lastBump=el2;if(countEl)countEl.textContent=String(tanda+extra)}
+      }
+      const base=90*(1-Math.exp(-el2/4000));
+      const wobble=el2>4000?2.5*Math.sin(el2/700):0;
+      if(barEl)barEl.style.width=Math.max(0,Math.min(96,base+wobble))+"%";
+      if(real.__done){clearInterval(t);resolve()}
+    },100);
+    real.then(()=>{real.__done=true});
   });
-  /* Fas C: hyllan är full (alla ryggar tända) men den riktiga avläsningen
-     är inte klar än - fortsätt visa rörelse (stapel + siffra kryper
-     vidare) och byt text, så det syns att nåt fortfarande händer istället
-     för att frysa helt tills svaret kommer. */
-  if(!realDone){
-    if(hintEl)hintEl.textContent="Analyserar böckerna …";
-    await new Promise(resolve=>{
-      let w=70,n=tanda;const nMax=tanda+6; /* räkna lite till, men inte i all oändlighet */
-      const t=setInterval(()=>{
-        if(realDone){clearInterval(t);resolve();return}
-        w=Math.min(93,w+0.6);
-        if(barEl)barEl.style.width=w+"%";
-        if(n<nMax){n+=1;if(countEl)countEl.textContent=String(n)}
-      },220);
-    });
-  }
-  /* Fas B: hämta det riktiga resultatet (redan klart om det var fas C som
-     avslutade väntan) och landa exakt där. */
   const{total,titles,failed}=await real;
   setTanda(spines.length);
   if(countEl)countEl.textContent=String(total);
