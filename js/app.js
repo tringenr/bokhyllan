@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024183029";
+const DV="?v=20261024203027";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1896,6 +1896,7 @@ async function nsFinish(){
   const S=nsState;
   const shots=S.shots.filter(s=>s.dataUrl);
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
+  const bc=S.bc;
   const btn=document.querySelector("#nsCam .ns-cam-done");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
   /* Overlayen tar över skärmen direkt - den ligger redan ovanpå kameran
@@ -1919,7 +1920,7 @@ async function nsFinish(){
     nsState=null;nsRender();
     buildShelfOptions();renderBcEditor();
     await loadNewShelves();
-    await nsRunAnalysisBatch(rows.map(r=>r.id));
+    await nsRunAnalysisBatch(rows.map(r=>r.id),bc);
   }catch(e){
     if(nsOverlay)nsOverlay.style.display="none";
     alert("Något gick fel: "+(e.message||e));
@@ -1928,23 +1929,26 @@ async function nsFinish(){
     if(b2){b2.disabled=false;b2.style.opacity=""}
   }
 }
-/* ---------- Analys-overlay + landningssida efter nsFinish() ----------
+/* ---------- Analys-overlay + Hylla-sidan efter nsFinish() ----------
    Körs automatiskt efter uppladdning: visar en overlay medan varje
-   uppladdat foto analyseras tyst (runAnalys med silent:true), sen en enkel
-   landningssida. Landningssidan är tillfällig - ersätts av "Platsen"
-   (designens steg 4, se docs/KARTA.md) i ett senare jobb.
+   uppladdat foto analyseras tyst (runAnalys med silent:true), sen
+   hyllans egen sida (designens steg 4 "Platsen", här "Hylla" - se
+   docs/KARTA.md och begreppskommentaren i designpaketets flow.html:
+   Hyllplan (ett foto) → Hylla (en samling hyllplan, t.ex.
+   "Vardagsrummet") → Min Bokhylla (allt). Varje Hylla visas separat,
+   aldrig ihopslagen med andra, exakt som hyllgrupperingen (bc/parent_bc)
+   redan fungerar i resten av appen.
 
    Overlayen återskapar Analyze()/Spine() ur designpaketets flow.html:
    samma ryggbredder (22-40px), samma höjdcykel (150/138/126), samma
    färger (bokdatans spine-hex ur shared.jsx), samma scaleY-reveal, samma
-   stora displaytal + progressbar. Bakgrunden tonar inte ända till papper
-   här - det är "Platsen" (steg 4) som gör det, inte byggt än. */
+   stora displaytal + progressbar. */
 const NS_SPINE_COLORS=["#C2410C","#1F6F5C","#3B3BAF","#7A5230","#0F766E","#8C1D3F","#2F4858"];
 const NS_SPINE_WIDTHS=[24,32,28,38,26,34,30,22,36,28,32,26];
-async function nsRunAnalysisBatch(ids){
-  if(!ids||!ids.length){nsShowDone([],0);return}
+async function nsRunAnalysisBatch(ids,bc){
+  if(!ids||!ids.length){nsShowHylla(bc);return}
   const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
-  const el=document.getElementById("nsAnalys");if(!el){nsShowDone([],ids.length);return}
+  const el=document.getElementById("nsAnalys");if(!el){nsShowHylla(bc,{failed:ids.length});return}
   el.style.display="";
   const spineN=NS_SPINE_WIDTHS.length;
   el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
@@ -2013,26 +2017,125 @@ async function nsRunAnalysisBatch(ids){
      balken är full, oavsett hur lång väntan varit innan dess. */
   await new Promise(res=>setTimeout(res,900));
   el.style.display="none";
-  nsShowDone(titles,failed);
+  nsShowHylla(bc,{failed});
 }
-function nsShowDone(titles,failed){
+/* Hyllans egen sida (designens steg 4/6 "Platsen"/"Sparad plats",
+   begreppsmässigt vår "Hylla") - visas direkt efter analysen, och är
+   samma vy man når senare via openPlace()/renderPlace() för samma bc,
+   bara med de här extra delarna påklistrade (kort + sparaformulär) som
+   hör till just den här första landningen. Data (foton, antal, namn)
+   kommer från placeList(), samma källa som Hem och Platser-vyn - ingen
+   egen datahämtning här. */
+function nsShowHylla(bc,opts){
+  opts=opts||{};
   const el=document.getElementById("nsDone");if(!el)return;
-  const n=titles.length;
-  el.innerHTML=`<div class="ns-done-head">
-      <h1>Här landar man när man har analyserat</h1>
-      <div class="ns-done-count mono">${n} ${n===1?"bok":"böcker"} hittad${n===1?"":"e"}${failed?` · ${failed} foto${failed>1?"n":""} gick inte att läsa av`:""}</div>
+  const top=topBc(String(bc));
+  const p=placeList().find(x=>x.bc===top);
+  const saved=!!(sbUser&&!sbUser.is_anonymous);
+  const antal=p?p.photos.length:0;
+  const total=p?p.count:0;
+  const namn=p?p.name:(bcNames[top]||("Hylla "+top));
+  /* Analysen sparar aldrig böcker direkt - den bara föreslår dem
+     (analysBooks), och de landar i katalogen först när man granskat och
+     tryckt "Lägg in" i oklarhetslistan (analysSave) - det är den separata
+     rättningsprocessen Thomas bad om att behålla. Så "0 böcker" direkt
+     efter analysen är korrekt, men sidan måste visa VARFÖR och låta en
+     komma åt granskningen (psOpen) istället för att bara tiga om det. */
+  const planer=(p?p.photos:[]).map(ph=>({ph,pending:(analysBooks[analysKey("shelf",ph.nsId)]||{books:[]}).books.length}));
+  const pendingTotal=planer.reduce((s,x)=>s+x.pending,0);
+  /* Sök/Värdera/Dela: sidorna de skulle leda till är inte byggda än
+     (oavsett om hyllan är sparad eller inte), så korten visas gråade
+     istället för aktiva - ett medvetet avsteg från designpaketet,
+     godkänt av Thomas 2026-10-24. */
+  const kan=[["search","Sök i hyllan","Hitta vilken bok som helst direkt"],
+             ["tag","Värdera","Se vad böckerna är värda i dag"],
+             ["link","Dela","Visa hyllan för vänner"]];
+  el.className="ns-hylla"+(saved?" is-saved":"");
+  el.innerHTML=`
+    <div class="ns-hylla-head">
+      <div class="ns-hylla-eyebrow">${saved?"Hylla":"Din hylla, digitalt"}</div>
+      <h1 class="ns-hylla-name" id="nsHyllaName" title="Tryck för att byta namn">${esc(namn)}</h1>
+      <div class="ns-hylla-sub">${antal} hyllplan · ${total} böcker${pendingTotal?` · ${pendingTotal} väntar på granskning`:""}${opts.failed?` · ${opts.failed} foto${opts.failed>1?"n":""} gick inte att läsa av`:""}</div>
     </div>
-    ${n?`<ul class="ns-done-list">${titles.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:`<p class="ns-done-empty">Inga böcker hittades den här gången.</p>`}
-    <div class="ns-done-acts">
-      <button class="btn btn-outline" id="nsDoneSet" type="button">Inställningar</button>
-      <button class="btn btn-outline" id="nsDoneOut" type="button">Logga ut</button>
+    <div class="ns-hylla-planes">
+      ${planer.map(({ph,pending})=>`<div class="ns-hylla-plane">
+          <div class="ns-hylla-plane-img${pending?" has-pending":""}"${pending?` onclick="psOpen('analys',${ph.nsId})" role="button" tabindex="0"`:""}>${ph.thumb?`<img src="${ph.thumb}" alt="">`:""}</div>
+          <div class="ns-hylla-plane-cap">${esc(ph.cap||"")}${pending?` · ${pending} bok${pending===1?"":"er"} väntar på granskning`:""}</div>
+        </div>`).join("")}
+      <button class="ns-hylla-add" type="button" onclick="nsAddHyllplan('${top}')">${ic("plus")}Lägg till ett hyllplan</button>
+    </div>
+    <div class="ns-hylla-cards">
+      ${kan.map(([icn,t,s])=>`<div class="ns-hylla-card is-locked" aria-disabled="true">
+          <span class="ns-hylla-card-ic">${ic(icn)}</span>
+          <span class="ns-hylla-card-txt"><b>${t}</b><small>${s}</small></span>
+          <span class="ns-hylla-card-chev">${ic("chevron-right")}</span>
+        </div>`).join("")}
+    </div>
+    ${saved?`<div class="ns-hylla-savedbar"><span class="ns-hylla-savedbar-ic">${ic("check")}</span><span>Hyllan är sparad på ditt konto</span></div>`
+      :`<div class="ns-hylla-cta">
+          <button class="btn btn-primary" type="button" id="nsHyllaSaveBtn">Spara hyllan</button>
+          <p class="fine" style="text-align:center">Hyllan finns bara i den här telefonen tills du sparar den.</p>
+          <div class="ns-hylla-saveform" id="nsHyllaSaveForm" style="display:none">
+            <input id="nsHyllaEmail" type="email" placeholder="E-post" autocomplete="username">
+            <input id="nsHyllaPass" type="password" placeholder="Lösenord (minst 6 tecken)" autocomplete="new-password">
+            <button class="btn btn-primary" type="button" id="nsHyllaSaveGo">Skapa konto</button>
+            <span class="err" id="nsHyllaErr"></span>
+          </div>
+        </div>`}
+    <div class="ns-hylla-foot">
+      <button class="btn-outline" id="nsDoneOut" type="button">Logga ut</button>
     </div>`;
   el.style.display="";
-  el.querySelector("#nsDoneSet").onclick=()=>{el.style.display="none";openSet("platser")};
+  /* Namnbyte direkt på sidan - samma mönster som bc-name-fältet i
+     Inställningar → Hyllor (renderBcEditor): klick → textfält →
+     bekräftelsedialog → placeSave(). */
+  el.querySelector("#nsHyllaName").addEventListener("click",function(){
+    const h1=this;
+    const inp=document.createElement("input");inp.type="text";inp.value=bcNames[top]||namn;inp.className="ns-hylla-name-input";
+    h1.replaceWith(inp);inp.focus();inp.select();
+    let done=false;
+    const commit=async()=>{if(done)return;done=true;const n=inp.value.trim();
+      if(n&&n!==bcNames[top]){
+        if(!sbUser){alert("Logga in för att byta namn.");nsShowHylla(bc,opts);return}
+        const ok=await ask({title:"Byta namn?",text:`"${bcNames[top]||namn}" byter namn till "${n}".`,buttons:[{label:"Byt namn",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+        if(ok&&await placeSave([{bc:top,name:n}])){bcNames[top]=n;toast("Namnet är bytt");renderHome();buildShelfOptions();renderBcEditor()}
+      }
+      nsShowHylla(bc,opts)};
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();if(e.key==="Escape"){done=true;nsShowHylla(bc,opts)}});
+    inp.addEventListener("blur",commit)});
+  if(!saved){
+    el.querySelector("#nsHyllaSaveBtn").onclick=()=>{
+      el.querySelector("#nsHyllaSaveForm").style.display="";
+      el.querySelector("#nsHyllaSaveBtn").style.display="none";
+      el.querySelector("#nsHyllaEmail").focus();
+    };
+    const doSave=async()=>{
+      const email=el.querySelector("#nsHyllaEmail").value.trim(),pass=el.querySelector("#nsHyllaPass").value;
+      const errEl=el.querySelector("#nsHyllaErr");errEl.textContent="";
+      if(!email||pass.length<6){errEl.textContent="Fyll i e-post och ett lösenord på minst 6 tecken.";return}
+      const btn=el.querySelector("#nsHyllaSaveGo");btn.disabled=true;btn.textContent="Sparar…";
+      const {data:res,error}=await sb.auth.updateUser({email,password:pass});
+      if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";btn.disabled=false;btn.textContent="Skapa konto";return}
+      sbUser=res.user;renderAuth();toast("Kontot är skapat - hyllan är sparad.");
+      nsShowHylla(bc,opts);
+    };
+    el.querySelector("#nsHyllaSaveGo").onclick=doSave;
+    el.querySelector("#nsHyllaPass").addEventListener("keydown",e=>{if(e.key==="Enter")doSave()});
+  }
   el.querySelector("#nsDoneOut").onclick=async()=>{
-    if(!confirm("Logga ut?"))return;
+    const varning=saved?"Logga ut?":"Det tillfälliga biblioteket försvinner för gott om du loggar ut utan att först spara hyllan ovan. Logga ut ändå?";
+    if(!confirm(varning))return;
     await sb.auth.signOut();location.reload();
   };
+}
+/* Snabbväg för "+ Lägg till ett hyllplan" på Hylla-sidan: hoppar direkt
+   till kamerasteget (steg 4 i nsRender) för samma bc, utan att gå via
+   namn/typ-stegen i den vanliga guiden - det är redan samma hylla. */
+function nsAddHyllplan(bc){
+  const done=document.getElementById("nsDone");if(done)done.style.display="none";
+  openSet("platser");
+  nsState={step:4,mode:"update",bc:String(bc),name:bcNames[bc]||("Hylla "+bc),code:"",type:"S",shots:[],defLabel:""};
+  nsRender();
 }
 /* Inskickade hyllfoton. Bara de som inte är klarmarkerade syns i listan;
    klara ligger hopfällda längst ner, så att de ändå går att läsa av igen
@@ -2369,6 +2472,7 @@ window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSave
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsAddHyllplan=nsAddHyllplan;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
