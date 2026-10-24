@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024201138";
+const DV="?v=20261024203027";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2035,6 +2035,14 @@ function nsShowHylla(bc,opts){
   const antal=p?p.photos.length:0;
   const total=p?p.count:0;
   const namn=p?p.name:(bcNames[top]||("Hylla "+top));
+  /* Analysen sparar aldrig böcker direkt - den bara föreslår dem
+     (analysBooks), och de landar i katalogen först när man granskat och
+     tryckt "Lägg in" i oklarhetslistan (analysSave) - det är den separata
+     rättningsprocessen Thomas bad om att behålla. Så "0 böcker" direkt
+     efter analysen är korrekt, men sidan måste visa VARFÖR och låta en
+     komma åt granskningen (psOpen) istället för att bara tiga om det. */
+  const planer=(p?p.photos:[]).map(ph=>({ph,pending:(analysBooks[analysKey("shelf",ph.nsId)]||{books:[]}).books.length}));
+  const pendingTotal=planer.reduce((s,x)=>s+x.pending,0);
   /* Sök/Värdera/Dela: sidorna de skulle leda till är inte byggda än
      (oavsett om hyllan är sparad eller inte), så korten visas gråade
      istället för aktiva - ett medvetet avsteg från designpaketet,
@@ -2046,13 +2054,13 @@ function nsShowHylla(bc,opts){
   el.innerHTML=`
     <div class="ns-hylla-head">
       <div class="ns-hylla-eyebrow">${saved?"Hylla":"Din hylla, digitalt"}</div>
-      <h1 class="ns-hylla-name">${esc(namn)}</h1>
-      <div class="ns-hylla-sub">${antal} hyllplan · ${total} böcker${opts.failed?` · ${opts.failed} foto${opts.failed>1?"n":""} gick inte att läsa av`:""}</div>
+      <h1 class="ns-hylla-name" id="nsHyllaName" title="Tryck för att byta namn">${esc(namn)}</h1>
+      <div class="ns-hylla-sub">${antal} hyllplan · ${total} böcker${pendingTotal?` · ${pendingTotal} väntar på granskning`:""}${opts.failed?` · ${opts.failed} foto${opts.failed>1?"n":""} gick inte att läsa av`:""}</div>
     </div>
     <div class="ns-hylla-planes">
-      ${(p?p.photos:[]).map(ph=>`<div class="ns-hylla-plane">
-          <div class="ns-hylla-plane-img">${ph.thumb?`<img src="${ph.thumb}" alt="">`:""}</div>
-          <div class="ns-hylla-plane-cap">${esc(ph.cap||"")}</div>
+      ${planer.map(({ph,pending})=>`<div class="ns-hylla-plane">
+          <div class="ns-hylla-plane-img${pending?" has-pending":""}"${pending?` onclick="psOpen('analys',${ph.nsId})" role="button" tabindex="0"`:""}>${ph.thumb?`<img src="${ph.thumb}" alt="">`:""}</div>
+          <div class="ns-hylla-plane-cap">${esc(ph.cap||"")}${pending?` · ${pending} bok${pending===1?"":"er"} väntar på granskning`:""}</div>
         </div>`).join("")}
       <button class="ns-hylla-add" type="button" onclick="nsAddHyllplan('${top}')">${ic("plus")}Lägg till ett hyllplan</button>
     </div>
@@ -2078,6 +2086,23 @@ function nsShowHylla(bc,opts){
       <button class="btn-outline" id="nsDoneOut" type="button">Logga ut</button>
     </div>`;
   el.style.display="";
+  /* Namnbyte direkt på sidan - samma mönster som bc-name-fältet i
+     Inställningar → Hyllor (renderBcEditor): klick → textfält →
+     bekräftelsedialog → placeSave(). */
+  el.querySelector("#nsHyllaName").addEventListener("click",function(){
+    const h1=this;
+    const inp=document.createElement("input");inp.type="text";inp.value=bcNames[top]||namn;inp.className="ns-hylla-name-input";
+    h1.replaceWith(inp);inp.focus();inp.select();
+    let done=false;
+    const commit=async()=>{if(done)return;done=true;const n=inp.value.trim();
+      if(n&&n!==bcNames[top]){
+        if(!sbUser){alert("Logga in för att byta namn.");nsShowHylla(bc,opts);return}
+        const ok=await ask({title:"Byta namn?",text:`"${bcNames[top]||namn}" byter namn till "${n}".`,buttons:[{label:"Byt namn",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+        if(ok&&await placeSave([{bc:top,name:n}])){bcNames[top]=n;toast("Namnet är bytt");renderHome();buildShelfOptions();renderBcEditor()}
+      }
+      nsShowHylla(bc,opts)};
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();if(e.key==="Escape"){done=true;nsShowHylla(bc,opts)}});
+    inp.addEventListener("blur",commit)});
   if(!saved){
     el.querySelector("#nsHyllaSaveBtn").onclick=()=>{
       el.querySelector("#nsHyllaSaveForm").style.display="";
