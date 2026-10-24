@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024151013";
+const DV="?v=20261024153119";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1949,27 +1949,43 @@ async function nsRunAnalysisBatch(ids){
   const countEl=document.getElementById("nsAnalysCount");
   const hintEl=document.getElementById("nsAnalysHint");
   const barEl=document.getElementById("nsAnalysBar");
-  let total=0,titles=[],failed=0,si=0,done=0;
-  const started=Date.now();
-  for(const id of ids){
-    const r=await runAnalys("shelf",id,null,{silent:true});
-    if(r&&r.ok){
-      total+=r.titles.length;titles=titles.concat(r.titles);
-      if(countEl)countEl.textContent=String(total);
-    }else failed++;
-    done++;
-    if(barEl)barEl.style.width=Math.round(done/ids.length*100)+"%";
-    /* Väx upp en klunga ryggar per foto, underifrån - aldrig alla på en
-       gång. */
-    const target=Math.min(spines.length,Math.round(done/ids.length*spines.length));
-    while(si<target){spines[si++].classList.add("on")}
-  }
-  while(si<spines.length){spines[si++].classList.add("on")}
+  let tanda=0;
+  const setTanda=n=>{n=Math.max(tanda,Math.min(spines.length,n));while(tanda<n)spines[tanda++].classList.add("on")};
+  /* Den riktiga avläsningen körs i bakgrunden, oberoende av animationen -
+     annars syns ingenting alls under den riktiga väntan (som kan ta flera
+     sekunder för en AI-avläsning). Samma princip som Analyze() i
+     flow.html: en simulerad uppräkning (fas A) medan det riktiga svaret
+     hämtas, som sen landar exakt rätt (fas B) när svaret är klart. */
+  const real=(async()=>{
+    let total=0,titles=[],failed=0;
+    for(const id of ids){
+      const r=await runAnalys("shelf",id,null,{silent:true});
+      if(r&&r.ok){total+=r.titles.length;titles=titles.concat(r.titles)}else failed++;
+    }
+    return{total,titles,failed};
+  })();
+  /* Fas A: klättrar mot spineN på ~3,5s (samma takt som flow.html:
+     +2 var 70:e ms), oavsett hur lång den riktiga väntan blir. */
+  await new Promise(resolve=>{
+    let p=0;
+    const t=setInterval(()=>{
+      p=Math.min(100,p+2);
+      setTanda(Math.round(p/100*spines.length));
+      if(countEl)countEl.textContent=String(tanda);
+      if(barEl)barEl.style.width=Math.min(70,p)+"%";
+      if(p>=100){clearInterval(t);resolve()}
+    },70);
+  });
+  /* Fas B: hämta det riktiga resultatet (kan redan vara klart om
+     avläsningen tog längre än fas A) och landa exakt där. */
+  const{total,titles,failed}=await real;
+  setTanda(spines.length);
+  if(countEl)countEl.textContent=String(total);
+  if(barEl)barEl.style.width="100%";
   if(hintEl)hintEl.textContent="böcker i din hylla";
-  /* Garanterad minsta visningstid så animationen hinner synas även när
-     avläsningen själv går snabbt. */
-  const minShow=1800-(Date.now()-started);
-  if(minShow>0)await new Promise(res=>setTimeout(res,minShow));
+  /* Fast paus innan vi går vidare - samma som flow.html:s 900ms efter att
+     balken är full, oavsett hur lång väntan varit innan dess. */
+  await new Promise(res=>setTimeout(res,900));
   el.style.display="none";
   nsShowDone(titles,failed);
 }
