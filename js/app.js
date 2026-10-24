@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261024154114";
+const DV="?v=20261024154440";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1898,6 +1898,13 @@ async function nsFinish(){
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
   const btn=document.querySelector("#nsCam .ns-cam-done");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
+  /* Overlayen tar över skärmen direkt - den ligger redan ovanpå kameran
+     (z-index 91 mot 90), så den täcker allt utan att vi behöver vänta på
+     att kameran döljs. Annars hinner Hyllor/Foton-listan blinka till
+     under tiden det tar att ladda upp bilderna och ladda om listan
+     (nsRender/buildShelfOptions/loadNewShelves nedan). */
+  const nsOverlay=document.getElementById("nsAnalys");
+  if(nsOverlay){nsOverlay.style.display="";nsOverlay.innerHTML=`<p class="ns-analys-hint">Laddar upp foto …</p>`}
   try{
     if(S.mode==="new"&&!bcNames[S.bc]){
       bcNames[S.bc]=S.name;
@@ -1914,6 +1921,7 @@ async function nsFinish(){
     await loadNewShelves();
     await nsRunAnalysisBatch(rows.map(r=>r.id));
   }catch(e){
+    if(nsOverlay)nsOverlay.style.display="none";
     alert("Något gick fel: "+(e.message||e));
   }finally{
     const b2=document.querySelector("#nsWizard .ns-nav button:last-child");
