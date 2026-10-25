@@ -727,17 +727,34 @@ body.splashing{overflow:hidden}
 .ns-hylla-card-chev svg{width:16px;height:16px}
 .ns-hylla-cta{padding-bottom:4px}
 .ns-hylla-cta .btn-primary{width:100%}
-.ns-hylla-saveform{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-.ns-hylla-saveform input{height:48px;border-radius:10px;border:1px solid var(--border-default);
-  background:var(--surface);padding:0 14px;font:500 14px var(--font-body);color:var(--fg)}
-.ns-hylla-saveform .btn-primary{width:100%}
-.ns-hylla-saveform .err{color:var(--danger-500);font-size:12px;min-height:14px;text-align:center}
 .ns-hylla-savedbar{display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;
   background:var(--surface);border:1px solid var(--border-subtle)}
 .ns-hylla-savedbar-ic{color:var(--pink-500);display:flex;flex-shrink:0}
 .ns-hylla-savedbar-ic svg{width:18px;height:18px}
 .ns-hylla-savedbar span:last-child{font:600 14px var(--font-body);color:var(--fg)}
 .ns-hylla-foot{margin-top:auto;padding-bottom:24px}
+
+/* ===== Steg 5 - Konto (designens flow.html, Account-komponenten).
+   Eget fullskärmssteg, nås bara via "Spara hyllan" på Hylla-sidan -
+   se nsShowAccount() i app.js. Alltid papper-bakgrund (ingen gradient,
+   till skillnad från .ns-hylla), precis som designen. ===== */
+.ns-account{position:fixed;inset:0;z-index:92;color:var(--fg);background:var(--page);
+  display:flex;flex-direction:column;gap:22px;
+  padding:calc(env(safe-area-inset-top,0) + 28px) 26px env(safe-area-inset-bottom,0)}
+.ns-account-back{align-self:flex-start;border:none;background:none;color:var(--fg);
+  display:flex;padding:4px;margin:0 0 0 -4px}
+.ns-account-back svg{width:22px;height:22px}
+.ns-account-photo{height:92px;border-radius:10px 10px 2px 2px;overflow:hidden;
+  background:var(--surface-2);border:1px solid var(--border-subtle)}
+.ns-account-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.ns-account-spines{display:flex;align-items:flex-end;justify-content:center;gap:2.5px;height:100%}
+.ns-account-title{margin:0;font:400 30px/1.06 var(--font-display)}
+.ns-account-form{display:flex;flex-direction:column;gap:10px}
+.ns-account-form input{height:52px;border-radius:10px;border:1px solid var(--border-default);
+  background:var(--surface);padding:0 16px;font:500 15px var(--font-body);color:var(--fg)}
+.ns-account-form .btn-primary{width:100%}
+.ns-account-form .err{color:var(--danger-500);font-size:12px;min-height:14px;text-align:center}
+.ns-account-terms{margin:0;padding-bottom:26px;font-size:11.5px;color:var(--text-secondary);text-align:center}
 
 /* ===== Platser → Foton (design 9) ===== */
 .pl-photos{display:flex;flex-direction:column;gap:14px;margin-top:10px}
