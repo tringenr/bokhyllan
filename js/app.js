@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261025131537";
+const DV="?v=20261025145703";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -816,52 +816,81 @@ function hideAppChrome(){
   if(panelEl)panelEl.classList.remove("open");
   if(panelScrimEl)panelScrimEl.classList.remove("open");
 }
+/* Ryggrad-grafiken överst på Logga in-skärmen (login.html, LoggaIn):
+   BOOKS.slice(0,6), samma NS_SPINE_COLORS/WIDTHS som Steg 5 Konto och
+   Jobb A-animationen - men här bara en rad mot papper, ingen fotoruta. */
+function loginSpinesHtml(){
+  return Array.from({length:6}).map((x,i)=>
+    `<span class="ns-spine on" style="width:${NS_SPINE_WIDTHS[i]}px;height:${64-(i%3)*9}px;
+      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("");
+}
 function wireLoginForm(){
   const loginForm=document.getElementById("loginForm");
   const errEl=document.getElementById("loginErr"),submitBtn=document.getElementById("loginBtn");
-  const forgotBtn=document.getElementById("loginForgot"),signupBtn=document.getElementById("loginSignup");
-  const passField=document.getElementById("loginPass");
+  const forgotBtn=document.getElementById("loginForgot"),startBtn=document.getElementById("loginStart");
+  const spinesEl=document.querySelector("#view-login .login-spines");
+  if(spinesEl&&!spinesEl.childElementCount)spinesEl.innerHTML=loginSpinesHtml();
   if(!loginForm)return;
-  let loginMode="in";
-  function setLoginMode(mode){
-    loginMode=mode;errEl.textContent="";
-    if(mode==="forgot"){passField.style.display="none";passField.required=false;submitBtn.textContent="Skicka återställningslänk";forgotBtn.textContent="Tillbaka till inloggning";signupBtn.style.display="none"}
-    else if(mode==="signup"){passField.style.display="";passField.required=true;passField.autocomplete="new-password";submitBtn.textContent="Skapa konto";forgotBtn.style.display="none";signupBtn.textContent="Jag har redan ett konto"}
-    else{passField.style.display="";passField.required=true;passField.autocomplete="current-password";submitBtn.textContent="Logga in";forgotBtn.textContent="Glömt lösenordet?";forgotBtn.style.display="";signupBtn.textContent="Skapa ett";signupBtn.style.display=""}
-  }
-  setLoginMode("in");
   /* .onclick/.onsubmit istället för addEventListener - skärmen kan visas
      flera gånger under samma sidvisning (från vägvalet och från
      Inställningar), och en assignment skriver bara över förra
      handlern istället för att stapla flera. */
-  if(forgotBtn)forgotBtn.onclick=()=>setLoginMode(loginMode==="forgot"?"in":"forgot");
-  if(signupBtn)signupBtn.onclick=()=>setLoginMode(loginMode==="signup"?"in":"signup");
+  if(forgotBtn)forgotBtn.onclick=()=>showForgotScreen();
+  if(startBtn)startBtn.onclick=()=>startFromGuide();
   loginForm.onsubmit=async e=>{
     e.preventDefault();
-    const email=document.getElementById("loginEmail").value.trim(),pass=passField.value;
-    errEl.textContent="";submitBtn.disabled=true;
-    if(loginMode==="forgot"){
-      submitBtn.textContent="Skickar…";
-      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-      submitBtn.disabled=false;submitBtn.textContent="Skicka återställningslänk";
-      if(error){errEl.textContent=error.message||"Kunde inte skicka länken.";return}
-      toast("Länk skickad - kolla din e-post.");setLoginMode("in");return;
-    }
-    if(loginMode==="signup"){
-      submitBtn.textContent="Skapar konto…";
-      if(pass.length<6){errEl.textContent="Lösenordet måste vara minst 6 tecken.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
-      const {data:res,error}=await sb.auth.signUp({email,password:pass});
-      if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";submitBtn.disabled=false;submitBtn.textContent="Skapa konto";return}
-      sbUser=res.user;location.reload();return;
-    }
-    submitBtn.textContent="Loggar in…";
+    const email=document.getElementById("loginEmail").value.trim(),pass=document.getElementById("loginPass").value;
+    errEl.textContent="";submitBtn.disabled=true;submitBtn.textContent="Loggar in…";
     const {data:res,error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error){errEl.textContent=error.message||"Fel e-post eller lösenord.";submitBtn.disabled=false;submitBtn.textContent="Logga in";return}
     sbUser=res.user;location.reload();
   };
 }
+/* Glömt lösenord (login.html, Glomt): egen skärm med eget tillbaka-läge,
+   inte ett läge inuti loginformuläret - renderas om varje gång den visas
+   så "skickat"-läget alltid startar om från början. */
+function renderForgotBody(sent){
+  const body=document.getElementById("forgotBody");
+  if(!body)return;
+  body.innerHTML=!sent?`
+    <h2 class="login-title" style="font-size:28px">Återställ lösenord</h2>
+    <p class="fine login-sub">Ange din e-post och vi skickar en länk för att skapa ett nytt lösenord.</p>
+    <form id="forgotForm" class="login-form">
+      <input id="forgotEmail" class="inp inp-lg" type="email" placeholder="E-post" autocomplete="email" required>
+      <span class="err" id="forgotErr"></span>
+      <button class="btn btn-primary" type="submit" id="forgotBtn">Skicka återställningslänk</button>
+    </form>`:`
+    <div class="login-sentcheck">${ic("check")}</div>
+    <h2 class="login-title" style="font-size:26px">Mejl skickat</h2>
+    <p class="fine login-sub">Kolla din inkorg — länken är giltig en kort stund.</p>
+    <button class="btn btn-outline" id="forgotBackToLogin" type="button">Tillbaka till inloggning</button>`;
+  if(!sent){
+    const form=document.getElementById("forgotForm"),errEl=document.getElementById("forgotErr"),btn=document.getElementById("forgotBtn");
+    form.onsubmit=async e=>{
+      e.preventDefault();
+      const email=document.getElementById("forgotEmail").value.trim();
+      errEl.textContent="";btn.disabled=true;btn.textContent="Skickar…";
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+      btn.disabled=false;btn.textContent="Skicka återställningslänk";
+      if(error){errEl.textContent=error.message||"Kunde inte skicka länken.";return}
+      renderForgotBody(true);
+    };
+  } else {
+    document.getElementById("forgotBackToLogin").onclick=()=>showLoginScreen();
+  }
+}
+function showForgotScreen(){
+  const loginEl=document.getElementById("view-login"),forgotEl=document.getElementById("view-forgot");
+  if(loginEl)loginEl.style.display="none";
+  if(forgotEl)forgotEl.style.display="";
+  const backBtn=document.getElementById("forgotBack");
+  if(backBtn){if(!backBtn.childElementCount)backBtn.innerHTML=ic("chevron-left");backBtn.onclick=()=>showLoginScreen();}
+  renderForgotBody(false);
+}
 function showLoginScreen(){
   hideAppChrome();
+  const forgotEl=document.getElementById("view-forgot");
+  if(forgotEl)forgotEl.style.display="none";
   const loginEl=document.getElementById("view-login");
   if(loginEl)loginEl.style.display="";
   wireLoginForm();
