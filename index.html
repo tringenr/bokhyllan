@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261026222415">
+<link rel="stylesheet" href="css/style.css?v=20261026222806">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261026222415";
+  var MY="20261026222806";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -133,18 +133,23 @@
 
 <!-- ================= LOGGA IN ================= -->
 <section id="view-login" class="login-screen" style="display:none">
-  <div class="login-card card">
-    <h1 class="login-title">Min Bokhylla</h1>
-    <p class="fine login-sub">Fota dina hyllor. Sök bland dina böcker var du än är, och se exakt var de står.</p>
-    <form id="loginForm" class="login-form">
-      <input id="loginEmail" class="inp inp-lg" type="email" placeholder="E-post" autocomplete="username" required>
-      <input id="loginPass" class="inp inp-lg" type="password" placeholder="Lösenord" autocomplete="current-password" required>
-      <span class="err" id="loginErr"></span>
-      <button class="btn btn-primary" type="submit" id="loginBtn">Logga in</button>
-    </form>
-    <button class="link-btn login-link" id="loginForgot" type="button">Glömt lösenordet?</button>
-    <p class="fine login-signup">Har du inget konto? <button class="link-btn" id="loginSignup" type="button">Skapa ett</button></p>
-  </div>
+  <div class="login-spines"></div>
+  <h1 class="login-title">Välkommen tillbaka</h1>
+  <p class="fine login-sub">Logga in för att se din hylla.</p>
+  <form id="loginForm" class="login-form">
+    <input id="loginEmail" class="inp inp-lg" type="email" placeholder="E-post" autocomplete="email" required>
+    <input id="loginPass" class="inp inp-lg" type="password" placeholder="Lösenord" autocomplete="current-password" required>
+    <span class="err" id="loginErr"></span>
+    <button class="btn btn-primary" type="submit" id="loginBtn">Logga in</button>
+    <button class="link-btn login-link" id="loginForgot" type="button">Glömt lösenord?</button>
+  </form>
+  <p class="fine login-signup">Inget konto än? <button class="link-btn login-start" id="loginStart" type="button">Kom igång med din hylla</button></p>
+</section>
+
+<!-- ================= GLÖMT LÖSENORD ================= -->
+<section id="view-forgot" class="login-screen" style="display:none">
+  <button class="login-back" id="forgotBack" type="button" aria-label="Tillbaka"></button>
+  <div id="forgotBody"></div>
 </section>
 
 <main class="wrap">
@@ -346,6 +351,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261026222415"></script>
+<script src="js/app.js?v=20261026222806"></script>
 </body>
 </html>
