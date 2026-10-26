@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261026232125";
+const DV="?v=20261026232624";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -106,6 +106,13 @@ let bcNames={...DEFAULT_BC};
    signedPhotoUrl, loadBcPhotos). Tomma tills loadBcPhotos() körts efter
    inloggning. */
 let SHELF_IMGS=[],FLAT=[],PH=[];
+/* HEAT/SELL flyttade hit uppifrån Sälj-avsnittet (de låg annars långt ner i
+   filen) - renderHome()/renderHotSell() körs redan vid första render()-
+   anropet, innan skriptet hunnit så långt, så en const/let där nere gav
+   "Cannot access before initialization" (temporal dead zone). */
+const HEAT={het:["Het","var(--pink-600)"],medel:["Medel","var(--orange-600)"],lag:["Låg efterfrågan","var(--ink-500)"],
+            "kolla-upplaga":["Kolla upplaga","var(--ink-500)"],kolla:["Ej prisverifierad","var(--ink-500)"]};
+let SELL=null;
 function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
 /* FLAT/SHELF_IMGS - källan för "sågs senast" (lbShelf) och bläddringen i
    helskärmsvyn (lbShow) - byggdes tidigare bara ur bc_photos, en tabell som
@@ -456,10 +463,62 @@ function renderHome(){
      bara bilden, rubriken och de två knapparna syns. body.eg-lock
      stänger av bakgrundsscroll medan den täcker skärmen. */
   document.body.classList.toggle("eg-lock",!!firstRun);
-  el.innerHTML=places.map(p=>`<button class="tile" onclick="openPlace('${p.bc}')">
-      ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:""}
-      <span class="tile-bar"><span class="tile-name">${esc(p.name)}</span>${known?`<span class="tile-n">${p.count}</span>`:""}</span></button>`).join("")+`<button class="tile tile-add" onclick="addShelf()"><span class="ta-plus">${ic("plus")}</span><span class="ta-t">Lägg till hylla</span></button>`;
+  /* Hyllplanen som breda foton, en per rad, i stället för det gamla
+     tvåkolumns-rutnätet (Returning i designen). Hela raden är en knapp
+     som öppnar platsen, precis som den gamla .tile-rutan var - "Fota om"
+     är en inre, icke-knapp-yta (ogiltigt att nästla <button> i <button>)
+     som stoppar klicket från att bubbla upp innan den själv öppnar
+     platsen och startar samma ombyte-flöde som redan finns i platsvyn
+     (placePhoto('byt')). */
+  el.innerHTML=places.map(p=>`<button class="shelf-row" onclick="openPlace('${p.bc}')">
+      <span class="sr-head"><span class="sr-name">${esc(p.name)}</span>${known?`<span class="sr-n">${p.count} böcker</span>`:""}</span>
+      <span class="sr-photo">
+        ${p.cover?`<img src="${p.cover}" alt="" loading="lazy" decoding="async">`:`<span class="sr-noimg"></span>`}
+        <span class="sr-retake" onclick="event.stopPropagation();openPlace('${p.bc}');placePhoto('byt')">${ic("camera")}Fota om</span>
+      </span>
+      <span class="sr-edge"></span></button>`).join("")+
+    `<button class="sr-add" onclick="addShelf()">${ic("plus")}Lägg till hylla</button>`;
   const ps=document.getElementById("setPlacesSub");if(ps)ps.textContent=places.length+" hyllor · byt namn, slå ihop, ta bort";
+  /* Hem-rubrikens andra rad. Lånestatus (utlånad/flyter runt) tas bara
+     med när den faktiskt är skild från noll - annars ren "X hyllor · Y
+     böcker", samma information som det gamla statistikkortet visade,
+     fast som en diskret rad i stället för en egen ruta. Statistikkortet
+     (#homeSummary) är dolt men rörs inte - render()/renderSummary()
+     uppdaterar det precis som förut, om det någon gång visas igen. */
+  const sub=document.getElementById("homeSub");
+  if(sub){
+    let txt=places.length+(places.length===1?" hylla":" hyllor");
+    if(known)txt+=" · "+fmtN(data.length)+" böcker";
+    const ut=data.filter(d=>d.status==="utlanad").length,fly=data.filter(d=>d.status==="flyter").length;
+    const extra=[];if(ut)extra.push(ut+" utlånade");if(fly)extra.push(fly+" flyter runt");
+    if(extra.length)txt+=" · "+extra.join(" · ");
+    sub.textContent=txt;
+  }
+  renderHotSell();
+}
+/* Säljkortet på Hem: de "heta" titlarna ur data/sell.json (fältet finns
+   redan i filen - ingen härledning ur pris behövs). Tomt om inget är
+   hett, eller om sell.json inte hunnit laddas än (renderHotSell körs
+   igen när det fetch-anropet landar, se längre ner). */
+function renderHotSell(){
+  const el=document.getElementById("hotSell");if(!el)return;
+  if(!SELL||!SELL.items){el.innerHTML="";return}
+  const hot=SELL.items.filter(it=>it.heat==="het");
+  if(!hot.length){el.innerHTML="";return}
+  el.innerHTML=`<div class="card hot-sell"><div class="hot-sell-list">${hot.map(it=>{
+      const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
+      const spine=d?catColor(d.cat):"var(--pink-500)";
+      const h=HEAT[it.heat]||HEAT.kolla;
+      /* Marknadsplats härleds ur url:s domän i stället för att anta ett
+         fält sell.json kanske inte har - faller tillbaka till en
+         generisk text om url saknas eller inte går att tolka. */
+      let market="andrahandsmarknaden";
+      try{if(it.url){market=new URL(it.url).hostname.replace(/^www\./,"").split(".")[0];market=market.charAt(0).toUpperCase()+market.slice(1)}}catch(e){}
+      return `<div class="hs-row2"><span class="hs-spine" style="background:${spine}"></span>
+        <span class="hs-info"><span class="hs-t">${esc(it.title)}</span><span class="hs-s">steg till ${esc(shortPrice(it.price))} på ${esc(market)}</span></span>
+        <span class="hs-badge" style="color:${h[1]}">${h[0]}</span></div>`;
+    }).join("")}</div>
+    <button class="btn btn-primary hot-sell-btn" onclick="go('salj')">Sälj ${hot.length} ${hot.length===1?"bok":"böcker"}</button></div>`;
 }
 let curPlace=null,curPhoto=null;
 function openPlace(bc,fi){
@@ -1126,9 +1185,6 @@ function renderThemeSeg(){
 document.querySelectorAll("#themeSeg [data-mode]").forEach(b=>b.addEventListener("click",()=>{if(window.__theme)window.__theme.set(b.dataset.mode);renderThemeSeg()}));
 renderThemeSeg();
 /* ---------- Sälj ---------- */
-const HEAT={het:["Het","var(--pink-600)"],medel:["Medel","var(--orange-600)"],lag:["Låg efterfrågan","var(--ink-500)"],
-            "kolla-upplaga":["Kolla upplaga","var(--ink-500)"],kolla:["Ej prisverifierad","var(--ink-500)"]};
-let SELL=null;
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
   const s=SELL,sum=s.summary;
@@ -1154,7 +1210,7 @@ function renderSell(){
 function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
 function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
 window.toggleSell=toggleSell;
-fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{SELL=s;renderSell()})
+fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{SELL=s;renderSell();renderHotSell()})
   .catch(()=>{document.getElementById("sellList").innerHTML="<p class='fine'>Kunde inte ladda säljlistan.</p>"});
 
 /* ---------- Luckor ---------- */

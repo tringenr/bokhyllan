@@ -172,16 +172,13 @@ i[data-ic] svg{width:100%;height:100%}
 .lent-input{margin-top:4px;border:1px solid var(--border-default);background:var(--surface);border-radius:8px;padding:6px 8px;font:500 13px var(--font-body);width:100%}
 .var-link{color:var(--magenta-500);cursor:pointer}
 
-/* platsrutor */
-.place-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tile{position:relative;height:132px;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);background:var(--ink-700);border:none;padding:0;text-align:left}
-.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.tile-bar{position:absolute;left:0;right:0;bottom:0;padding:8px 11px 9px;background:rgba(35,26,30,.86);display:flex;align-items:flex-end;justify-content:space-between;gap:8px;color:#fff}
-.tile-name{min-width:0;font:700 13px/1.25 var(--font-body);text-wrap:pretty}
-.tile-n{flex:none;font:600 12px/1.25 var(--font-mono);color:var(--orange-300)}
+/* Hyllplanen på Hem stylas i "Hem v2"-blocket längre ner (.shelf-row m.fl.) -
+   det gamla tvåkolumns-rutnätet (.place-grid/.tile) är borta, ingen kod
+   skriver längre ut den markupen. */
 
 /* sammanfattning */
 .summary{background:var(--ink-900);color:var(--cream-100);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.summary[hidden]{display:none}
 .sum-top{display:flex;align-items:baseline;gap:10px}
 .sum-n{font:600 44px/1 var(--font-mono);letter-spacing:-0.03em}
 .sum-lbl{font-size:14px;color:var(--ink-300)}
@@ -876,9 +873,6 @@ body.ps-lock{overflow:hidden}
 /* ===== Hem v2 (design 2026-09-27) ===== */
 #view-hem{padding:8px 18px 20px;gap:16px}
 .home-head{gap:12px}
-.home-head .avatar{width:46px;height:46px;background-color:var(--magenta-500);color:#fff}
-.home-title{justify-content:center}
-.home-title span{font:700 24px/1.15 var(--font-display);letter-spacing:-0.02em;color:var(--fg)}
 .gear{flex:none;position:relative;width:44px;height:44px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;color:var(--fg)}
 .gear i{width:22px;height:22px;opacity:.8}
 .gear .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--flame-500);display:none}
@@ -904,15 +898,36 @@ body.ps-lock{overflow:hidden}
 .hs-recent button{border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.4);text-underline-offset:3px}
 .lw-head{display:flex;justify-content:space-between;align-items:baseline}
 .lw-head .link-btn{color:var(--magenta-500)}
-.place-grid{gap:10px}
-.tile{height:104px;border-radius:12px}
-.tile-bar{padding:6px 10px;align-items:center;background:rgba(35,26,30,.72)}
-.tile-name{font:700 12px/1.25 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-n{font:600 11px var(--font-mono);color:var(--orange-500)}
-.tile-add{border:1.5px dashed var(--pink-500);background:rgba(242,75,120,.08);box-shadow:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
-.ta-plus{width:34px;height:34px;border-radius:50%;background:var(--pink-500);color:#fff;display:flex;align-items:center;justify-content:center}
-.ta-plus svg{width:18px;height:18px}
-.ta-t{font:600 13px var(--font-body);color:var(--add-fg)}
+.home-cam{width:44px;height:44px;color:var(--pink-500)}
+.home-title{justify-content:flex-start}
+.home-title span{font:700 26px/1.15 var(--font-display);letter-spacing:-0.02em;color:var(--fg)}
+.home-title small{font-size:12.5px;color:var(--text-secondary)}
+/* Hyllplanen som breda fotorader (Returning i designen), en per rad i
+   stället för det gamla tvåkolumns-rutnätet. */
+.shelf-rows{display:flex;flex-direction:column;gap:18px}
+.shelf-row{border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column}
+.sr-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px}
+.sr-name{font:600 13px var(--font-body);color:var(--fg)}
+.sr-n{font-size:12px;color:var(--text-secondary)}
+.sr-photo{position:relative;height:140px;border-radius:10px 10px 2px 2px;overflow:hidden;background:var(--surface-2);border:1px solid var(--border-subtle);display:block}
+.sr-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sr-noimg{position:absolute;inset:0;background:var(--surface-2)}
+.sr-retake{position:absolute;right:10px;bottom:10px;border:none;border-radius:8px;padding:7px 12px;background:rgba(35,26,30,.68);color:#FDFBF9;font:600 12px var(--font-body);display:flex;align-items:center;gap:6px}
+.sr-retake svg{width:14px;height:14px;flex:none}
+.sr-edge{display:block;height:9px;background:linear-gradient(var(--border-subtle),var(--surface-2));border-radius:2px;box-shadow:0 5px 12px rgba(28,26,23,.14)}
+.sr-add{border:1.5px dashed var(--pink-500);background:rgba(242,75,120,.08);border-radius:10px;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;font:600 14px var(--font-body);color:var(--pink-500)}
+.sr-add svg{width:16px;height:16px;flex:none}
+/* Säljkortet på Hem - de "heta" titlarna, se renderHotSell() */
+.hot-sell{padding:0;overflow:hidden}
+.hot-sell-list{display:flex;flex-direction:column}
+.hs-row2{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--border-subtle)}
+.hs-row2:first-child{border-top:none}
+.hs-spine{width:6px;height:28px;border-radius:2px;flex:none}
+.hs-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.hs-t{font:600 14px var(--font-body);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-s{font-size:12px;color:var(--text-secondary)}
+.hs-badge{flex:none;font:600 11px var(--font-body)}
+.hot-sell-btn{width:100%;margin:14px 16px 16px;width:calc(100% - 32px)}
 .summary{background:var(--stat-bg);border:1px solid var(--stat-bd);border-radius:16px;padding:18px;gap:12px}
 .sum-n{font-size:40px}
 .sum-bar{height:8px}
@@ -960,7 +975,6 @@ body.ps-lock{overflow:hidden}
 .safe-top{background:var(--page)}
 .page-head h1,.pl-head h1,.sub-h,.pl-h h2,.pl-gh b,.sheet h2,.dlg>b,.info-box h3{color:var(--fg)}
 .bk-title,.sell-head .t,.sell-head .p,.pc-t b,.pc-bk b{color:var(--fg)}
-.tile{box-shadow:none}
 :root[data-theme="dark"] .empty{border-color:rgba(255,255,255,.2)}
 :root[data-theme="dark"] .pill-back{background:var(--surface);color:var(--fg)}
 :root[data-theme="dark"] .pc-rot{background:var(--surface);color:var(--fg)}
