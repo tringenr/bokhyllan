@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261026205809";
+const DV="?v=20261026222415";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -484,7 +484,10 @@ function renderPlace(){
   const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
   const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
   const books=sel?data.filter(d=>sel.shelves.includes(d.shelf)):inPlace;
-  const loggedOut=!data.some(d=>d.shelf);
+  /* "Inte inloggad" ska betyda "ingen Supabase-session alls" - inte "inga
+     böcker ännu". En nyss registrerad användare vars granskningskö fortfarande
+     är tom är inloggad men boklös, och ska inte få "Logga in för att se". */
+  const loggedOut=!sbUser;
   el.innerHTML=`<div class="pl-cover">${coverSrc?`<img src="${coverSrc}" alt="${sel?esc(capOf(sel)):""}" onclick="showPhoto(${sel?sel.fi:-1})">`:`<div class="no-img"></div>`}
       <button class="pill-back" onclick="go('hem')">← Hem</button></div>
     <div class="pl-head"><h1>${esc(p.name)}</h1><span>${loggedOut?"":p.count+" böcker · "}${p.photos.length} foton</span></div>
