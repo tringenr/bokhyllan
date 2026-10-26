@@ -130,16 +130,18 @@ löpnummer) någonsin blir gissningsbara eller läcker ut. **Inte åtgärdat.**
   bibliotek i testdatabasen, varsin medlem, varsitt foto — korskoppling
   blockerades av RLS på både läsning och skrivning.
 
-**Kvarstår — gamla foton i repot:** `data/photos.json` + `img/` (36 foton,
-80 filer, 8 MB) är fortfarande committade och publiceras okrypterat via
-GitHub Pages — bekräftat nåbart på
-`https://tringenr.github.io/bokhyllan/data/photos.json`. Det är fortfarande
-den **enda källan** till omslagsfoto i Hem-rutnätet (`placeList()` bygger
-`cover` uteslutande ur `PH`-arrayen som fylls från den filen), så filen går
-inte att ta bort utan att först migrera in fotona i `bc_photos`-tabellen
-(skapad i migrationen `bc_photos_privat_lagring`, 0 rader hittills) och
-ersätta `placeList()`:s källa. Kräver att originalfotona laddas upp till
-Storage — ett separat steg, inte påbörjat.
+**Löst 26/10:** `data/photos.json` + `img/` (36 foton, 80 filer, 8 MB) låg
+fortfarande committade och publicerades okrypterat via GitHub Pages, trots
+att `js/app.js` sedan migrationen till `bc_photos` (17/10) slutat läsa filen
+— resultatet blev att 6 av 7 hyllor i Hem-rutnätet visade tomma grå rutor
+(upptäckt av Thomas 26/10, `bc_photos` hade fortfarande 0 rader). Åtgärdat:
+de 36 fotona importerade (Thomas körde ett engångsskript inloggad i appens
+konsol, se `claude/rapport-hyllfoton-bc-photos-2026-10-26.md`) till den
+privata `gap-photos`-bucketen + `bc_photos`-tabellen, och filen/mappen är
+borttagna ur repot. `placeList()`:s `cover` och "sågs senast" (`FLAT`) byggs
+nu ur `PH`, som fylls av både `loadBcPhotos()` (`bc_photos`) och
+`syncShelfPhotos()` (`new_shelves`) — ingen kod i `js/app.js` behövde ändras,
+bara datan som saknades.
 
 ---
 
@@ -182,9 +184,8 @@ nuvarande `data/sell.json`-innehåll, ta bort filen. Inte påbörjat.
 
 1. **Säljlistans glapp** (ovan) — upptäckt 20/10, samma allvarsgrad som
    Storage-hålet hade. Inte påbörjat.
-2. **De 36 gamla fotona** i `data/photos.json`/`img/` — kräver att de laddas
-   upp till Storage och `bc_photos`-tabellen fylls innan filen kan tas bort.
-   Inte påbörjat.
+2. ~~De 36 gamla fotona i `data/photos.json`/`img/`~~ — **löst 26/10**, se
+   ovan.
 3. **`analysera`-funktionens bristande behörighetskontroll per bibliotek** —
    identifierad 17/10, inte åtgärdad.
 4. **PR #28** (ta bort den övergivna CI-automationen) — öppnad, status för
