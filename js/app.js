@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261025131537";
+const DV="?v=20261025224648";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -319,7 +319,12 @@ async function placeSave(rows){
     name:("name" in r)?r.name:(bcNames[r.bc]||("Hylla "+r.bc)),
     parent_bc:("parent_bc" in r)?r.parent_bc:(bcParent[r.bc]||null),
     hidden:("hidden" in r)?r.hidden:bcHidden.has(r.bc)}));
-  const {error}=await sb.from("bc_names").upsert(full);
+  /* onConflict måste anges explicit - annars matchar Supabase bara mot
+     primärnyckeln id (som aldrig skickas med här), och ett nytt försök på
+     en bc som redan har en rad krockar med den unika regeln på
+     (library_id, bc) istället för att uppdatera raden. library_id behöver
+     inte skickas med - databastriggern fyller i den före konfliktkollen. */
+  const {error}=await sb.from("bc_names").upsert(full,{onConflict:"library_id,bc"});
   if(error){alert("Kunde inte spara: "+error.message);return false}
   return true;
 }
@@ -1909,7 +1914,7 @@ async function nsFinish(){
   try{
     if(S.mode==="new"&&!bcNames[S.bc]){
       bcNames[S.bc]=S.name;
-      await sb.from("bc_names").upsert({bc:S.bc,name:S.name});
+      await sb.from("bc_names").upsert({bc:S.bc,name:S.name},{onConflict:"library_id,bc"});
     }
     const rows=[];
     for(let i=0;i<shots.length;i++){
