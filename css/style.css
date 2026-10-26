@@ -82,14 +82,22 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--magenta-500);out
    mot en enfärgad bakgrund istället, så guiden funkar fint utan bild
    också. env(safe-area-inset-*) ger plats för skåran och hemknappsraden
    på iPhone. */
-.eg-card{position:fixed;inset:0;z-index:80;overflow:hidden;text-align:center;border:none;border-radius:0;padding:0;margin:0}
+.eg-card{position:fixed;inset:0;z-index:80;overflow:hidden;text-align:left;border:none;border-radius:0;padding:0;margin:0;background:#2E2529}
 .eg-hero{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .eg-scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.78) 0%,rgba(0,0,0,.42) 45%,rgba(0,0,0,.12) 75%)}
 .eg-card.eg-noimg .eg-scrim{display:none}
-.eg-content{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:24px calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
-.eg-title{margin:0;font:700 24px/1.25 var(--font-display);color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.45)}
+.eg-content{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:16px;padding:24px calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.eg-title{margin:0;font:400 44px/1.04 var(--font-display);color:#fff;text-shadow:0 1px 24px rgba(0,0,0,.5)}
 .eg-card.eg-noimg .eg-title{color:var(--fg);text-shadow:none}
-.eg-content .btn-primary{width:100%;max-width:320px}
+/* Knappen sitter alltid på fotot (eller den mörka bottenfärgen) - ljus
+   botten/mörk text oavsett ljust/mörkt tema, precis som fotot självt inte
+   byter med temat. Undantaget är eg-noimg (ingen bild): då är ytan bakom
+   knappen den vanliga sid-bakgrunden, och en nästan-vit knapp i ljust läge
+   skulle bli osynlig - då faller den tillbaka till vanlig accentfärg. */
+.eg-content .btn-primary{align-self:flex-start;width:auto;height:52px;padding:0 30px;background:#FDFBF9;color:var(--ink-900)}
+.eg-content .btn-primary:hover{background:#fff}
+.eg-card.eg-noimg .eg-content .btn-primary{background:var(--pink-500);color:#fff}
+.eg-card.eg-noimg .eg-content .btn-primary:hover{background:var(--pink-600)}
 .eg-about{color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .eg-card.eg-noimg .eg-about{color:var(--text-secondary);text-shadow:none}
 body.eg-lock{overflow:hidden}
