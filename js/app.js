@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261025145703";
+const DV="?v=20261026222806";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -107,16 +107,26 @@ let bcNames={...DEFAULT_BC};
    inloggning. */
 let SHELF_IMGS=[],FLAT=[],PH=[];
 function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
-function buildPhotoIndexes(rows){
+/* FLAT/SHELF_IMGS - källan för "sågs senast" (lbShelf) och bläddringen i
+   helskärmsvyn (lbShow) - byggdes tidigare bara ur bc_photos, en tabell som
+   aldrig fylldes (0 rader i produktion). De riktiga hyllfotona ligger i
+   new_shelves och hamnar i PH via syncShelfPhotos. Den här funktionen
+   bygger därför om FLAT/SHELF_IMGS ur PH istället, varje gång PH ändras -
+   så att "sågs senast" känner till samma foton som resten av appen redan
+   visar. Grupperar bara per bc (inte per "label" som bc_photos-tiden
+   gjorde - det fältet finns inte på de riktiga fotona). */
+function rebuildFlatFromPH(){
   SHELF_IMGS=[];
-  (rows||[]).forEach(p=>{
-    let g=SHELF_IMGS.find(x=>x.bc===p.bc&&x.label===p.label);
-    if(!g){g={bc:p.bc,label:p.label,imgs:[]};SHELF_IMGS.push(g)}
-    g.imgs.push({cap:p.cap,shelves:p.shelves||[],thumb:p.thumb_data,path:p.storage_path});
+  PH.forEach(p=>{
+    let g=SHELF_IMGS.find(x=>x.bc===p.bc);
+    if(!g){g={bc:p.bc,imgs:[]};SHELF_IMGS.push(g)}
+    g.imgs.push({cap:p.cap,shelves:p.shelves||[],thumb:p.thumb,path:p.path||null});
   });
-  FLAT=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>FLAT.push({path:im.path,thumb:im.thumb,cap:(g.bc?(bcNames[g.bc]||"")+" · ":"")+im.cap})));
-  /* Alla foton i en platt lista, i samma ordning som helskärmsvyn (FLAT). */
-  PH=[];SHELF_IMGS.forEach(g=>g.imgs.forEach(im=>PH.push({bc:g.bc,cap:im.cap,thumb:im.thumb,path:im.path,shelves:im.shelves||[],fi:PH.length})));
+  FLAT=PH.map(p=>({path:p.path||null,thumb:p.thumb,cap:(p.bc?(bcNames[p.bc]||"")+" · ":"")+p.cap,shelves:p.shelves||[]}));
+}
+function buildPhotoIndexes(rows){
+  PH=(rows||[]).map((p,i)=>({bc:p.bc,cap:p.cap,thumb:p.thumb_data,path:p.storage_path,shelves:p.shelves||[],fi:i}));
+  rebuildFlatFromPH();
 }
 async function loadBcPhotos(){
   const {data:rows,error}=await sb.from("bc_photos").select("*");
@@ -164,7 +174,6 @@ const SEC={V:"vänster",H:"höger",S:"hyllplan",K:"hyllplan"};
 function locLabel(shelf){
   if(!shelf)return "hylla dold – logga in för att se";
   const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
-  if(bc==="4"&&rest==="K3")return `${bcNames[bc]} · löst i köket`;
   const place=bcParent[bc]?`${bcNames[topBc(bc)]} · ${shortName(bc)}`:bcNames[bc];
   if(sec==="L")return `${place} · ${spotNames[shelf]||"löst"}`;
   return (sec==="S"||sec==="K")?`${place} · hyllplan ${plan}`:`${place} · ${SEC[sec]} · plan ${plan}`}
@@ -319,7 +328,12 @@ async function placeSave(rows){
     name:("name" in r)?r.name:(bcNames[r.bc]||("Hylla "+r.bc)),
     parent_bc:("parent_bc" in r)?r.parent_bc:(bcParent[r.bc]||null),
     hidden:("hidden" in r)?r.hidden:bcHidden.has(r.bc)}));
-  const {error}=await sb.from("bc_names").upsert(full);
+  /* onConflict måste anges explicit - annars matchar Supabase bara mot
+     primärnyckeln id (som aldrig skickas med här), och ett nytt försök på
+     en bc som redan har en rad krockar med den unika regeln på
+     (library_id, bc) istället för att uppdatera raden. library_id behöver
+     inte skickas med - databastriggern fyller i den före konfliktkollen. */
+  const {error}=await sb.from("bc_names").upsert(full,{onConflict:"library_id,bc"});
   if(error){alert("Kunde inte spara: "+error.message);return false}
   return true;
 }
@@ -470,7 +484,10 @@ function renderPlace(){
   const cm={};inPlace.forEach(d=>cm[d.cat]=(cm[d.cat]||0)+1);
   const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5);const cMax=cats.length?cats[0][1]:1;
   const books=sel?data.filter(d=>sel.shelves.includes(d.shelf)):inPlace;
-  const loggedOut=!data.some(d=>d.shelf);
+  /* "Inte inloggad" ska betyda "ingen Supabase-session alls" - inte "inga
+     böcker ännu". En nyss registrerad användare vars granskningskö fortfarande
+     är tom är inloggad men boklös, och ska inte få "Logga in för att se". */
+  const loggedOut=!sbUser;
   el.innerHTML=`<div class="pl-cover">${coverSrc?`<img src="${coverSrc}" alt="${sel?esc(capOf(sel)):""}" onclick="showPhoto(${sel?sel.fi:-1})">`:`<div class="no-img"></div>`}
       <button class="pill-back" onclick="go('hem')">← Hem</button></div>
     <div class="pl-head"><h1>${esc(p.name)}</h1><span>${loggedOut?"":p.count+" böcker · "}${p.photos.length} foton</span></div>
@@ -747,16 +764,12 @@ function renderAuth(){
 
 
 function lbShelf(shelf,bookId){
-  const [bc,rest]=shelf.split(":");const sec=rest[0],plan=rest.slice(1);
-  let idx=0,found=-1;
-  SHELF_IMGS.forEach(g=>{g.imgs.forEach((im,j)=>{
-    if(found<0&&g.bc===bc){
-      if((bc==="1"||bc==="2")&&g.label==="plan "+plan&&j===(sec==="V"?0:1))found=idx;
-      else if(bc==="3"&&g.label==="hylla "+plan)found=idx;
-      else if(bc==="4"&&j===0&&g.label===(plan==="3"?"löst i köket":"kokbokshyllan"))found=idx;
-      else if(bc!=="1"&&bc!=="2"&&bc!=="3"&&bc!=="4")found=(found<0?idx:found);
-    }
-    idx++})});
+  const [bc,rest]=shelf.split(":");const plan=rest.slice(1);
+  /* Hitta fotot som faktiskt är taggat med den här hyllkoden - generellt
+     för alla hyllor, istället för den tidigare hårdkodade matchningen mot
+     Thomas fyra bc:er (1-4) och deras rumsnamn. */
+  if(!FLAT.length){alert("Inget foto av den här hyllan ännu.");return}
+  let found=FLAT.findIndex(f=>f.shelves&&f.shelves.includes(shelf));
   if(found<0)found=0;
   lbOpen(found);
   lbCap.textContent=locLabel(shelf);
@@ -1938,7 +1951,7 @@ async function nsFinish(){
   try{
     if(S.mode==="new"&&!bcNames[S.bc]){
       bcNames[S.bc]=S.name;
-      await sb.from("bc_names").upsert({bc:S.bc,name:S.name});
+      await sb.from("bc_names").upsert({bc:S.bc,name:S.name},{onConflict:"library_id,bc"});
     }
     const rows=[];
     for(let i=0;i<shots.length;i++){
@@ -2456,6 +2469,7 @@ function syncShelfPhotos(rows){
       nsId:r.id,done:r.state==="done",doneAt:r.done_at?new Date(r.done_at).getTime():0,createdAt:new Date(r.created_at||0).getTime()});
   });
   markReplaced();
+  rebuildFlatFromPH();
   renderHome();if(curView==="place")renderPlace();
 }
 /* Vilken hyllkod hor det har fotot till? Forst den gissade koden ur

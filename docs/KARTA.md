@@ -153,7 +153,7 @@ Storage — ett separat steg, inte påbörjat.
 | Luckor | `gaps`/`gap_status`, samma analysflöde | Fungerar, delar bildproblemet |
 | Kategorier | `cat_renames`, `book_cat` | Fungerar |
 | Sälj | Egen flik (`view-salj`) | Manuell, oförändrad sedan augusti |
-| Dela | `view-delade`, `shelf_shares` | Fungerar |
+| Dela | `view-delade` | **Inte byggd.** Fliken visar "Kommer snart" och kopierar bara appens adress; `shelf_shares` finns i databasen men anropas aldrig från `js/app.js`. Kopplat till fas 4 (delning av bibliotek, hösten 2027) |
 | Inställningar | `view-set` | Fungerar |
 
 De nio gamla glappen från augusti (två sanningar i katalogen, dubbletter,
