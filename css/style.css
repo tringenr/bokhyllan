@@ -241,6 +241,21 @@ i[data-ic] svg{width:100%;height:100%}
 .sell-row.open .sell-more{display:block}
 .sell-more p{margin:0 0 6px}
 .sell-more a{font-weight:600}
+.sell-more .u{display:inline-block;padding:1px 8px;border-radius:999px;font:600 11px var(--font-body);margin:0 0 6px}
+.sell-more .u.lag{background:var(--success-50);color:var(--success-500)}
+.sell-more .u.medel{background:var(--surface-2);color:var(--fg-2)}
+.sell-more .u.hog{background:#FDEBEA;color:var(--danger-500)}
+.sell-sources{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:4px}
+.sell-sources li{display:flex;justify-content:space-between;gap:8px}
+.sell-empty-msg{padding:24px 0;text-align:center;color:var(--fg-2);font-size:13px}
+.sell-info{margin:14px 0 0}
+.sell-info summary{list-style:none;cursor:pointer}
+.sell-info summary::-webkit-details-marker{display:none}
+.sell-info p{margin:0 0 8px}
+.sell-links{display:flex;gap:16px;margin:0;font:600 12px var(--font-body)}
+.sell-links a{color:var(--fg-2)}
+.link-btn.danger{color:var(--danger-500)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ---------- Sidopanel ---------- */
 .scrim{position:fixed;inset:0;background:rgba(35,26,30,.45);z-index:80;opacity:0;pointer-events:none;transition:opacity var(--duration-base) var(--ease-out)}
