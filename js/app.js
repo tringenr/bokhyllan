@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027225623";
+const DV="?v=20261027230945";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2102,11 +2102,345 @@ async function uploadShelfPhoto({bc,name,code,label,file,dataUrl,i}){
   if(error)throw error;
   return (rows||[])[0]||null;
 }
+/* ---------- Dela ett foto i flera hyllplan (designhandoff 2026-10-27) ----------
+   Körs efter "Skicka" i kamerasteget, för de foton som märkts med bocken
+   "Flera plan" (shot.multi). Beslut 27/10: fotandet ska aldrig avbrytas
+   mitt i, därför ligger justeringen här och inte direkt efter avtryck.
+
+   Ett foto i taget: läs av -> justera gränserna -> klipp -> resultat.
+   Resultatet ersätter det flaggade fotot med ett band per hyllplan, och
+   varje band går sedan genom den vanliga kedjan som ett eget hyllplansfoto
+   (projektplanens punkt 0) - egen rad i new_shelves, egen bild, egen
+   "Byt bild"/"Ny bild" i hyllvyn.
+
+   Del B1: gränserna är tills vidare en jämn uppdelning. Del B2 byter ut
+   nsDelaForslag() mot den riktiga AI-funktionen, med tyst fallback till
+   dagens flöde när anropet misslyckas eller bilden är vriden. */
+
+const NS_DELA_MIN=5;      /* minsta höjd per hyllplan, i % av bildhöjden */
+const NS_DELA_MAX=12;     /* tak för antal hyllplan i ett foto */
+
+/* B1-platshållare: jämn uppdelning i tre plan. Returnerar gränser som
+   y-värden i procent av bildhöjden, uppifrån och ner. */
+async function nsDelaForslag(shot){
+  await new Promise(r=>setTimeout(r,1500));
+  return [33.3,66.7];
+}
+
+/* Kör hela sekvensen för alla flaggade foton. Returnerar en ny shots-lista
+   där varje flaggat foto bytts mot sina band. Avbryter användaren hamnar
+   hon tillbaka i kamerasteget med fotona kvar (null returneras). */
+async function nsDelaKor(shots){
+  if(!shots.some(s=>s.multi))return shots;
+  const ut=[];
+  const flaggade=shots.filter(s=>s.multi).length;
+  let nr=0;
+  for(const shot of shots){
+    if(!shot.multi){ut.push(shot);continue}
+    nr++;
+    const band=await nsDelaEttFoto(shot,nr,flaggade);
+    if(!band)return null;
+    band.forEach(b=>ut.push(b));
+  }
+  return ut;
+}
+
+function nsDelaOverlay(){
+  let el=document.getElementById("nsDela");
+  if(!el){el=document.createElement("div");el.id="nsDela";el.className="ns-dela";document.body.appendChild(el)}
+  el.style.display="";
+  return el;
+}
+function nsDelaStang(){
+  const el=document.getElementById("nsDela");
+  if(el){el.innerHTML="";el.style.display="none"}
+}
+
+/* Ett foto genom hela sekvensen. Returnerar en lista band-shots, eller
+   null om användaren valde att ta om fotot. */
+async function nsDelaEttFoto(shot,nr,av){
+  let granser=await nsDelaLaserAv(shot,nr,av);
+  if(granser===null)return null;
+  /* "Ta om" på resultatsidan går tillbaka till justeringen med samma
+     gränser - inte om till avläsningen, som vore att tappa bort det man
+     just dragit. "Ta om fotot" i justeringen avbryter hela sändningen
+     och lämnar fotona kvar i kamerasteget. */
+  for(;;){
+    const slutliga=await nsDelaJustera(shot,granser,nr,av);
+    if(slutliga===null)return null;
+    granser=slutliga;
+    const band=await nsDelaKlipp(shot,slutliga);
+    if(await nsDelaResultat(band))return band;
+  }
+}
+
+/* Steg 1: "Läser av hyllan" - fotot i ram på svart, röd laserstråle som
+   sveper, progressmätare. "Ta om fotot" går tillbaka till kameran. */
+function nsDelaLaserAv(shot,nr,av){
+  const el=nsDelaOverlay();
+  el.innerHTML=`
+    <div class="ns-dela-topp">${av>1?`Foto ${nr} av ${av}`:""}</div>
+    <div class="ns-dela-mitt">
+      <div class="ns-dela-ram" id="nsDelaRam">
+        <img src="${shot.dataUrl}" alt="">
+        <span class="ns-laser"></span>
+      </div>
+    </div>
+    <div class="ns-dela-foot">
+      <p class="ns-dela-txt">Letar efter hyllplanen …</p>
+      <div class="ns-analys-bar"><span id="nsDelaBar" style="width:0%"></span></div>
+      <button class="btn btn-ghost ns-dela-om" onclick="nsDelaAvbryt()">Ta om fotot</button>
+    </div>`;
+  nsDelaRamProportion(el,shot);
+  const bar=document.getElementById("nsDelaBar");
+  const t0=Date.now();
+  const iv=setInterval(()=>{
+    const g=Date.now()-t0;
+    if(bar)bar.style.width=Math.min(97,g/1500*100)+"%";
+  },60);
+  return new Promise(res=>{
+    nsDelaAvbrytFn=()=>{clearInterval(iv);res(null)};
+    nsDelaForslag(shot).then(g=>{
+      clearInterval(iv);
+      if(bar)bar.style.width="100%";
+      nsDelaAvbrytFn=null;
+      res(g);
+    });
+  });
+}
+let nsDelaAvbrytFn=null;
+function nsDelaAvbryt(){if(nsDelaAvbrytFn)nsDelaAvbrytFn()}
+
+/* Ramen får bildens proportion, så gränser i procent av bildhöjden
+   hamnar på rätt pixelrad utan brevlådekanter att räkna bort. */
+function nsDelaRamProportion(el,shot){
+  const ram=el.querySelector("#nsDelaRam");
+  const img=ram&&ram.querySelector("img");
+  if(!img)return;
+  const satt=()=>{if(img.naturalWidth)ram.style.aspectRatio=img.naturalWidth+" / "+img.naturalHeight};
+  if(img.complete)satt();else img.onload=satt;
+}
+
+/* Steg 2: justera gränserna. Linjerna renderas från en lista y-% - hur
+   många som helst. Hela linjen är gripbar (44px osynlig träffyta), och
+   under dragning visas en lupp förskjuten från fingret. */
+function nsDelaJustera(shot,granserIn,nr,av){
+  const el=nsDelaOverlay();
+  let granser=granserIn.slice().sort((a,b)=>a-b);
+  const ursprung=granser.slice();
+  let valt=-1;   /* gräns med synligt kryss */
+
+  const rita=()=>{
+    const plan=granser.length+1;
+    el.innerHTML=`
+      <div class="ns-dela-topp">${av>1?`Foto ${nr} av ${av}`:""}</div>
+      <div class="ns-dela-mitt">
+        <div class="ns-dela-ram" id="nsDelaRam">
+          <img src="${shot.dataUrl}" alt="">
+          ${nsDelaEtiketter(granser)}
+          ${granser.map((y,i)=>`
+            <div class="ns-grans${valt===i?" valt":""}" data-i="${i}" style="top:${y}%">
+              <span class="ns-grans-linje"></span>
+              <span class="ns-grans-pill">${valt===i?ic("x"):""}</span>
+            </div>`).join("")}
+          <div class="ns-lupp" id="nsLupp"></div>
+        </div>
+      </div>
+      <div class="ns-dela-foot">
+        <div class="ns-dela-verktyg">
+          <button class="btn btn-ghost btn-sm" onclick="nsDelaLaggTill()"
+            ${plan>=NS_DELA_MAX?"disabled":""}>${ic("plus")} Lägg till gräns</button>
+          <button class="btn btn-ghost btn-sm" onclick="nsDelaAterstall()">${ic("rotate-cw")} Återställ</button>
+        </div>
+        <button class="btn btn-primary" onclick="nsDelaKlar()">Klipp och fortsätt · ${plan} hyllplan</button>
+        <button class="btn btn-ghost ns-dela-om" onclick="nsDelaAvbryt()">Ta om fotot</button>
+      </div>`;
+    nsDelaRamProportion(el,shot);
+    koppla();
+  };
+
+  const koppla=()=>{
+    const ram=el.querySelector("#nsDelaRam");
+    const lupp=el.querySelector("#nsLupp");
+    if(!ram)return;
+    ram.querySelectorAll(".ns-grans").forEach(g=>{
+      const i=+g.dataset.i;
+      g.addEventListener("pointerdown",e=>{
+        e.preventDefault();
+        g.setPointerCapture(e.pointerId);
+        /* Dragningen räknas som en förflyttning från där fingret sattes
+           ned, inte som "linjen hoppar dit fingret är" - annars flyttar
+           även ett rent tryck på handtaget linjen. Först när fingret
+           rört sig mer än några pixlar räknas det som ett drag; kortare
+           än så är det ett tryck. */
+        const startY=e.clientY,startVal=granser[i];
+        let drog=false;
+        const flytta=ev=>{
+          const r=ram.getBoundingClientRect();
+          if(Math.abs(ev.clientY-startY)>4)drog=true;
+          if(!drog)return;
+          let y=startVal+((ev.clientY-startY)/r.height)*100;
+          /* Clampas mot grannarna med minsta planhöjd, så linjer aldrig
+             passerar varandra eller skapar hårfina band. */
+          const min=(i===0?0:granser[i-1])+NS_DELA_MIN;
+          const max=(i===granser.length-1?100:granser[i+1])-NS_DELA_MIN;
+          y=Math.max(min,Math.min(max,y));
+          granser[i]=y;
+          g.style.top=y+"%";
+          nsDelaRitaEtiketter(ram,granser);
+          nsDelaLupp(lupp,ram,y,ev.clientY-r.top);
+        };
+        const slapp=()=>{
+          try{g.releasePointerCapture(e.pointerId)}catch(err){}
+          g.removeEventListener("pointermove",flytta);
+          g.removeEventListener("pointerup",slapp);
+          g.removeEventListener("pointercancel",slapp);
+          if(lupp)lupp.classList.remove("syns");
+          if(drog){
+            granser.sort((a,b)=>a-b);
+          }else if(valt===i){
+            /* Andra trycket på ett handtag med kryss tar bort gränsen och
+               slår ihop planen. Borttagningen ligger här och inte som en
+               klicklyssnare på krysset: omritningen vid pointerup hann
+               plocka bort krysset innan klicket nådde fram. */
+            granser.splice(i,1);valt=-1;
+          }else{
+            valt=i;
+          }
+          rita();
+        };
+        g.addEventListener("pointermove",flytta);
+        g.addEventListener("pointerup",slapp);
+        g.addEventListener("pointercancel",slapp);
+      });
+    });
+  };
+
+  rita();
+  return new Promise(res=>{
+    nsDelaAvbrytFn=()=>res(null);
+    nsDelaKlarFn=()=>res(granser.slice().sort((a,b)=>a-b));
+    nsDelaLaggTillFn=()=>{
+      /* Ny gräns mitt i det största hyllplanet. */
+      const kant=[0,...granser,100];
+      let bast=0,storst=-1;
+      for(let i=0;i<kant.length-1;i++){
+        const h=kant[i+1]-kant[i];
+        if(h>storst){storst=h;bast=i}
+      }
+      if(storst<NS_DELA_MIN*2)return;
+      granser.push((kant[bast]+kant[bast+1])/2);
+      granser.sort((a,b)=>a-b);valt=-1;rita();
+    };
+    nsDelaAterstallFn=()=>{granser=ursprung.slice();valt=-1;rita()};
+  });
+}
+let nsDelaKlarFn=null,nsDelaLaggTillFn=null,nsDelaAterstallFn=null;
+function nsDelaKlar(){if(nsDelaKlarFn)nsDelaKlarFn()}
+function nsDelaLaggTill(){if(nsDelaLaggTillFn)nsDelaLaggTillFn()}
+function nsDelaAterstall(){if(nsDelaAterstallFn)nsDelaAterstallFn()}
+
+function nsDelaEtiketter(granser){
+  const kant=[0,...granser,100];
+  let h="";
+  for(let i=0;i<kant.length-1;i++){
+    h+=`<span class="ns-planetikett" style="top:${(kant[i]+kant[i+1])/2}%">Hyllplan ${i+1}</span>`;
+  }
+  return h;
+}
+/* Numrerar om etiketterna live under dragning, utan att rita om linjerna
+   (en omritning mitt i ett drag tappar pekarfångsten). */
+function nsDelaRitaEtiketter(ram,granser){
+  ram.querySelectorAll(".ns-planetikett").forEach(e=>e.remove());
+  ram.insertAdjacentHTML("beforeend",nsDelaEtiketter([...granser].sort((a,b)=>a-b)));
+}
+
+/* Luppen: förstorat utsnitt vid linjen, förskjutet uppåt eller nedåt så
+   fingret inte skymmer just det man försöker träffa. */
+function nsDelaLupp(lupp,ram,yProcent,yPixel){
+  if(!lupp)return;
+  const img=ram.querySelector("img");
+  const b=ram.getBoundingClientRect();
+  const z=2.4,storlek=132;
+  lupp.classList.add("syns");
+  lupp.style.backgroundImage=`url(${img.getAttribute("src")})`;
+  lupp.style.backgroundSize=(b.width*z)+"px "+(b.height*z)+"px";
+  const cx=b.width/2,cy=b.height*yProcent/100;
+  lupp.style.backgroundPosition=`${-(cx*z-storlek/2)}px ${-(cy*z-storlek/2)}px`;
+  lupp.style.left=(cx-storlek/2)+"px";
+  /* Över fingret när linjen ligger i nedre halvan, annars under. */
+  lupp.style.top=(yProcent>45?cy-storlek-28:cy+28)+"px";
+}
+
+/* Steg 3: klipp. Varje band blir en egen bild via canvas, med en riktig
+   Blob - inte en kopia av helbilden - så lagringen får rätt bild per plan. */
+async function nsDelaKlipp(shot,granser){
+  const el=nsDelaOverlay();
+  const kant=[0,...granser,100];
+  el.innerHTML=`
+    <div class="ns-dela-mitt">
+      <div class="ns-dela-ram ns-viker" id="nsDelaRam">
+        <img src="${shot.dataUrl}" alt="">
+        ${granser.map(y=>`<div class="ns-grans" style="top:${y}%"><span class="ns-grans-linje"></span></div>`).join("")}
+      </div>
+    </div>
+    <div class="ns-dela-foot"><p class="ns-dela-txt">Delar upp i ${kant.length-1} hyllplan</p></div>`;
+  nsDelaRamProportion(el,shot);
+  const img=await new Promise((res,rej)=>{
+    const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=shot.dataUrl;
+  });
+  const band=[];
+  for(let i=0;i<kant.length-1;i++){
+    const y0=Math.round(img.height*kant[i]/100);
+    const y1=Math.round(img.height*kant[i+1]/100);
+    const h=Math.max(1,y1-y0);
+    const c=document.createElement("canvas");
+    c.width=img.width;c.height=h;
+    c.getContext("2d").drawImage(img,0,y0,img.width,h,0,0,img.width,h);
+    const dataUrl=c.toDataURL("image/jpeg",0.72);
+    const blob=await new Promise(res=>c.toBlob(res,"image/jpeg",0.72));
+    const fil=blob?new File([blob],`hyllplan-${i+1}.jpg`,{type:"image/jpeg"}):shot.file;
+    band.push({label:`Hyllplan ${i+1}`,dataUrl,file:fil,multi:false});
+  }
+  await new Promise(r=>setTimeout(r,650));
+  return band;
+}
+
+/* Steg 4: resultat. Mörk bakgrund, rutnät i två kolumner, bara rubrik per
+   bild. Varje ruta motsvarar en egen rad i new_shelves (punkt 0). */
+function nsDelaResultat(band){
+  const el=nsDelaOverlay();
+  el.innerHTML=`
+    <div class="ns-dela-mitt">
+      <div class="ns-dela-rutnat">
+        ${band.map(b=>`<figure><img src="${b.dataUrl}" alt=""><figcaption>${esc(b.label)}</figcaption></figure>`).join("")}
+      </div>
+    </div>
+    <div class="ns-dela-foot">
+      <button class="btn btn-primary" onclick="nsDelaKlar()">Fortsätt · ${band.length} hyllplan</button>
+      <button class="btn btn-ghost ns-dela-om" onclick="nsDelaAvbryt()">Ta om</button>
+    </div>`;
+  return new Promise(res=>{
+    nsDelaKlarFn=()=>res(true);
+    nsDelaAvbrytFn=()=>res(false);
+  });
+}
+
 async function nsFinish(){
   if(!sbUser){alert("Logga in för att skicka hyllplanet.");return}
   const S=nsState;
-  const shots=S.shots.filter(s=>s.dataUrl);
+  let shots=S.shots.filter(s=>s.dataUrl);
   if(!shots.length){alert("Lägg till minst ett foto först.");return}
+  /* Foton märkta "Flera plan" delas upp först - ett i taget, med
+     justering av gränserna - och ersätts av ett band per hyllplan.
+     Avbryter användaren står kamerasteget kvar med fotona i behåll. */
+  if(shots.some(s=>s.multi)){
+    const delade=await nsDelaKor(shots);
+    nsDelaStang();
+    if(!delade)return;
+    shots=delade;
+    S.shots=delade;
+  }
   const bc=S.bc;
   const btn=document.querySelector("#nsCam .ns-cam-send");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
@@ -2750,6 +3084,8 @@ const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
+window.nsDelaAvbryt=nsDelaAvbryt;window.nsDelaKlar=nsDelaKlar;
+window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
