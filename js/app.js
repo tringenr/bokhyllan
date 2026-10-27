@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027130649";
+const DV="?v=20261027135134";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -974,6 +974,16 @@ async function afterAuthReady(){
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
   try{await loadBcPhotos();renderHome();if(curView==="place")renderPlace()}catch(e){console.warn("bcPhotos",e)}
+  /* bc_photos har 0 rader i produktion (se #66) - de riktiga hyllfotona
+     ligger i new_shelves och laddas annars bara in i PH efter en mutation
+     i samma session (uppladdning/redigering/klarmarkering). Utan den här
+     raden stod FLAT/SHELF_IMGS tomma vid varje ny sida, och "sågs senast"
+     kraschade ändå trots #66:s fix av själva algoritmen - söker man i en
+     tom FLAT hittar man förstås inget. Körs efter loadBcPhotos() med
+     flit: den sätter PH=[] från bc_photos, och syncShelfPhotos (som
+     loadNewShelves anropar) lägger bara till/ersätter db:true-poster utan
+     att nollställa resten av PH. */
+  try{await loadNewShelves()}catch(e){console.warn("newShelves",e)}
   buildShelfOptions();
   try{await loadStatuses()}catch(e){console.warn("statuses",e)}
   sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
