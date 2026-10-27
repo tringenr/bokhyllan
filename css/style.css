@@ -1023,3 +1023,52 @@ body.ps-lock{overflow:hidden}
 .pl-acts .btn{flex:1}
 .pl-acts .btn-outline{color:var(--fg)}
 .dlg-in{font:500 15px var(--font-body);padding:11px 12px}
+
+/* ---------- Kamerasteget, design 2026-10-27 ("Fota hel hylla") ----------
+   Mörk sökare oavsett appläge; panelytor (info-arket) följer apptemats
+   tokens. Lagt sist i filen med flit - rör inte de äldre .ns-cam-reglerna
+   ovan mer än nödvändigt. */
+.ns-cam-bar{justify-content:space-between}
+.ns-cam-rnd{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.08);color:#FDFBF9;display:flex;align-items:center;justify-content:center;padding:0}
+.ns-cam-rnd svg{width:20px;height:20px}
+.ns-cam-stage{position:relative;flex-direction:column;gap:14px}
+.ns-cam-finder{position:absolute;inset:8% 10%;pointer-events:none}
+.ns-cam-finder i{position:absolute;width:26px;height:26px;border:2px solid rgba(255,255,255,.55)}
+.ns-cam-finder i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-radius:8px 0 0 0}
+.ns-cam-finder i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-radius:0 8px 0 0}
+.ns-cam-finder i:nth-child(3){bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 8px 0}
+.ns-cam-finder i:nth-child(4){bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 8px}
+.ns-cam-aim{font:500 14px var(--font-body);opacity:.8;margin:0;text-align:center}
+.ns-cam-foot{flex-shrink:0;padding:0 16px calc(14px + env(safe-area-inset-bottom))}
+.ns-cam-striphead{font:600 12px var(--font-body);opacity:.7;margin:0 0 6px;letter-spacing:.02em}
+.ns-cam-strip{padding:0 0 2px}
+.ns-cam-strip .ns-num{position:absolute;bottom:3px;left:4px;min-width:16px;height:16px;border-radius:8px;
+  background:rgba(35,26,30,.7);color:#FDFBF9;font:700 10px var(--font-body);
+  display:flex;align-items:center;justify-content:center;padding:0 4px}
+.ns-cam-strip .ns-multi{position:absolute;bottom:3px;right:4px;width:16px;height:16px;border-radius:50%;
+  background:var(--pink-500);color:#fff;display:flex;align-items:center;justify-content:center}
+.ns-cam-strip .ns-multi svg{width:10px;height:10px}
+.ns-cam-multi{display:flex;align-items:center;gap:9px;margin:12px 0 4px;
+  font:500 14px var(--font-body);color:#FDFBF9;opacity:.85}
+.ns-cam-multi.on{opacity:1}
+.ns-cam-multi input{position:absolute;opacity:0;width:0;height:0}
+.ns-cam-box{width:22px;height:22px;border-radius:6px;border:1.5px solid rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:transparent}
+.ns-cam-box svg{width:14px;height:14px}
+.ns-cam-multi.on .ns-cam-box{background:var(--pink-500);border-color:var(--pink-500);color:#fff}
+.ns-cam-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 2px}
+.ns-cam-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.ns-cam-pick{width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.08);color:#FDFBF9;display:flex;align-items:center;justify-content:center}
+.ns-cam-pick svg{width:22px;height:22px}
+.ns-cam-pick.off,.ns-cam-shot.off{opacity:.4}
+.ns-cam-tip{position:absolute;top:52px;white-space:nowrap;font:500 12px var(--font-body);
+  background:rgba(253,251,249,.94);color:#231A1E;padding:5px 9px;border-radius:8px;
+  opacity:0;transition:opacity .15s;pointer-events:none}
+.ns-cam-tip.show{opacity:1}
+.ns-cam-send{width:100%;margin-top:14px}
+.ns-cam-login{display:block;width:100%;margin:10px auto 0;border:none;background:none;
+  color:rgba(253,251,249,.62);font:500 13px var(--font-body);text-decoration:underline}
+.ns-cam-again{display:flex;align-items:center;gap:8px;font:500 14px var(--font-body);color:var(--ink)}
+.ns-cam-again input{width:18px;height:18px;accent-color:var(--pink-500)}
