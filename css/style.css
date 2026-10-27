@@ -719,11 +719,11 @@ body.splashing{overflow:hidden}
 .ns-analys-spines{position:relative;overflow:hidden}
 .ns-spine.vilar{opacity:.28;filter:saturate(.5)}
 .ns-spine{transition:transform .45s cubic-bezier(.22,.9,.3,1.2),opacity .5s ease,filter .5s ease}
-.ns-kagla{position:absolute;top:0;bottom:0;width:120px;pointer-events:none;
-  background:radial-gradient(ellipse at center,rgba(255,255,255,.34) 0%,rgba(255,255,255,.12) 45%,transparent 72%);
-  animation:nsSvep 2.1s ease-in-out infinite}
-@keyframes nsSvep{0%{left:-130px}100%{left:100%}}
-@media (prefers-reduced-motion:reduce){.ns-kagla{animation-duration:4.2s}}
+.ns-kagla{position:absolute;left:0;top:0;width:170px;height:170px;pointer-events:none;
+  margin:-85px 0 0 -85px;will-change:transform;
+  background:radial-gradient(circle at center,rgba(255,255,255,.36) 0%,rgba(255,255,255,.14) 42%,transparent 70%);
+  transition:transform 2.4s cubic-bezier(.45,0,.55,1)}
+
 .ns-analys-hint{font:500 14px var(--font-body);opacity:.7;margin-top:4px}
 .ns-analys-bar{height:3px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
 .ns-analys-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .12s linear}
