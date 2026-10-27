@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027224832";
+const DV="?v=20261027225623";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2162,26 +2162,38 @@ const NS_SPINE_WIDTHS=[24,32,28,38,26,34,30,22,36,28,32,26];
    håller sig lugn oavsett avstånd. Slutar av sig själv när elementet
    plockas bort (svaret har landat). Respekterar prefers-reduced-motion
    genom att röra sig långsammare och kortare. */
-function nsKaglaVandra(kagla){
-  if(!kagla)return;
+function nsKaglaVandra(kagla,ljus){
+  if(!kagla&&!ljus)return;
   const lugnt=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const slump=(min,max)=>min+Math.random()*(max-min);
-  let x=null,y=null;
-  const etapp=()=>{
-    if(!kagla.isConnected)return;
-    const rad=kagla.parentElement;
-    const b=rad?rad.clientWidth:300, h=rad?rad.clientHeight:150;
-    /* Håller sig innanför raden med lite marginal, så käglan aldrig
-       parkerar helt utanför bild. */
-    const nx=slump(b*0.1,b*0.9), ny=slump(h*0.25,h*0.8);
+  const rad=(ljus||kagla).parentElement;
+  let x=null,y=null,fx=0,fy=0,mx=0,my=0,t0=0,tid=1,vila=0;
+  const mal=()=>{
+    const b=rad?rad.clientWidth:320,h=rad?rad.clientHeight:150;
+    const nx=slump(b*0.12,b*0.88),ny=slump(h*0.28,h*0.78);
     const avst=x===null?0:Math.hypot(nx-x,ny-y);
-    const tid=x===null?0.01:Math.min(lugnt?5:3.6,slump(lugnt?2:1.2,lugnt?2.9:2.1)+avst/(lugnt?160:235));
-    x=nx;y=ny;
-    kagla.style.transitionDuration=tid+"s";
-    kagla.style.transform=`translate(${nx}px,${ny}px)`;
-    setTimeout(etapp,tid*1000+slump(lugnt?500:120,lugnt?1300:780));
+    tid=x===null?0.01:Math.min(lugnt?5:3.6,slump(lugnt?2:1.2,lugnt?2.9:2.1)+avst/(lugnt?160:235));
+    fx=x===null?nx:x;fy=y===null?ny:y;mx=nx;my=ny;x=nx;y=ny;
+    t0=performance.now();
+    vila=slump(lugnt?500:120,lugnt?1300:780);
   };
-  etapp();
+  /* Mjuk start och mjukt stopp per etapp, sedan en paus där käglan står
+     stilla innan nästa slumpade mål. Ritar varje bildruta i stället för
+     CSS-övergång, eftersom masken styrs av egna css-variabler. */
+  const ease=p=>p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+  mal();
+  const rit=()=>{
+    if(!rad||!rad.isConnected)return;
+    if(!(kagla&&kagla.isConnected)&&!(ljus&&ljus.isConnected))return;
+    const g=performance.now()-t0;
+    const p=Math.min(1,g/(tid*1000));
+    const px=fx+(mx-fx)*ease(p),py=fy+(my-fy)*ease(p);
+    if(ljus){ljus.style.setProperty("--kx",px+"px");ljus.style.setProperty("--ky",py+"px")}
+    if(kagla)kagla.style.transform=`translate(${px}px,${py}px)`;
+    if(p>=1&&g>tid*1000+vila)mal();
+    requestAnimationFrame(rit);
+  };
+  requestAnimationFrame(rit);
 }
 async function nsRunAnalysisBatch(ids,bc){
   if(!ids||!ids.length){nsShowHylla(bc);return}
@@ -2189,18 +2201,29 @@ async function nsRunAnalysisBatch(ids,bc){
   const el=document.getElementById("nsAnalys");if(!el){nsShowHylla(bc,{failed:ids.length});return}
   el.style.display="";
   const spineN=NS_SPINE_WIDTHS.length;
-  el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
-    `<span class="ns-spine on vilar" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
-      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("")}<span class="ns-kagla"></span></div>
+  /* Två identiska bokrader ovanpå varandra: den undre nedsläckt, den övre
+     i full färg men maskerad till en rund fläck. Ljuskäglan flyttar
+     masken, så böckerna under den träder fram i stället för att
+     överstrålas av ett vitt skimmer (fel i första versionen - ljuset låg
+     ovanpå och gjorde raden ljusare men inte tydligare). */
+  const radHtml=Array.from({length:spineN}).map((x,i)=>
+    `<span class="ns-spine on" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
+      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("");
+  el.innerHTML=`<div class="ns-analys-spines">
+    <div class="ns-rad ns-rad-mork">${radHtml}</div>
+    <div class="ns-rad ns-rad-ljus" id="nsRadLjus">${radHtml}</div>
+    <span class="ns-kagla"></span></div>
     <div><div class="ns-analys-count" id="nsAnalysCount"></div>
     <p class="ns-analys-hint" id="nsAnalysHint">Läser av hyllan …</p></div>
     <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>`;
-  const spines=[...el.querySelectorAll(".ns-spine")];
+  const spines=[...el.querySelectorAll(".ns-rad-mork .ns-spine")];
   const countEl=document.getElementById("nsAnalysCount");
   const hintEl=document.getElementById("nsAnalysHint");
   const barEl=document.getElementById("nsAnalysBar");
   const kaglaEl=el.querySelector(".ns-kagla");
-  nsKaglaVandra(kaglaEl);
+  const ljusEl=document.getElementById("nsRadLjus");
+  spines.forEach(sp=>sp.classList.add("vilar"));
+  nsKaglaVandra(kaglaEl,ljusEl);
   /* Den riktiga avläsningen körs i bakgrunden medan ljuskäglan sveper.
      Ingen siffra visas under tiden: appen frågar AI:n en gång per foto och
      vet ingenting om antalet förrän svaret kommer. Den gamla versionen
@@ -2231,6 +2254,7 @@ async function nsRunAnalysisBatch(ids,bc){
      det verkliga antalet och lika många ryggar tänds - blev det fler
      böcker än det finns ryggar tänds hela raden. */
   if(kaglaEl)kaglaEl.remove();
+  if(ljusEl)ljusEl.remove();
   if(barEl)barEl.style.width="100%";
   const tandas=Math.min(spines.length,total);
   for(let i=0;i<tandas;i++)spines[i].classList.remove("vilar");
