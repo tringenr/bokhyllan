@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027174727";
+const DV="?v=20261027175456";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1258,6 +1258,8 @@ window.toggleSell=toggleSell;
 document.querySelectorAll("#sellFilters .chip").forEach(c=>c.addEventListener("click",()=>{
   document.querySelectorAll("#sellFilters .chip").forEach(x=>x.classList.remove("active"));
   c.classList.add("active");sellFilter=c.dataset.sf;renderSell()}));
+document.getElementById("sellInfoBtn")?.addEventListener("click",()=>{
+  const p=document.getElementById("sellInfoPanel");if(p)p.open=!p.open});
 document.getElementById("sellClearBtn")?.addEventListener("click",async()=>{
   if(!confirm("Rensa hela värderingslistan? Det går inte att ångra - en ny värderingsrunda fyller listan igen."))return;
   const ids=(SELL&&SELL.items||[]).map(it=>it.id);
