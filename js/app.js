@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027164509";
+const DV="?v=20261027174727";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -113,6 +113,7 @@ let SHELF_IMGS=[],FLAT=[],PH=[];
 const HEAT={het:["Het","var(--pink-600)"],medel:["Medel","var(--orange-600)"],lag:["Låg efterfrågan","var(--ink-500)"],
             "kolla-upplaga":["Kolla upplaga","var(--ink-500)"],kolla:["Ej prisverifierad","var(--ink-500)"]};
 let SELL=null;
+let SELL_PRICES={};
 /* Samma TDZ-skäl som HEAT/SELL ovan: renderHome() körs redan vid den
    första render()-anropet och läser homeView. */
 const HOMEVIEW_KEY="minbokhylla-homeview";
@@ -1186,22 +1187,45 @@ document.querySelectorAll("#themeSeg [data-mode]").forEach(b=>b.addEventListener
 renderThemeSeg();
 document.querySelectorAll("#homeViewSeg [data-view]").forEach(b=>b.addEventListener("click",()=>setHomeView(b.dataset.view)));
 renderHomeViewSeg();
-/* ---------- Sälj ----------
+/* ---------- Värdera (tidigare "Sälj") ----------
    Låg tidigare i data/sell.json - en delad, publik fil utan
    inloggningskoppling (samma mönster som fotobehörighetshålet, PR 4.5
    hade). Ligger nu i sell_items/sell_meta, skyddade med samma RLS-mönster
-   som manual_books/bc_photos (is_library_member). */
+   som manual_books/bc_photos (is_library_member).
+
+   Fas 1 av Värdera-utbyggnaden (PR efter #71): nya kolumner på sell_items
+   (estimated_value/uncertainty/heat_score/heat_reason/condition_note) och
+   en ny tabell sell_price_sources (en rad per bok+sajt) för flera
+   sajt-priser i detaljpanelen. De gamla kolumnerna (price/heat/why/low)
+   finns kvar som fallback för de 31 raderna från innan de körts om genom
+   den nya värderingsrundan - renderSell() visar nya fält när de finns,
+   annars de gamla, så listan ser likadan ut tills en ny runda körts.
+   Själva sökningen (mot Studentapan/Bokbörsen/Tradera) är fas B: ingen
+   knapp i appen ännu, körs manuellt i en Claude-session på Thomas begäran
+   (se claude/bokhyllan-projektplan.md). */
+const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Tradera"};
+let sellFilter="alla";
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
   const s=SELL,sum=s.summary;
-  if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";return}
-  const maxLow=Math.max(1,...s.items.map(it=>it.low||0));
+  const emptyMsg=document.getElementById("sellEmptyMsg");
+  if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";if(emptyMsg)emptyMsg.style.display="block";return}
+  if(emptyMsg)emptyMsg.style.display="none";
+  /* Nyare fält i första hand, gamla som fallback (se kommentar ovan). */
+  const val=it=>it.estimated_value!=null?it.estimated_value:(it.low||0);
+  const isSure=it=>it.uncertainty?it.uncertainty==="lag":!!it.checked;
+  let items=s.items.slice().sort((a,b)=>val(b)-val(a));
+  if(sellFilter==="sakra")items=items.filter(isSure);
+  if(sellFilter==="topp25")items=items.slice(0,25);
+  const maxVal=Math.max(1,...items.map(val));
+  if(!items.length){el.innerHTML=`<div class="sell-empty-msg">Inga böcker matchar filtret.</div>`;document.getElementById("sellNote").textContent="";return}
   el.innerHTML=(sum?`<div class="card sell-sum"><span class="fine">Försiktig uppskattning, lägsta pris per titel</span>
       <span class="kr">ca ${fmtN(sum.summa)} kr</span>
       <span class="fine"><span class="mono">${sum.antal_i_summan}</span> prisverifierade titlar · <span class="mono">${sum.heta}</span> heta just nu${sum.kvar_att_kolla?` · <span class="mono">${sum.kvar_att_kolla}</span> kvar att kolla`:""}</span>
       </div>`:"")+
-    `<div>`+s.items.map((it,i)=>{
-      const h=HEAT[it.heat]||HEAT.kolla;
+    `<div>`+items.map((it,i)=>{
+      const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
+      const priceLabel=it.estimated_value!=null?`${fmtN(it.estimated_value)} kr`:shortPrice(it.price);
       /* book_id (satt en gång vid migreringen/när posten skapas) är den
          pålitliga kopplingen - före flytten matchades titelsträngen om
          vid varje visning, och "Står i:"-raden tappades tyst bort så fort
@@ -1210,12 +1234,20 @@ function renderSell(){
       const d=(it.book_id&&data.find(x=>x.id===it.book_id))||
         (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))));
       const loc=d&&d.shelf?locLabel(d.shelf):"";
+      const sources=(SELL_PRICES[it.id]||[]);
+      const u=it.uncertainty?`<span class="u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"";
       return `<div class="sell-row" id="sr-${i}"><button class="sell-head" onclick="toggleSell(${i})">
-          <span class="t">${esc(it.title)}</span><span class="p">${esc(shortPrice(it.price))}</span>
-          <span class="track"><span style="width:${Math.round((it.low||0)/maxLow*100)}%"></span></span>
+          <span class="t">${esc(it.title)}</span><span class="p">${esc(priceLabel)}</span>
+          <span class="track"><span style="width:${Math.round(val(it)/maxVal*100)}%"></span></span>
           <span class="h" style="color:${h[1]}">${h[0]}</span></button>
-        <div class="sell-more">${shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}${it.why?`<p>${esc(it.why)}</p>`:""}${loc?`<p>Står i: ${esc(loc)}</p>`:""}
-          ${it.url?`<a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
+        <div class="sell-more">${u}
+          ${it.condition_note?`<p><b>Villkor:</b> ${esc(it.condition_note)}</p>`:""}
+          ${!it.estimated_value&&shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}
+          ${it.heat_reason?`<p>${esc(it.heat_reason)}</p>`:(it.why?`<p>${esc(it.why)}</p>`:"")}
+          ${loc?`<p>Står i: ${esc(loc)}</p>`:""}
+          ${sources.length?`<ul class="sell-sources">${sources.map(src=>`<li><span>${esc(SELL_SITES[src.site]||src.site)}</span><span>${src.price!=null?fmtN(src.price)+" kr":"?"}${src.url?` · <a href="${esc(src.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
+          ${it.wanted_ad_url?`<p><a href="${esc(it.wanted_ad_url)}" target="_blank" rel="noopener">Någon söker efter den här boken</a></p>`:""}
+          ${!sources.length&&it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
   document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+(s.updated?"Uppdaterad "+s.updated+".":"");
 }
 /* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
@@ -1223,11 +1255,29 @@ function renderSell(){
 function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
 function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
 window.toggleSell=toggleSell;
+document.querySelectorAll("#sellFilters .chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll("#sellFilters .chip").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active");sellFilter=c.dataset.sf;renderSell()}));
+document.getElementById("sellClearBtn")?.addEventListener("click",async()=>{
+  if(!confirm("Rensa hela värderingslistan? Det går inte att ångra - en ny värderingsrunda fyller listan igen."))return;
+  const ids=(SELL&&SELL.items||[]).map(it=>it.id);
+  if(!ids.length)return;
+  const {error}=await sb.from("sell_items").delete().in("id",ids);
+  if(error){alert("Kunde inte rensa listan: "+error.message);return}
+  SELL={items:[],summary:null,note:"",updated:""};SELL_PRICES={};renderSell();
+});
 async function loadSell(){
   const {data:items,error:e1}=await sb.from("sell_items").select("*").order("id");
   if(e1){console.warn("sell_items",e1);return}
   const {data:metaRows,error:e2}=await sb.from("sell_meta").select("*").limit(1);
   if(e2)console.warn("sell_meta",e2);
+  const ids=(items||[]).map(it=>it.id);
+  SELL_PRICES={};
+  if(ids.length){
+    const {data:sources,error:e3}=await sb.from("sell_price_sources").select("*").in("sell_item_id",ids);
+    if(e3)console.warn("sell_price_sources",e3);
+    (sources||[]).forEach(src=>{(SELL_PRICES[src.sell_item_id]=SELL_PRICES[src.sell_item_id]||[]).push(src)});
+  }
   const meta=(metaRows&&metaRows[0])||{};
   SELL={items:items||[],summary:meta.summary||null,note:meta.note||"",updated:meta.updated_date||""};
   renderSell();

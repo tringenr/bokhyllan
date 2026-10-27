@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261027164509">
+<link rel="stylesheet" href="css/style.css?v=20261027174727">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261027164509";
+  var MY="20261027174727";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -251,8 +251,21 @@
 <!-- ================= SÄLJ ================= -->
 <section id="view-salj" class="view" style="display:none">
   <div class="page-head"><h1>Värdera</h1></div>
+  <p class="fine sell-ai-note">Priser och hetta är AI:ns uppskattning utifrån det den hittar på nätet just nu - inte en garanti. Kontrollera alltid själv innan du sätter pris.</p>
+  <div class="chips" id="sellFilters">
+    <button class="chip active" data-sf="alla">Alla</button>
+    <button class="chip" data-sf="sakra">Säkra pris</button>
+    <button class="chip" data-sf="topp25">Topp 25</button>
+  </div>
   <div id="sellList"></div>
   <p id="sellNote" class="fine"></p>
+  <div class="sell-empty-msg" id="sellEmptyMsg" style="display:none">Listan är tom. Be Claude köra en ny värderingsrunda, så fylls den igen.</div>
+  <div class="sell-links">
+    <a href="https://www.studentapan.se" target="_blank" rel="noopener">Studentapan</a>
+    <a href="https://www.bokborsen.se" target="_blank" rel="noopener">Bokbörsen</a>
+    <a href="https://www.tradera.com" target="_blank" rel="noopener">Tradera</a>
+  </div>
+  <button class="link-btn danger" id="sellClearBtn">Rensa listan</button>
 </section>
 
 <!-- ================= LUCKOR ================= -->
@@ -367,6 +380,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261027164509"></script>
+<script src="js/app.js?v=20261027174727"></script>
 </body>
 </html>
