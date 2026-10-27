@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027200811";
+const DV="?v=20261027205421";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1990,25 +1990,18 @@ function nsRenderCam(){
       <p class="ns-cam-aim">Rikta kameran mot hyllan</p>
     </div>
     <div class="ns-cam-foot">
-      ${S.shots.length?`<p class="ns-cam-striphead">Tagna foton</p>
-      <div class="ns-cam-strip" id="nsShots"></div>`:""}
-      <label class="ns-cam-multi${S.multi?" on":""}">
-        <input type="checkbox" ${S.multi?"checked":""} onchange="nsToggleMulti(this.checked)">
-        <span class="ns-cam-box">${ic("check")}</span>
-        <span>Flera hyllplan på bilden</span>
-      </label>
+      ${S.shots.length?`<div class="ns-cam-strip" id="nsShots"></div>`:""}
+      ${full?`<p class="ns-cam-hint">Fler foton får inte plats — skicka de ${NS_MAX_SHOTS} du tagit först.</p>`:""}
       <div class="ns-cam-row">
-        <div class="ns-cam-side">
-          <label class="ns-cam-pick${full?" off":""}" aria-label="Hämta bild från biblioteket"
-                 onclick="nsPickTip()">${ic("image")}
-            <input type="file" accept="image/*" ${full?"disabled":""} style="display:none" onchange="nsCamShot(this)"></label>
-          <span class="ns-cam-tip" id="nsPickTip">Hämta en bild du redan har</span>
-        </div>
+        <label class="ns-cam-mini${full?" off":""}" aria-label="Hämta bild från biblioteket">
+          ${ic("image")}<em>Bibliotek</em>
+          <input type="file" accept="image/*" ${full?"disabled":""} style="display:none" onchange="nsCamShot(this)"></label>
         <label class="ns-cam-shot${full?" off":""}" aria-label="Ta foto">${ic("camera")}
           <input type="file" accept="image/*" capture="environment" ${full?"disabled":""} style="display:none" onchange="nsCamShot(this)"></label>
-        <div class="ns-cam-side"></div>
+        <button class="ns-cam-mini${S.multi?" on":""}" aria-pressed="${S.multi?"true":"false"}"
+                onclick="nsToggleMulti(${S.multi?"false":"true"})" aria-label="Flera hyllplan på bilden">
+          ${ic("align-justify")}<em>Flera plan</em></button>
       </div>
-      ${full?`<p class="ns-cam-hint">Fler foton får inte plats — skicka de ${NS_MAX_SHOTS} du tagit först.</p>`:""}
       ${n?`<button class="btn btn-primary ns-cam-send" onclick="nsFinish()">Skicka · ${n} foto${n>1?"n":""}</button>`:""}
       ${!sbUser?`<button class="ns-cam-login" onclick="showLoginScreen()">Har du redan ett konto? Logga in</button>`:""}
     </div>
@@ -2016,8 +2009,11 @@ function nsRenderCam(){
     <div class="ns-cam-sheet">
       <span class="grip"></span>
       <h3>Så går det till</h3>
-      <p class="fine">Fota ett hyllplan i taget — allt räknas, så länge det går att fota i ett svep: ett vanligt hyllplan, en trave böcker, eller en enda bok som ligger löst.</p>
-      <p class="fine">Får du med flera hyllplan på samma bild, bocka för <strong>Flera hyllplan på bilden</strong> innan du fotar. Då får du dra gränserna mellan planen när du skickar.</p>
+      <ol class="ns-cam-steps">
+        <li><b>Fota ett hyllplan i taget.</b> En trave eller en lös bok räknas också.</li>
+        <li><b>Flera plan på samma bild?</b> Slå på <i>Flera plan</i> innan du fotar.</li>
+        <li><b>Skicka när du är klar.</b> Appen läser av böckerna och du får granska.</li>
+      </ol>
       <label class="ns-cam-again"><input type="checkbox" id="nsTipsNever"> Visa inte igen</label>
       <button class="btn btn-primary" onclick="nsCloseTips()">Jag fattar</button>
     </div>`:""}`;
@@ -2030,14 +2026,6 @@ function nsCloseTips(){
   nsState.tips=false;nsRenderCam();
 }
 function nsToggleMulti(v){nsState.multi=!!v;nsRenderCam()}
-/* Tryck-tooltip istället för hover: gallerikappen förklarar sig själv på
-   mobil, där det inte finns någon hover att vila på. */
-let nsPickTipT=null;
-function nsPickTip(){
-  const el=document.getElementById("nsPickTip");if(!el)return;
-  el.classList.add("show");clearTimeout(nsPickTipT);
-  nsPickTipT=setTimeout(()=>el.classList.remove("show"),2200);
-}
 async function nsCamShot(input){
   const file=input.files&&input.files[0];if(!file)return;
   input.value="";
@@ -2718,7 +2706,7 @@ const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
-window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;window.nsPickTip=nsPickTip;
+window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;
