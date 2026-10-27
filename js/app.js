@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027230201";
+const DV="?v=20261027230945";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2265,14 +2265,21 @@ function nsDelaJustera(shot,granserIn,nr,av){
     if(!ram)return;
     ram.querySelectorAll(".ns-grans").forEach(g=>{
       const i=+g.dataset.i;
-      let drog=false;
       g.addEventListener("pointerdown",e=>{
         e.preventDefault();
         g.setPointerCapture(e.pointerId);
-        drog=false;
+        /* Dragningen räknas som en förflyttning från där fingret sattes
+           ned, inte som "linjen hoppar dit fingret är" - annars flyttar
+           även ett rent tryck på handtaget linjen. Först när fingret
+           rört sig mer än några pixlar räknas det som ett drag; kortare
+           än så är det ett tryck. */
+        const startY=e.clientY,startVal=granser[i];
+        let drog=false;
         const flytta=ev=>{
           const r=ram.getBoundingClientRect();
-          let y=((ev.clientY-r.top)/r.height)*100;
+          if(Math.abs(ev.clientY-startY)>4)drog=true;
+          if(!drog)return;
+          let y=startVal+((ev.clientY-startY)/r.height)*100;
           /* Clampas mot grannarna med minsta planhöjd, så linjer aldrig
              passerar varandra eller skapar hårfina band. */
           const min=(i===0?0:granser[i-1])+NS_DELA_MIN;
@@ -2281,30 +2288,30 @@ function nsDelaJustera(shot,granserIn,nr,av){
           granser[i]=y;
           g.style.top=y+"%";
           nsDelaRitaEtiketter(ram,granser);
-          if(Math.abs(ev.clientY-(r.top+r.height*granserIn[i]/100))>3)drog=true;
           nsDelaLupp(lupp,ram,y,ev.clientY-r.top);
         };
         const slapp=()=>{
-          g.releasePointerCapture(e.pointerId);
+          try{g.releasePointerCapture(e.pointerId)}catch(err){}
           g.removeEventListener("pointermove",flytta);
           g.removeEventListener("pointerup",slapp);
           g.removeEventListener("pointercancel",slapp);
           if(lupp)lupp.classList.remove("syns");
-          granser.sort((a,b)=>a-b);
-          if(!drog){valt=valt===i?-1:i}
+          if(drog){
+            granser.sort((a,b)=>a-b);
+          }else if(valt===i){
+            /* Andra trycket på ett handtag med kryss tar bort gränsen och
+               slår ihop planen. Borttagningen ligger här och inte som en
+               klicklyssnare på krysset: omritningen vid pointerup hann
+               plocka bort krysset innan klicket nådde fram. */
+            granser.splice(i,1);valt=-1;
+          }else{
+            valt=i;
+          }
           rita();
         };
         g.addEventListener("pointermove",flytta);
         g.addEventListener("pointerup",slapp);
         g.addEventListener("pointercancel",slapp);
-        drog=true;
-        flytta(e);
-        drog=false;
-      });
-      const pill=g.querySelector(".ns-grans-pill");
-      if(pill&&valt===i)pill.addEventListener("click",ev=>{
-        ev.stopPropagation();
-        granser.splice(i,1);valt=-1;rita();
       });
     });
   };
