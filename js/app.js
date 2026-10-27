@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027205421";
+const DV="?v=20261027224832";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2156,6 +2156,33 @@ async function nsFinish(){
    stora displaytal + progressbar. */
 const NS_SPINE_COLORS=["#C2410C","#1F6F5C","#3B3BAF","#7A5230","#0F766E","#8C1D3F","#2F4858"];
 const NS_SPINE_WIDTHS=[24,32,28,38,26,34,30,22,36,28,32,26];
+/* Ljuskäglan vandrar i stället för att svepa fram och tillbaka: varje
+   etapp får ett slumpat mål i både x- och y-led, en slumpad restid och en
+   slumpad paus innan nästa. Längre etapper får längre tid, så farten
+   håller sig lugn oavsett avstånd. Slutar av sig själv när elementet
+   plockas bort (svaret har landat). Respekterar prefers-reduced-motion
+   genom att röra sig långsammare och kortare. */
+function nsKaglaVandra(kagla){
+  if(!kagla)return;
+  const lugnt=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const slump=(min,max)=>min+Math.random()*(max-min);
+  let x=null,y=null;
+  const etapp=()=>{
+    if(!kagla.isConnected)return;
+    const rad=kagla.parentElement;
+    const b=rad?rad.clientWidth:300, h=rad?rad.clientHeight:150;
+    /* Håller sig innanför raden med lite marginal, så käglan aldrig
+       parkerar helt utanför bild. */
+    const nx=slump(b*0.1,b*0.9), ny=slump(h*0.25,h*0.8);
+    const avst=x===null?0:Math.hypot(nx-x,ny-y);
+    const tid=x===null?0.01:Math.min(lugnt?5:3.6,slump(lugnt?2:1.2,lugnt?2.9:2.1)+avst/(lugnt?160:235));
+    x=nx;y=ny;
+    kagla.style.transitionDuration=tid+"s";
+    kagla.style.transform=`translate(${nx}px,${ny}px)`;
+    setTimeout(etapp,tid*1000+slump(lugnt?500:120,lugnt?1300:780));
+  };
+  etapp();
+}
 async function nsRunAnalysisBatch(ids,bc){
   if(!ids||!ids.length){nsShowHylla(bc);return}
   const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
@@ -2163,22 +2190,22 @@ async function nsRunAnalysisBatch(ids,bc){
   el.style.display="";
   const spineN=NS_SPINE_WIDTHS.length;
   el.innerHTML=`<div class="ns-analys-spines">${Array.from({length:spineN}).map((x,i)=>
-    `<span class="ns-spine" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
-      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("")}</div>
-    <div><div class="ns-analys-count" id="nsAnalysCount">0</div>
-    <p class="ns-analys-hint" id="nsAnalysHint">böcker hittade</p></div>
+    `<span class="ns-spine on vilar" style="width:${NS_SPINE_WIDTHS[i]}px;height:${150-(i%3)*12}px;
+      background:${NS_SPINE_COLORS[i%NS_SPINE_COLORS.length]}"></span>`).join("")}<span class="ns-kagla"></span></div>
+    <div><div class="ns-analys-count" id="nsAnalysCount"></div>
+    <p class="ns-analys-hint" id="nsAnalysHint">Läser av hyllan …</p></div>
     <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>`;
   const spines=[...el.querySelectorAll(".ns-spine")];
   const countEl=document.getElementById("nsAnalysCount");
   const hintEl=document.getElementById("nsAnalysHint");
   const barEl=document.getElementById("nsAnalysBar");
-  let tanda=0;
-  const setTanda=n=>{n=Math.max(tanda,Math.min(spines.length,n));while(tanda<n)spines[tanda++].classList.add("on")};
-  /* Den riktiga avläsningen körs i bakgrunden, oberoende av animationen -
-     annars syns ingenting alls under den riktiga väntan (som kan ta flera
-     sekunder för en AI-avläsning). Samma princip som Analyze() i
-     flow.html: en simulerad uppräkning (fas A) medan det riktiga svaret
-     hämtas, som sen landar exakt rätt (fas B) när svaret är klart. */
+  const kaglaEl=el.querySelector(".ns-kagla");
+  nsKaglaVandra(kaglaEl);
+  /* Den riktiga avläsningen körs i bakgrunden medan ljuskäglan sveper.
+     Ingen siffra visas under tiden: appen frågar AI:n en gång per foto och
+     vet ingenting om antalet förrän svaret kommer. Den gamla versionen
+     räknade upp i takt med tiden och kunde landa på 18 innan sanningen
+     (4) kom - en siffra som mätte väntan, inte böcker. */
   const real=(async()=>{
     let total=0,titles=[],failed=0;
     for(const id of ids){
@@ -2187,46 +2214,39 @@ async function nsRunAnalysisBatch(ids,bc){
     }
     return{total,titles,failed};
   })();
-  /* Stapeln drivs av en egen, obruten kurva från start till att svaret
-     kommer - aldrig en fast gräns den fastnar vid. Den närmar sig 90%
-     asymptotiskt (långsammare i början än förut) och vaggar sen lite kring
-     toppen om väntan drar ut på tiden, så den aldrig ser helt stilla ut.
-     Ryggarna/räknaren fylls separat, över ~3,5s som innan. */
+  /* Stapeln är det enda som rör sig mot ett mål under väntan: en hyperbel
+     som alltid stiger och aldrig når fram av sig själv - 96*t/(t+10000),
+     ~9% vid 1s, ~25% vid 3,5s, ~64% vid 20s. Strikt monoton. */
   const started=Date.now();
-  let extra=0,lastBump=0;
   await new Promise(resolve=>{
     const t=setInterval(()=>{
-      const el2=Date.now()-started;
-      const spineTarget=Math.min(spines.length,Math.round(el2/3500*spines.length));
-      setTanda(spineTarget);
-      if(spineTarget<spines.length){
-        if(countEl)countEl.textContent=String(tanda);
-      }else{
-        if(hintEl&&hintEl.textContent!=="Analyserar böckerna …")hintEl.textContent="Analyserar böckerna …";
-        /* Räkna lite till, i små steg, så siffran inte heller fryser om
-           den riktiga avläsningen drar ut på tiden - men inte i oändlighet. */
-        if(el2-lastBump>900&&extra<6){extra++;lastBump=el2;if(countEl)countEl.textContent=String(tanda+extra)}
-      }
-      /* Strikt monoton - går ALDRIG bakåt (en vaggning gjorde det förra
-         gången, fel för en förloppsindikator). En hyperbel, inte en
-         exponential: avtar mycket långsammare över tid, så den fortsätter
-         krypa framåt mätbart även efter lång tid istället för att plana ut
-         hårt. Högre tidskonstant (10000 istf 5000) = långsammare start,
-         mer sträcka kvar att gå på mot slutet: 96*t/(t+10000): ~9% vid 1s,
-         ~25% vid 3,5s, ~64% vid 20s, ~82% vid 60s - alltid stigande. */
-      if(barEl)barEl.style.width=(96*el2/(el2+10000))+"%";
+      const gatt=Date.now()-started;
+      if(barEl)barEl.style.width=(96*gatt/(gatt+10000))+"%";
       if(real.__done){clearInterval(t);resolve()}
     },100);
     real.then(()=>{real.__done=true});
   });
   const{total,titles,failed}=await real;
-  setTanda(spines.length);
-  if(countEl)countEl.textContent=String(total);
+  /* Svaret har landat: käglan slocknar, siffran räknas upp från noll till
+     det verkliga antalet och lika många ryggar tänds - blev det fler
+     böcker än det finns ryggar tänds hela raden. */
+  if(kaglaEl)kaglaEl.remove();
   if(barEl)barEl.style.width="100%";
-  if(hintEl)hintEl.textContent="böcker i din hylla";
-  /* Fast paus innan vi går vidare - samma som flow.html:s 900ms efter att
-     balken är full, oavsett hur lång väntan varit innan dess. */
-  await new Promise(res=>setTimeout(res,900));
+  const tandas=Math.min(spines.length,total);
+  for(let i=0;i<tandas;i++)spines[i].classList.remove("vilar");
+  if(hintEl)hintEl.textContent=total===1?"bok hittad":"böcker hittade";
+  await new Promise(res=>{
+    const steg=Math.max(1,Math.round(total/18));
+    let n=0;
+    if(!total){if(countEl)countEl.textContent="0";res();return}
+    const t=setInterval(()=>{
+      n=Math.min(total,n+steg);
+      if(countEl)countEl.textContent=String(n);
+      if(n>=total){clearInterval(t);res()}
+    },45);
+  });
+  /* Står kvar en stund så man hinner läsa siffran innan hyllan tar över. */
+  await new Promise(res=>setTimeout(res,2600));
   el.style.display="none";
   nsShowHylla(bc,{failed});
 }
