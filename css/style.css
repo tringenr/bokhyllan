@@ -131,10 +131,15 @@ i[data-ic] svg{width:100%;height:100%}
 .avatar-84{width:84px;height:84px;font-size:24px}
 
 /* ---------- Hem ---------- */
-.home-head{display:flex;align-items:center;gap:12px}
-.home-title{flex:1;min-width:0;border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:1px}
-.home-title span{font:700 26px/1.15 var(--font-display);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-title small{font-size:12px;color:var(--text-secondary)}
+/* Rubrikraden (design 2026-10-26, "Startsida"-handoffen): sökikon vänster,
+   "N böcker" centrerad (öppnar panelen Alla böcker), kugghjul höger. Sökfältet
+   och Alla böcker-panelen återanvänder samma #q-nod (flyttas med DOM-appendChild
+   mellan platserna i js/app.js, inte en kopia) så sökningen alltid är samma
+   motor oavsett var man skrev. Detaljerad layout/vyer i "Hem v3"-blocket
+   längre ner i filen (.hm-* / .hv-* / .books-panel).
+   .home-title (centrerat namn+bild, data-edit) är borta - den funktionen
+   ligger numera bara i Inställningar ("Bibliotekets namn och bild"). */
+.home-head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .icon-btn{flex:none;position:relative;width:44px;height:44px;border-radius:12px;border:1px solid var(--border-subtle);background:var(--surface);display:flex;align-items:center;justify-content:center}
 .icon-btn i{width:20px;height:20px}
 .icon-btn .dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--flame-500);border:2px solid #fff;box-sizing:content-box;display:none}
@@ -172,8 +177,8 @@ i[data-ic] svg{width:100%;height:100%}
 .lent-input{margin-top:4px;border:1px solid var(--border-default);background:var(--surface);border-radius:8px;padding:6px 8px;font:500 13px var(--font-body);width:100%}
 .var-link{color:var(--magenta-500);cursor:pointer}
 
-/* Hyllplanen på Hem stylas i "Hem v2"-blocket längre ner (.shelf-row m.fl.) -
-   det gamla tvåkolumns-rutnätet (.place-grid/.tile) är borta, ingen kod
+/* Hyllplanen på Hem stylas i "Hem v3"-blocket längre ner (.hv-grid/.hv-list/
+   .hv-text m.fl.) - äldre rutnät/fotorad-varianter är borta, ingen kod
    skriver längre ut den markupen. */
 
 /* sammanfattning */
@@ -870,22 +875,28 @@ body.ps-lock{overflow:hidden}
 .splash-fill{background:var(--sp-accent,var(--orange-300))}
 .splash-title{max-width:100%;overflow-wrap:break-word}
 
-/* ===== Hem v2 (design 2026-09-27) ===== */
+/* ===== Hem v3 (design 2026-10-26, "Startsida"-handoffen) =====
+   Ersätter v2 (breda fotorader + säljkort på Hem) helt - se commit-
+   meddelandet för vilka delar av v2 som försvinner och varför. */
 #view-hem{padding:8px 18px 20px;gap:16px}
-.home-head{gap:12px}
 .gear{flex:none;position:relative;width:44px;height:44px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;color:var(--fg)}
 .gear i{width:22px;height:22px;opacity:.8}
 .gear .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--flame-500);display:none}
 .gear .dot.on{display:block}
-.hs{display:flex;flex-direction:column;gap:12px}
-.hs-row{display:flex;align-items:flex-end;gap:12px;border-bottom:2px solid var(--line-rest);padding-bottom:10px;transition:border-color var(--duration-base)}
-.hs-row.open{border-bottom-color:var(--magenta-500)}
-#q{flex:1;min-width:0;border:none;outline:none;background:none;padding:0;font:700 30px/1.15 var(--font-display);letter-spacing:-0.02em;color:var(--fg)}
-#q::placeholder{color:var(--fg);opacity:.45}
-#q::-webkit-search-cancel-button{filter:grayscale(1)}
-.hs-f{flex:none;width:44px;height:44px;border:none;border-radius:50%;background:var(--fbtn);color:var(--fg);display:flex;align-items:center;justify-content:center;padding:0;transition:background var(--duration-base)}
-.hs-f i{width:19px;height:19px}
-.hs-row.open .hs-f{background:var(--pink-500);color:#fff}
+.round-btn{flex:none}
+/* Titeln "N böcker" - öppnar panelen Alla böcker. */
+.hm-title{flex:1;min-width:0;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.hm-title span{font:700 26px/1.15 var(--font-display);letter-spacing:-0.02em;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--duration-base)}
+.hm-title i{width:18px;height:18px;opacity:.5;flex:none}
+/* Sökfältet (samma #q-nod återanvänds i Alla böcker-panelen, se app.js).
+   Täcker headern från vänster till 50px från höger kant, så kugghjulet
+   förblir synligt och klickbart (samma mått som designfilen anger). */
+.hm-search-ov{position:absolute;left:0;right:50px;top:0;bottom:0;z-index:1;display:flex;align-items:center;gap:10px}
+.hm-search-ov[hidden]{display:none}
+.hm-search-field{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:48px;padding:0 6px 0 14px;border-radius:14px;background:var(--surface);box-shadow:var(--shadow-md)}
+.hm-search-field i{width:19px;height:19px;flex:none;opacity:.6;color:var(--fg)}
+.hm-search-field #q{flex:1;min-width:0;border:none;outline:none;background:none;padding:0;font:500 15px var(--font-body);color:var(--fg)}
+.hm-search-field #q::placeholder{color:var(--text-secondary)}
 .hs-panel{display:flex;flex-direction:column;gap:12px;padding-top:4px}
 .hs-panel[hidden]{display:none}
 .hs-chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -896,55 +907,59 @@ body.ps-lock{overflow:hidden}
 .hs-recent:empty{display:none}
 .hs-recent svg{width:15px;height:15px;opacity:.5;flex:none}
 .hs-recent button{border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.4);text-underline-offset:3px}
-.lw-head{display:flex;justify-content:space-between;align-items:baseline}
-.lw-head .link-btn{color:var(--magenta-500)}
-.home-cam{width:44px;height:44px;color:var(--pink-500)}
-.home-title{justify-content:flex-start}
-.home-title span{font:700 26px/1.15 var(--font-display);letter-spacing:-0.02em;color:var(--fg)}
-.home-title small{font-size:12.5px;color:var(--text-secondary)}
-/* Hyllplanen som breda fotorader (Returning i designen), en per rad i
-   stället för det gamla tvåkolumns-rutnätet. */
-.shelf-rows{display:flex;flex-direction:column;gap:18px}
-.shelf-row{border:none;background:none;padding:0;text-align:left;display:flex;flex-direction:column}
-.sr-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px}
-.sr-name{font:600 13px var(--font-body);color:var(--fg)}
-.sr-n{font-size:12px;color:var(--text-secondary)}
-.sr-photo{position:relative;height:140px;border-radius:10px 10px 2px 2px;overflow:hidden;background:var(--surface-2);border:1px solid var(--border-subtle);display:block}
-.sr-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.sr-noimg{position:absolute;inset:0;background:var(--surface-2)}
-.sr-retake{position:absolute;right:10px;bottom:10px;border:none;border-radius:8px;padding:7px 12px;background:rgba(35,26,30,.68);color:#FDFBF9;font:600 12px var(--font-body);display:flex;align-items:center;gap:6px}
-.sr-retake svg{width:14px;height:14px;flex:none}
-.sr-edge{display:block;height:9px;background:linear-gradient(var(--border-subtle),var(--surface-2));border-radius:2px;box-shadow:0 5px 12px rgba(28,26,23,.14)}
-.sr-add{border:1.5px dashed var(--pink-500);background:rgba(242,75,120,.08);border-radius:10px;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;font:600 14px var(--font-body);color:var(--pink-500)}
-.sr-add svg{width:16px;height:16px;flex:none}
-/* Säljkortet på Hem - de "heta" titlarna, se renderHotSell() */
-.hot-sell{padding:0;overflow:hidden}
-.hot-sell-list{display:flex;flex-direction:column}
-.hs-row2{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--border-subtle)}
-.hs-row2:first-child{border-top:none}
-.hs-spine{width:6px;height:28px;border-radius:2px;flex:none}
-.hs-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.hs-t{font:600 14px var(--font-body);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hs-s{font-size:12px;color:var(--text-secondary)}
-.hs-badge{flex:none;font:600 11px var(--font-body)}
-.hot-sell-btn{width:100%;margin:14px 16px 16px;width:calc(100% - 32px)}
-.summary{background:var(--stat-bg);border:1px solid var(--stat-bd);border-radius:16px;padding:18px;gap:12px}
-.sum-n{font-size:40px}
-.sum-bar{height:8px}
-.bl-card{border-radius:14px;background:var(--surface);border:1px solid var(--border-subtle);overflow:hidden}
-.bl-row{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 6px 16px}
-.bl-t{display:flex;align-items:center;gap:10px;font:600 14px var(--font-body);color:var(--fg)}
-.bl-t i{width:18px;height:18px}
-.bl-t b{font:600 12px var(--font-mono);color:var(--num)}
-.bl-btn{width:40px;height:40px;border:none;border-radius:10px;background:var(--surface-2);color:var(--fg);display:flex;align-items:center;justify-content:center;padding:0}
-.bl-btn i{width:18px;height:18px;transition:transform var(--duration-base) var(--ease-out)}
-.bl-card.open .bl-btn i{transform:rotate(180deg)}
-.bl-cats{border-top:1px solid var(--border-subtle);display:flex;flex-direction:column}
-.bl-cats[hidden]{display:none}
-.bl-cat,.bl-all{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border:none;border-bottom:1px solid var(--border-subtle);background:none;font:600 14px var(--font-body);color:var(--fg);text-align:left}
-.bl-cat .mono{font:500 12px var(--font-mono);color:var(--text-secondary)}
-.bl-all{background:var(--pink-500);color:#fff;font-weight:700;border-bottom:none;padding:13px 16px}
-.bl-all .mono{font:600 12px var(--font-mono)}
+
+/* "Lägg till hylla" - fylld rosa yta, ingen ram/ikon, text pink-300 på
+   mörkt (så README anger den - "text på mörkt") men pink-600 på ljust för
+   läsbarhet mot en ljus sida; samma mönster som eg-card-knappen sedan
+   tidigare i filen. */
+.hv-add{border:none;background:rgba(242,75,120,.14);color:var(--pink-600);font:700 15px var(--font-body);cursor:pointer}
+:root[data-theme="dark"] .hv-add{color:var(--pink-300)}
+
+/* Vy 1: Rutnät (standard) */
+.hv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hv-grid[hidden]{display:none}
+.hv-g-item{position:relative;height:128px;border-radius:14px;overflow:hidden;background:var(--surface-2);border:none;padding:0;display:block;width:100%;cursor:pointer}
+.hv-g-item img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.hv-g-noimg{position:absolute;inset:0;background:var(--surface-2)}
+.hv-g-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.72))}
+.hv-g-info{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;display:flex;flex-direction:column;gap:2px;text-align:left}
+.hv-g-name{font:700 14px var(--font-display);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-g-n{font:700 12px var(--font-mono);color:var(--orange-300)}
+.hv-add.hv-g-item{height:128px;display:flex;align-items:center;justify-content:center;border-radius:14px}
+
+/* Vy 2: Lista */
+.hv-list{display:flex;flex-direction:column;border-radius:16px;background:var(--surface);border:1px solid var(--border-subtle);overflow:hidden}
+.hv-list[hidden]{display:none}
+.hv-l-item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border-subtle);border-left:none;border-right:none;border-top:none;background:none;width:100%;text-align:left;cursor:pointer}
+.hv-l-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;display:block;background:var(--surface-2)}
+.hv-l-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hv-l-name{font:600 15px var(--font-body);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-l-n{font:700 12px var(--font-mono);color:var(--orange-500)}
+.hv-l-item svg{width:18px;height:18px;opacity:.4;flex:none}
+.hv-add.hv-l-item{grid-template-columns:1fr;justify-items:center;padding:15px 14px;border-bottom:none}
+
+/* Vy 3: Textlista */
+.hv-text{display:flex;flex-direction:column}
+.hv-text[hidden]{display:none}
+.hv-t-item{display:flex;align-items:center;gap:14px;padding:14px 2px;border-top:1px solid var(--border-subtle);border-left:none;border-right:none;border-bottom:none;background:none;width:100%;text-align:left;cursor:pointer}
+.hv-t-spine{flex:none;width:4px;height:28px;border-radius:2px}
+.hv-t-name{flex:1;font:600 16px var(--font-body);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-t-n{font:500 13px var(--font-mono);color:var(--text-secondary)}
+.hv-t-item svg{width:17px;height:17px;opacity:.35;flex:none}
+.hv-add.hv-t-item{margin-top:8px;border-radius:12px;padding:15px 14px;justify-content:center;border-top:none}
+
+/* "Alla böcker" - helskärmsöverlägg, öppnas från titeln. Samma lista/sök/
+   filter som redan fanns (#listWrap/#grid/render()) - bara flyttad hit och
+   given en egen rubrikrad, se app.js. */
+.books-panel{position:fixed;inset:0;z-index:85;background:var(--page);display:flex;flex-direction:column;padding:52px 18px 18px;gap:14px;overflow-y:auto}
+.books-panel[hidden]{display:none}
+.bp-head{display:flex;align-items:center;gap:12px}
+.bp-title{flex:1;font:700 22px var(--font-display);color:var(--fg)}
+.bp-search{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;background:var(--surface)}
+.bp-search i{width:19px;height:19px;flex:none;opacity:.6;color:var(--fg)}
+.bp-search #q{flex:1;min-width:0;height:100%;padding:0;border:none;outline:none;background:none;font:500 15px var(--font-body);color:var(--fg)}
+.bp-search #q::placeholder{color:var(--text-secondary)}
+.lw-head{display:flex;justify-content:flex-end;align-items:baseline}
 
 /* ===== Temat på övriga delar ===== */
 .tabbar{background:var(--nav-bg);border-top-color:var(--border-subtle)}

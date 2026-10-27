@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261026232624">
+<link rel="stylesheet" href="css/style.css?v=20261027130649">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261026232624";
+  var MY="20261027130649";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -157,35 +157,21 @@
 <!-- ================= HEM ================= -->
 <section id="view-hem" class="view">
   <div class="home-head">
-    <button class="home-title" data-edit aria-label="Byt namn eller bild"><span id="homeName">Min Bokhylla</span><small id="homeSub"></small></button>
-    <button class="round-btn home-cam" onclick="addShelf()" aria-label="Ny hylla eller nytt foto"><i data-ic="camera"></i></button>
+    <button class="round-btn" id="hmSearchBtn" aria-label="Sök"><i data-ic="search"></i></button>
+    <button class="hm-title" id="hmTitleBtn" aria-label="Visa alla böcker"><span id="hmCount">0 böcker</span><i data-ic="chevron-down"></i></button>
     <button class="gear" id="gearBtn" aria-label="Inställningar"><i data-ic="settings"></i><span class="dot" id="gearDot"></span></button>
-  </div>
-
-  <div class="hs">
-    <div class="hs-row" id="hsRow">
-      <input id="q" type="search" placeholder="Vad letar du efter?" autocomplete="off" enterkeyhint="search" aria-label="Sök titel eller författare">
-      <button class="hs-f" id="fBtn" aria-label="Kategorier" aria-expanded="false"><i data-ic="sliders-horizontal"></i></button>
-    </div>
-    <div class="hs-panel" id="fPanel" hidden>
-      <div class="hs-chips" id="catChips"></div>
-      <div class="hs-recent" id="recentRow"></div>
+    <div class="hm-search-ov" id="hmSearchOv" hidden>
+      <div class="hm-search-field" id="hmSearchSlot">
+        <i data-ic="search"></i>
+        <input id="q" type="search" placeholder="Sök titel eller författare" autocomplete="off" enterkeyhint="search" aria-label="Sök titel eller författare">
+      </div>
+      <button class="round-btn" id="hmSearchClose" aria-label="Stäng"><i data-ic="x"></i></button>
     </div>
   </div>
 
-  <div id="listWrap" class="list-wrap" style="display:none">
-    <div class="lw-head"><span id="count"></span><button class="link-btn" id="lwClose">Dölj listan</button></div>
-    <div class="controls">
-      <select id="fShelf"></select>
-      <select id="fCat" hidden><option value="">Alla kategorier</option></select>
-    </div>
-    <div class="chips">
-      <button class="chip active" data-s="">Alla</button>
-      <button class="chip" data-s="hylla">På plats</button>
-      <button class="chip" data-s="utlanad">Utlånad</button>
-      <button class="chip" data-s="flyter">Flyter runt</button>
-    </div>
-    <div class="booklist" id="grid"></div>
+  <div class="hs-panel" id="fPanel" hidden>
+    <div class="hs-chips" id="catChips"></div>
+    <div class="hs-recent" id="recentRow"></div>
   </div>
 
   <div class="card eg-card" id="homeEmptyGuide" style="display:none">
@@ -199,13 +185,15 @@
     </div>
   </div>
 
-  <div class="shelf-rows" id="placeGrid"></div>
+  <div class="hv-grid" id="viewGrid"></div>
+  <div class="hv-list" id="viewList"></div>
+  <div class="hv-text" id="viewText"></div>
 
-  <div id="hotSell"></div>
-
-  <!-- .summary döljs på Hem (ersatt av homeSub-raden ovan och
-       lånestatus-filtren i boklistan nedan) men rörs inte i övrigt -
-       render()/renderSummary() uppdaterar den oförändrat. -->
+  <!-- .summary syns aldrig (ersatt av titeln "N böcker" och panelen Alla
+       böcker) men render()/renderSummary() skriver fortfarande oskyddat
+       till dess id:n (#stTot m.fl.) - elementen får finnas kvar dolda
+       hellre än att göra render()/renderSummary() null-säkra på flera
+       ställen i en redan stor ändring. -->
   <div class="summary" id="homeSummary" hidden>
     <div class="sum-top"><span class="sum-n" id="stTot">0</span><span class="sum-lbl" id="stPlaces">böcker</span></div>
     <div class="sum-bar" id="sumBar"></div>
@@ -215,13 +203,30 @@
       <span><i class="lg" style="background:var(--magenta-300)"></i><b id="stFly">0</b>flyter runt</span>
     </div>
   </div>
-
-  <div class="bl-card" id="blCard">
-    <div class="bl-row"><span class="bl-t"><i data-ic="list"></i>Visa hela boklistan<b class="mono" id="blN"></b></span>
-      <button class="bl-btn" id="blBtn" aria-label="Visa kategorier" aria-expanded="false"><i data-ic="chevron-down"></i></button></div>
-    <div class="bl-cats" id="blCats" hidden></div>
-  </div>
 </section>
+
+<!-- ================= ALLA BÖCKER (helskärmsöverlägg) ================= -->
+<div class="books-panel" id="booksPanel" hidden>
+  <div class="bp-head">
+    <button class="round-btn" id="bpClose" aria-label="Stäng"><i data-ic="x"></i></button>
+    <span class="bp-title">Alla böcker</span>
+  </div>
+  <div class="bp-search" id="bpSearchSlot"><i data-ic="search"></i></div>
+  <div id="listWrap" class="list-wrap">
+    <div class="lw-head"><span id="count"></span></div>
+    <div class="controls">
+      <select id="fShelf"></select>
+      <select id="fCat" hidden><option value="">Alla kategorier</option></select>
+    </div>
+    <div class="chips">
+      <button class="chip active" data-s="">Alla</button>
+      <button class="chip" data-s="hylla">På plats</button>
+      <button class="chip" data-s="utlanad">Utlånad</button>
+      <button class="chip" data-s="flyter">Flyter runt</button>
+    </div>
+    <div class="booklist" id="grid"></div>
+  </div>
+</div>
 
 <!-- ================= PLATS ================= -->
 <section id="view-place" class="view" style="display:none"></section>
@@ -330,6 +335,12 @@
       <button data-mode="dark"><i data-ic="moon"></i>Mörkt</button>
       <button data-mode="auto"><i data-ic="smartphone"></i>Auto</button>
     </div>
+    <div class="app-row"><i data-ic="layout-grid"></i><span><b>Startsidans utseende</b><small>Välj hur hyllorna visas på startsidan</small></span></div>
+    <div class="seg" id="homeViewSeg">
+      <button data-view="grid"><i data-ic="layout-grid"></i>Rutnät</button>
+      <button data-view="list"><i data-ic="list"></i>Lista</button>
+      <button data-view="text"><i data-ic="align-justify"></i>Textlista</button>
+    </div>
   </div>
 </aside>
 
@@ -356,6 +367,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261026232624"></script>
+<script src="js/app.js?v=20261027130649"></script>
 </body>
 </html>
