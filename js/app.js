@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027135134";
+const DV="?v=20261027163141";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -984,6 +984,7 @@ async function afterAuthReady(){
      loadNewShelves anropar) lägger bara till/ersätter db:true-poster utan
      att nollställa resten av PH. */
   try{await loadNewShelves()}catch(e){console.warn("newShelves",e)}
+  try{await loadSell()}catch(e){console.warn("sell",e)}
   buildShelfOptions();
   try{await loadStatuses()}catch(e){console.warn("statuses",e)}
   sb.channel("book_status").on("postgres_changes",{event:"*",schema:"public",table:"book_status"},p=>{
@@ -1185,10 +1186,15 @@ document.querySelectorAll("#themeSeg [data-mode]").forEach(b=>b.addEventListener
 renderThemeSeg();
 document.querySelectorAll("#homeViewSeg [data-view]").forEach(b=>b.addEventListener("click",()=>setHomeView(b.dataset.view)));
 renderHomeViewSeg();
-/* ---------- Sälj ---------- */
+/* ---------- Sälj ----------
+   Låg tidigare i data/sell.json - en delad, publik fil utan
+   inloggningskoppling (samma mönster som fotobehörighetshålet, PR 4.5
+   hade). Ligger nu i sell_items/sell_meta, skyddade med samma RLS-mönster
+   som manual_books/bc_photos (is_library_member). */
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
   const s=SELL,sum=s.summary;
+  if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";return}
   const maxLow=Math.max(1,...s.items.map(it=>it.low||0));
   el.innerHTML=(sum?`<div class="card sell-sum"><span class="fine">Försiktig uppskattning, lägsta pris per titel</span>
       <span class="kr">ca ${fmtN(sum.summa)} kr</span>
@@ -1196,7 +1202,13 @@ function renderSell(){
       </div>`:"")+
     `<div>`+s.items.map((it,i)=>{
       const h=HEAT[it.heat]||HEAT.kolla;
-      const d=data.find(x=>x.title===it.match)||data.find(x=>x.title.startsWith(it.match));
+      /* book_id (satt en gång vid migreringen/när posten skapas) är den
+         pålitliga kopplingen - före flytten matchades titelsträngen om
+         vid varje visning, och "Står i:"-raden tappades tyst bort så fort
+         en titel rättades i katalogen (flödesrapporten 2026-10-26, punkt
+         4.3). match_title-fallbacken finns kvar för poster utan book_id. */
+      const d=(it.book_id&&data.find(x=>x.id===it.book_id))||
+        (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))));
       const loc=d&&d.shelf?locLabel(d.shelf):"";
       return `<div class="sell-row" id="sr-${i}"><button class="sell-head" onclick="toggleSell(${i})">
           <span class="t">${esc(it.title)}</span><span class="p">${esc(shortPrice(it.price))}</span>
@@ -1204,15 +1216,22 @@ function renderSell(){
           <span class="h" style="color:${h[1]}">${h[0]}</span></button>
         <div class="sell-more">${shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}${it.why?`<p>${esc(it.why)}</p>`:""}${loc?`<p>Står i: ${esc(loc)}</p>`:""}
           ${it.url?`<a href="${it.url}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
-  document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+"Uppdaterad "+s.updated+".";
+  document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+(s.updated?"Uppdaterad "+s.updated+".":"");
 }
 /* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
    raden fälls ut. "359 kr (uppl 5) / 175 kr (uppl 4)" -> "359 kr". */
 function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
 function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
 window.toggleSell=toggleSell;
-fetch("data/sell.json"+DV).then(r=>r.json()).then(s=>{SELL=s;renderSell()})
-  .catch(()=>{document.getElementById("sellList").innerHTML="<p class='fine'>Kunde inte ladda säljlistan.</p>"});
+async function loadSell(){
+  const {data:items,error:e1}=await sb.from("sell_items").select("*").order("id");
+  if(e1){console.warn("sell_items",e1);return}
+  const {data:metaRows,error:e2}=await sb.from("sell_meta").select("*").limit(1);
+  if(e2)console.warn("sell_meta",e2);
+  const meta=(metaRows&&metaRows[0])||{};
+  SELL={items:items||[],summary:meta.summary||null,note:meta.note||"",updated:meta.updated_date||""};
+  renderSell();
+}
 
 /* ---------- Luckor ---------- */
 let GAPS=[],gapState={},gapFilter="open";
