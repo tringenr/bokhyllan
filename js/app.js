@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027230945";
+const DV="?v=20261027235315";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2117,14 +2117,34 @@ async function uploadShelfPhoto({bc,name,code,label,file,dataUrl,i}){
    nsDelaForslag() mot den riktiga AI-funktionen, med tyst fallback till
    dagens flöde när anropet misslyckas eller bilden är vriden. */
 
+/* Skiljer "användaren tryckte Ta om fotot" från "AI:n gav inget svar" -
+   båda kom tidigare tillbaka som null och gick inte att skilja åt. */
+const NS_DELA_AVBRUTEN=Symbol("avbruten");
 const NS_DELA_MIN=5;      /* minsta höjd per hyllplan, i % av bildhöjden */
 const NS_DELA_MAX=12;     /* tak för antal hyllplan i ett foto */
 
-/* B1-platshållare: jämn uppdelning i tre plan. Returnerar gränser som
-   y-värden i procent av bildhöjden, uppifrån och ner. */
+const HYLLPLAN_URL=SB_URL.replace(".supabase.co",".functions.supabase.co")+"/hyllplan";
+/* Frågar AI:n var gränserna går. Returnerar {cuts, rotated} eller null om
+   anropet inte gick igenom - appen faller då tillbaka på dagens flöde
+   (fotot blir ett hyllplan) utan att visa något felmeddelande, precis som
+   innan funktionen fanns. Samma sak om bilden är vriden 90 grader: då
+   ligger hyllplanen inte vågrätt och gränser i procent av bildhöjden
+   skulle klippa tvärs igenom bokryggarna. */
 async function nsDelaForslag(shot){
-  await new Promise(r=>setTimeout(r,1500));
-  return [33.3,66.7];
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session)return null;
+    const res=await fetch(HYLLPLAN_URL,{method:"POST",
+      headers:{Authorization:"Bearer "+session.access_token,"content-type":"application/json"},
+      body:JSON.stringify({image:shot.dataUrl})});
+    if(!res.ok)throw new Error("status "+res.status);
+    const out=await res.json();
+    if(out.rotated)return null;
+    return Array.isArray(out.cuts)?out.cuts:null;
+  }catch(e){
+    console.warn("hyllplan",e);
+    return null;
+  }
 }
 
 /* Kör hela sekvensen för alla flaggade foton. Returnerar en ny shots-lista
@@ -2160,7 +2180,19 @@ function nsDelaStang(){
    null om användaren valde att ta om fotot. */
 async function nsDelaEttFoto(shot,nr,av){
   let granser=await nsDelaLaserAv(shot,nr,av);
-  if(granser===null)return null;
+  if(granser===NS_DELA_AVBRUTEN)return null;
+  /* Inget svar från AI:n, eller en vriden bild: gå vidare som idag, med
+     fotot som ett enda hyllplan. Tyst - användaren har inte bett om
+     uppdelningen på ett sätt som gör ett felmeddelande meningsfullt. */
+  if(granser===null)return [{...shot,multi:false}];
+  if(!granser.length){
+    /* AI:n ser bara ett hyllplan. Beslut 27/10: inget sker automatiskt -
+       användaren väljer själv (handoffen, "Specialfall"). */
+    const val=await nsDelaEttPlan(shot);
+    if(val==="om")return null;
+    if(val==="fortsatt")return [{...shot,multi:false}];
+    granser=[50];
+  }
   /* "Ta om" på resultatsidan går tillbaka till justeringen med samma
      gränser - inte om till avläsningen, som vore att tappa bort det man
      just dragit. "Ta om fotot" i justeringen avbryter hela sändningen
@@ -2199,7 +2231,7 @@ function nsDelaLaserAv(shot,nr,av){
     if(bar)bar.style.width=Math.min(97,g/1500*100)+"%";
   },60);
   return new Promise(res=>{
-    nsDelaAvbrytFn=()=>{clearInterval(iv);res(null)};
+    nsDelaAvbrytFn=()=>{clearInterval(iv);res(NS_DELA_AVBRUTEN)};
     nsDelaForslag(shot).then(g=>{
       clearInterval(iv);
       if(bar)bar.style.width="100%";
@@ -2220,6 +2252,30 @@ function nsDelaRamProportion(el,shot){
   const satt=()=>{if(img.naturalWidth)ram.style.aspectRatio=img.naturalWidth+" / "+img.naturalHeight};
   if(img.complete)satt();else img.onload=satt;
 }
+
+/* Specialfall: AI:n hittade bara ett hyllplan. Kort bekräftelse med fotot
+   i ram, tydlig primärknapp och två jämnstora sekundärknappar. Inget sker
+   av sig självt - användaren väljer (handoff 2026-10-27). */
+function nsDelaEttPlan(shot){
+  const el=nsDelaOverlay();
+  el.innerHTML=`
+    <div class="ns-dela-topp"></div>
+    <div class="ns-dela-mitt">
+      <div class="ns-dela-ram" id="nsDelaRam"><img src="${shot.dataUrl}" alt=""></div>
+    </div>
+    <div class="ns-dela-foot">
+      <p class="ns-dela-txt">1 hyllplan hittat</p>
+      <button class="btn btn-primary" onclick="nsDelaVal('fortsatt')">Fortsätt till avläsning</button>
+      <div class="ns-dela-tva">
+        <button class="btn btn-outline" onclick="nsDelaVal('dela')">Dela upp ändå</button>
+        <button class="btn btn-outline" onclick="nsDelaVal('om')">Ta om fotot</button>
+      </div>
+    </div>`;
+  nsDelaRamProportion(el,shot);
+  return new Promise(res=>{nsDelaValFn=res});
+}
+let nsDelaValFn=null;
+function nsDelaVal(v){if(nsDelaValFn)nsDelaValFn(v)}
 
 /* Steg 2: justera gränserna. Linjerna renderas från en lista y-% - hur
    många som helst. Hela linjen är gripbar (44px osynlig träffyta), och
@@ -3084,7 +3140,7 @@ const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
-window.nsDelaAvbryt=nsDelaAvbryt;window.nsDelaKlar=nsDelaKlar;
+window.nsDelaVal=nsDelaVal;window.nsDelaAvbryt=nsDelaAvbryt;window.nsDelaKlar=nsDelaKlar;
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;

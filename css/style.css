@@ -1145,3 +1145,5 @@ body.ps-lock{overflow:hidden}
   .ns-laser{animation-duration:3s}
   .ns-viker img{animation:none}
 }
+.ns-dela-tva{display:flex;gap:8px}
+.ns-dela-tva .btn{flex:1;color:#FDFBF9;border-color:rgba(255,255,255,.3)}
