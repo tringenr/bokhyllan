@@ -712,6 +712,18 @@ body.splashing{overflow:hidden}
 .ns-spine::before{top:7px}
 .ns-spine::after{bottom:7px}
 .ns-analys-count{font:400 44px/1 var(--font-display)}
+/* Avläsningen: under väntan ligger hela bokraden tänd men nedtonad, och en
+   ljuskägla sveper över den (ingen siffra - appen vet inget förrän svaret
+   kommer, se nsRunAnalysisBatch). När svaret landar tänds så många ryggar
+   som det blev böcker, resten blir kvar nedtonade. */
+.ns-analys-spines{position:relative;overflow:hidden}
+.ns-spine.vilar{opacity:.28;filter:saturate(.5)}
+.ns-spine{transition:transform .45s cubic-bezier(.22,.9,.3,1.2),opacity .5s ease,filter .5s ease}
+.ns-kagla{position:absolute;top:0;bottom:0;width:120px;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(255,255,255,.34) 0%,rgba(255,255,255,.12) 45%,transparent 72%);
+  animation:nsSvep 2.1s ease-in-out infinite}
+@keyframes nsSvep{0%{left:-130px}100%{left:100%}}
+@media (prefers-reduced-motion:reduce){.ns-kagla{animation-duration:4.2s}}
 .ns-analys-hint{font:500 14px var(--font-body);opacity:.7;margin-top:4px}
 .ns-analys-bar{height:3px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
 .ns-analys-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .12s linear}
