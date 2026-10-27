@@ -1084,3 +1084,64 @@ body.ps-lock{overflow:hidden}
   color:rgba(253,251,249,.62);font:500 13px var(--font-body);text-decoration:underline}
 .ns-cam-again{display:flex;align-items:center;gap:8px;font:500 14px var(--font-body);color:var(--ink)}
 .ns-cam-again input{width:18px;height:18px;accent-color:var(--pink-500)}
+
+/* ---------- Dela ett foto i flera hyllplan (handoff 2026-10-27) ----------
+   Mörk helskärm oavsett appläge, som kamerasökaren. Fotot ligger i ram
+   (inte helbleed) med gränslinjerna ovanpå. */
+.ns-dela{position:fixed;inset:0;z-index:93;display:flex;flex-direction:column;
+  background:#1B1417;color:#FDFBF9;padding:calc(12px + env(safe-area-inset-top)) 16px
+  calc(14px + env(safe-area-inset-bottom))}
+.ns-dela-topp{min-height:20px;text-align:center;font:600 13px var(--font-body);opacity:.7}
+.ns-dela-mitt{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.ns-dela-ram{position:relative;max-width:100%;max-height:100%;border-radius:12px;overflow:hidden;
+  background:#000;box-shadow:0 8px 30px rgba(0,0,0,.5);touch-action:none}
+.ns-dela-ram img{display:block;width:100%;height:100%;object-fit:fill}
+.ns-dela-foot{flex-shrink:0;display:flex;flex-direction:column;gap:9px;padding-top:12px}
+.ns-dela-txt{text-align:center;font:500 14px var(--font-body);opacity:.8;margin:0}
+.ns-dela-om{color:rgba(253,251,249,.7)}
+.ns-dela-verktyg{display:flex;gap:8px;justify-content:center}
+.ns-dela-verktyg .btn{color:#FDFBF9;background:rgba(255,255,255,.08);gap:6px}
+.ns-dela-verktyg .btn[disabled]{opacity:.35}
+.ns-dela-verktyg .btn svg{width:15px;height:15px}
+
+/* Gränslinjen: synlig 2px-linje men 44px osynlig greppyta, så en tumme
+   kan ta tag var som helst längs linjen. */
+.ns-grans{position:absolute;left:0;right:0;height:44px;margin-top:-22px;
+  display:flex;align-items:center;cursor:ns-resize;touch-action:none}
+.ns-grans-linje{position:absolute;left:0;right:0;height:2px;background:var(--pink-500);
+  box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.ns-grans-pill{position:absolute;left:50%;transform:translateX(-50%);
+  width:52px;height:22px;border-radius:999px;background:var(--pink-500);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.ns-grans-pill svg{width:14px;height:14px}
+.ns-grans.valt .ns-grans-pill{width:34px}
+.ns-planetikett{position:absolute;left:10px;transform:translateY(-50%);
+  font:600 12px var(--font-body);color:#FDFBF9;background:rgba(27,20,23,.55);
+  padding:3px 8px;border-radius:999px;pointer-events:none}
+
+/* Luppen vid dragning - förskjuten från fingret, se nsDelaLupp(). */
+.ns-lupp{position:absolute;width:132px;height:132px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.85);box-shadow:0 6px 20px rgba(0,0,0,.5);
+  background-repeat:no-repeat;opacity:0;pointer-events:none;transition:opacity .12s}
+.ns-lupp.syns{opacity:1}
+.ns-lupp::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;
+  background:var(--pink-500);transform:translateY(-1px)}
+
+.ns-viker img{animation:nsViker .62s ease}
+@keyframes nsViker{0%{transform:scaleY(1)}45%{transform:scaleY(.94)}100%{transform:scaleY(1)}}
+
+.ns-dela-rutnat{display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  width:100%;max-height:100%;overflow-y:auto;padding:2px}
+.ns-dela-rutnat figure{margin:0}
+.ns-dela-rutnat img{width:100%;border-radius:9px;display:block;background:#000}
+.ns-dela-rutnat figcaption{font:600 12px var(--font-body);opacity:.8;margin-top:5px}
+
+/* Laserstrålen under avläsningen. */
+.ns-laser{position:absolute;left:0;right:0;height:3px;background:#ff2d55;
+  box-shadow:0 0 14px 3px rgba(255,45,85,.6);animation:nsLaser 1.5s ease-in-out infinite}
+@keyframes nsLaser{0%{top:2%}50%{top:96%}100%{top:2%}}
+@media (prefers-reduced-motion:reduce){
+  .ns-laser{animation-duration:3s}
+  .ns-viker img{animation:none}
+}
