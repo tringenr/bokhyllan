@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027224702";
+const DV="?v=20261027224832";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2175,11 +2175,11 @@ function nsKaglaVandra(kagla){
        parkerar helt utanför bild. */
     const nx=slump(b*0.1,b*0.9), ny=slump(h*0.25,h*0.8);
     const avst=x===null?0:Math.hypot(nx-x,ny-y);
-    const tid=x===null?0.01:Math.min(lugnt?6:4.4,slump(lugnt?2.4:1.5,lugnt?3.4:2.6)+avst/(lugnt?130:190));
+    const tid=x===null?0.01:Math.min(lugnt?5:3.6,slump(lugnt?2:1.2,lugnt?2.9:2.1)+avst/(lugnt?160:235));
     x=nx;y=ny;
     kagla.style.transitionDuration=tid+"s";
     kagla.style.transform=`translate(${nx}px,${ny}px)`;
-    setTimeout(etapp,tid*1000+slump(lugnt?600:150,lugnt?1500:950));
+    setTimeout(etapp,tid*1000+slump(lugnt?500:120,lugnt?1300:780));
   };
   etapp();
 }
