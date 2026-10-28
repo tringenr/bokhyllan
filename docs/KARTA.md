@@ -212,11 +212,17 @@ som e-posttjänst och rätt Redirect URL i Supabase (21/10).
 
 ## Design-flödet vs. byggt läge
 
-*Tillagd 24/10. Facit för varje skärm är
-`Cointelligence Design System 261022/design_handoff_min_bokhylla/README.md`
-(projektdokument) — citat därifrån i "Design säger"-kolumnen, inte min
-tolkning av `flow.html`-koden. Stäm alltid av här innan en skärm märks klar;
-se processen i stycket efter tabellen.*
+*Tillagd 24/10, rättad 28/10. Facit för varje skärm är
+`Cointelligence Design System 261022/ui_kits/min-bokhylla/` (projektdokument) —
+citat därifrån i "Design säger"-kolumnen, inte min tolkning av `flow.html`-koden.
+Stäm alltid av här innan en skärm märks klar; se processen i stycket efter tabellen.*
+
+**Använd inte `design_handoff_min_bokhylla/`.** Den mappen är en äldre, ej
+korrigerad kopia: där är `--mb-teal` fortfarande riktigt teal (`#0F766E`) och
+typsnitten Instrument Serif / Work Sans. I `ui_kits/min-bokhylla/bokhylla.css` är
+samma variabel satt till Cointelligences rosa (`#F24B78`) med Raleway/Montserrat,
+enligt beslutet 22/10 att behålla appens rosa system. Variabeln heter alltså teal
+men innehåller rosa — en fälla värd att känna till innan man läser filerna.
 
 ### Nyanvändarflödet (`flow.html`, steg 1–6)
 
@@ -236,13 +242,13 @@ se processen i stycket efter tabellen.*
 |---|---|---|
 | Sök i hyllan | Autofokuserat sökfält, filterchips (Alla/Till salu/Het/Kurslitteratur), träfflista med plats+hylla, medelvärde, temperaturbadge | **Inte byggd.** Ingen sökvy i `index.html` |
 | Bokdetalj | Flikar värde/fakta/historik, knappar "Sälj boken"/"Ändra" | **Inte byggd** i detta utförande |
-| Värdering | Grönt totalkort, summa per sajt, böcker sorterbara på värde/temp/titel, CTA "Sälj de 3 hetaste" | **Inte byggd.** `view-salj` är bara en tom rubrik-platshållare |
+| Värdering | Grönt totalkort, summa per sajt, böcker sorterbara på värde/temp/titel, CTA "Sälj de 3 hetaste" | **Byggd i annat utförande (PR #71, #72, mergade 27/10).** `view-salj`/`renderSell()` har lista, detaljpanel, filter och priser per sajt ur `sell_items`/`sell_price_sources`. Följer inte designens exakta utseende (inget totalkort i grönt, annan sortering) — inte avstämd punkt för punkt mot `screens-ovriga.html` |
 | Dela platsen | Hyllfoto, tre synlighetsnivåer, växel "Visa värdering", kopierbar länk | **Inte byggd.** `view-delade` existerar men inte detta utförande |
 
 ### Process för att undvika glapp framöver
 
 Innan en skärm markeras klar:
-1. Citera den exakta styckena ur `design_handoff_min_bokhylla/README.md` för
+1. Citera den exakta styckena ur `ui_kits/min-bokhylla/` för
    just den skärmen (tabellen ovan) i PR-beskrivningen eller i chatten — inte
    en fri tolkning av `flow.html`.
 2. Jämför skärmdump/produktion mot citatet explicit, punkt för punkt.
