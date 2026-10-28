@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261028192012";
+const DV="?v=20261028193132";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2617,6 +2617,7 @@ async function nsFinish(){
     S.shots=delade;
   }
   const bc=S.bc;
+  nsAvbrytTillHem=S.origin==="hem";
   const btn=document.querySelector("#nsCam .ns-cam-send");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
   /* Overlayen tar över skärmen direkt - den ligger redan ovanpå kameran
@@ -2709,6 +2710,9 @@ function nsKaglaVandra(kagla,ljus){
    har därför ingen tillbaka-pil. Avbrytningen stoppar avläsningen efter
    det foto som är igång och går vidare till hyllan. */
 let nsAnalysAvbruten=false;
+/* nsState är redan nollställt när analysen kör (nsFinish rensar det efter
+   uppladdningen), så varifrån guiden startades måste sparas separat. */
+let nsAvbrytTillHem=false;
 function nsAvbrytAnalys(){
   nsAnalysAvbruten=true;
   const b=document.getElementById("nsAnalysAvbryt");
@@ -2773,12 +2777,19 @@ async function nsRunAnalysisBatch(ids,bc){
     },100);
     real.then(()=>{real.__done=true});
   });
-  /* Avbryter användaren lämnar vi avläsningen direkt och går till hyllan.
-     Fotona ligger kvar som egna hyllplan utan boklista - de kan läsas av
-     senare från hyllvyn. Inget raderas: en uppladdad bild är användarens
-     arbete, inte skräp att städa bort. */
+  /* Avbryter användaren lämnar vi avläsningen direkt. Vart man hamnar
+     beror på var man kom ifrån (beslut 28/10): den som är inne i
+     nyanvändarguiden för första gången går tillbaka till startsidan hon
+     just kom från - att landa på hyllsidan, en vy hon aldrig sett, vore
+     förvirrande. Den som startade guiden inifrån appen känner hyllsidan
+     och får den.
+
+     Inget raderas i något av fallen: fotona ligger kvar som egna
+     hyllplan utan boklista och kan läsas av senare. En uppladdad bild är
+     användarens arbete, inte skräp att städa bort. */
   if(nsAnalysAvbruten){
     el.style.display="none";
+    if(nsAvbrytTillHem){nsAvbrytTillHem=false;go("hem");renderHome();return}
     nsShowHylla(bc,{avbruten:true});
     return;
   }
