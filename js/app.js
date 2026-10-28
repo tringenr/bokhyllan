@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261027235315";
+const DV="?v=20261028193132";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1015,8 +1015,12 @@ async function startFromGuide(){
      förblir kamera-ytan osynlig trots att dess egen display sätts till
      synlig, eftersom en förälder fortfarande är display:none. */
   openSet("platser");
-  nsState={step:4,mode:"new",shots:[],bc:nextFreeBc(),name:"Min första hylla",type:"S",defLabel:""};
+  nsState={step:4,mode:"new",shots:[],bc:nextFreeBc(),name:"Min första hylla",type:"S",defLabel:"",origin:"hem"};
   nsRender();
+  /* Fanns det foton kvar från ett tidigare besök - man backade ut, gick
+     till inloggningen eller stängde appen - frågar vi om de ska användas
+     innan kameran visas (B3). */
+  await nsFragaSparade();
 }
 window.startFromGuide=startFromGuide;
 
@@ -2003,7 +2007,7 @@ function nsRenderCam(){
           ${ic("align-justify")}<em>Flera plan</em></button>
       </div>
       ${n?`<button class="btn btn-primary ns-cam-send" onclick="nsFinish()">Skicka · ${n} foto${n>1?"n":""}</button>`:""}
-      ${!sbUser?`<button class="ns-cam-login" onclick="showLoginScreen()">Har du redan ett konto? Logga in</button>`:""}
+      ${!sbUser?`<button class="ns-cam-login" onclick="nsTillInloggning()">Har du redan ett konto? Logga in</button>`:""}
     </div>
     ${S.tips?`<div class="ns-cam-sheet-scrim" onclick="nsCloseTips()"></div>
     <div class="ns-cam-sheet">
@@ -2038,6 +2042,10 @@ async function nsCamShot(input){
     catch(e2){alert("Kunde inte läsa bilden. Prova en annan.");nsState.shots.pop();nsRenderCam();return}
   }
   nsRenderCam();
+  /* Sparas vid varje foto, inte bara när man backar eller går till
+     inloggningen - stänger man appen rakt av finns ingen händelse att
+     haka på, och då ska fotona ändå finnas kvar nästa gång (B3). */
+  nsSparaFoton(nsState.shots);
 }
 /* Miniatyrraden: numrerad, horisontellt scrollbar. Ritas bara när det finns
    minst ett foto - nsRenderCam() bygger om hela foten, så den här
@@ -2060,13 +2068,121 @@ function nsRenderShots(){
   const c=document.getElementById("nsCount");
   if(c)c.textContent=n?`(${n} foto${n>1?"n":""})`:"";
 }
-function nsStartWizard(){nsState={step:1,mode:null,shots:[],bc:nextFreeBc()};nsRender();
+/* ---------- Tagna foton som överlever ett avbrott (B3, beslut 27/10) ----------
+   Backar man ut ur guiden, går till inloggningen mitt i, eller stänger
+   appen helt innan fotona skickats - då ska de ligga kvar till nästa
+   gång, med frågan "Fortsätt med de N foton du tog?".
+
+   IndexedDB, inte localStorage: tio nedskalade foton är flera megabyte
+   och localStorage tar slut vid ~5 MB, delat med profilbilden som redan
+   har en "kunde inte spara"-varning. Originalfilen sparas inte - bara den
+   nedskalade kopian, som sedan får bli både analysunderlag och
+   lagringsbild. Accepterat 27/10: alternativet vore att slänga fotona. */
+const NS_FOTO_DB="bokhyllan-foton",NS_FOTO_STORE="shots";
+function nsFotoDb(){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB){rej(new Error("ingen indexedDB"));return}
+    const r=indexedDB.open(NS_FOTO_DB,1);
+    r.onupgradeneeded=()=>{const db=r.result;
+      if(!db.objectStoreNames.contains(NS_FOTO_STORE))db.createObjectStore(NS_FOTO_STORE)};
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function nsSparaFoton(shots){
+  const spara=(shots||[]).filter(s=>s.dataUrl)
+    .map(s=>({dataUrl:s.dataUrl,label:s.label||"",multi:!!s.multi}));
+  try{
+    const db=await nsFotoDb();
+    await new Promise((res,rej)=>{
+      const t=db.transaction(NS_FOTO_STORE,"readwrite");
+      const st=t.objectStore(NS_FOTO_STORE);
+      if(spara.length)st.put(spara,"pagaende");else st.delete("pagaende");
+      t.oncomplete=res;t.onerror=()=>rej(t.error);
+    });
+    db.close();
+  }catch(e){console.warn("kunde inte spara foton lokalt",e)}
+}
+async function nsHamtaFoton(){
+  try{
+    const db=await nsFotoDb();
+    const rader=await new Promise((res,rej)=>{
+      const t=db.transaction(NS_FOTO_STORE,"readonly");
+      const q=t.objectStore(NS_FOTO_STORE).get("pagaende");
+      q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);
+    });
+    db.close();
+    return Array.isArray(rader)?rader:[];
+  }catch(e){console.warn("kunde inte läsa sparade foton",e);return[]}
+}
+async function nsRensaFoton(){try{await nsSparaFoton([])}catch(e){}}
+/* Återskapar en fil ur den nedskalade kopian, så uppladdningen har något
+   att lägga i lagringen. Originalet finns inte kvar - se kommentaren ovan. */
+function nsFilFranDataUrl(dataUrl,namn){
+  try{
+    const m=/^data:(image\/[a-z+]+);base64,(.+)$/.exec(dataUrl);
+    if(!m)return null;
+    const bin=atob(m[2]);
+    const buf=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+    return new File([buf],namn,{type:m[1]});
+  }catch(e){return null}
+}
+/* Frågar om sparade foton ska återupptas. Ja lägger dem i kamerasteget,
+   Nej slänger dem. Körs när guiden öppnas - efter inloggning, efter en
+   back, eller när appen startas om. */
+async function nsFragaSparade(){
+  if(!nsState||nsState.shots.length)return;
+  const sparade=await nsHamtaFoton();
+  if(!sparade.length)return;
+  const n=sparade.length;
+  const svar=await ask({
+    title:`Fortsätt med de ${n} foto${n>1?"n":""} du tog?`,
+    text:"De ligger kvar sedan sist och är inte skickade än.",
+    buttons:[{label:"Ja, fortsätt",value:"ja",kind:"primary"},{label:"Nej, släng",value:"nej"}]
+  });
+  /* Bara ett uttryckligt svar avgör fotonas öde. Stänger man dialogen
+     genom att trycka utanför (ask() ger false) ligger de kvar och frågan
+     kommer igen - att slänga någons foton på ett oavsiktligt tryck vore
+     fel väg att gissa. */
+  if(svar==="ja"){
+    nsState.shots=sparade.map((s,i)=>({
+      label:s.label||"",dataUrl:s.dataUrl,multi:!!s.multi,
+      file:nsFilFranDataUrl(s.dataUrl,`hyllplan-${i+1}.jpg`)
+    })).filter(s=>s.file);
+    await nsRensaFoton();
+  }else if(svar==="nej"){
+    await nsRensaFoton();
+  }
+  nsRender();
+}
+/* Byte till inloggningen mitt i guiden: fotona sparas lokalt först, så de
+   kan erbjudas igen efter lyckad inloggning (B3). */
+async function nsTillInloggning(){
+  if(nsState&&nsState.shots&&nsState.shots.length)await nsSparaFoton(nsState.shots);
+  showLoginScreen();
+}
+function nsStartWizard(){nsState={step:1,mode:null,shots:[],bc:nextFreeBc(),origin:"hyllor"};nsRender();
   document.getElementById("nsWizard").scrollIntoView({behavior:"smooth",block:"nearest"})}
 function nsCancel(){nsState=null;nsRender()}
-function nsBack(){if(!nsState)return;
+/* Ett steg bakåt i guiden (B1). Den som kom in via "Kom igång" på
+   startsidan hoppade direkt till kamerasteget och har aldrig sett
+   stegen före - för henne leder bakåt ut till startsidan, inte in i
+   Inställningar > Hyllor där kameraytan råkar bo. */
+function nsBack(){
+  if(!nsState)return;
+  if(nsState.step===4&&nsState.origin==="hem"){nsLamnaGuiden();return}
   if(nsState.step===4&&nsState.mode==="update")nsState.step=2;
   else nsState.step=Math.max(1,nsState.step-1);
-  nsRender()}
+  nsRender();
+}
+/* Lämnar guiden och går till startsidan. Tagna foton sparas lokalt så de
+   finns kvar nästa gång guiden öppnas (B3). */
+async function nsLamnaGuiden(){
+  if(nsState&&nsState.shots&&nsState.shots.length)await nsSparaFoton(nsState.shots);
+  nsState=null;nsRender();
+  go("hem");
+}
 function nsPick(mode){nsState.mode=mode;nsState.step=2;nsRender()}
 function nsSaveName(){
   const v=(document.getElementById("nsNameInp").value||"").trim();
@@ -2078,11 +2194,14 @@ function nsPickExisting(){
   const code=(document.getElementById("nsCodeInp").value||"").trim();
   nsState.bc=bc;nsState.name=bcNames[bc];nsState.code=code;
   nsState.type=code&&/^\d+:[VH]/.test(code)?"VH":"S";
-  nsState.step=4;nsState.shots=[];nsState.defLabel=code||"";nsRender();
+  /* Behåller redan tagna foton (B3, beslut 27/10): backar man ett steg
+     och går fram igen ligger de kvar i miniatyrraden. Ett råkat tryck
+     ska inte kosta fotandet. */
+  nsState.step=4;nsState.defLabel=code||"";nsRender();
 }
 function nsType(t){nsState.type=t;nsState.step=4;
-  nsState.shots=[];nsState.defLabel="";nsRender()}
-function nsDelShot(i){nsState.shots.splice(i,1);nsRenderCam()}
+  nsState.defLabel="";nsRender()}
+function nsDelShot(i){nsState.shots.splice(i,1);nsRenderCam();nsSparaFoton(nsState.shots)}
 function nsShotLabel(i,v){nsState.shots[i].label=v}
 /* Laddar upp ett hyllfoto: originalet till lagringen (om det går) och en
    nedskalad kopia i raden, som avläsningen använder. Returnerar raden. */
@@ -2498,6 +2617,7 @@ async function nsFinish(){
     S.shots=delade;
   }
   const bc=S.bc;
+  nsAvbrytTillHem=S.origin==="hem";
   const btn=document.querySelector("#nsCam .ns-cam-send");
   if(btn){btn.disabled=true;btn.style.opacity=".6";btn.textContent="Skickar…"}
   /* Overlayen tar över skärmen direkt - den ligger redan ovanpå kameran
@@ -2519,6 +2639,7 @@ async function nsFinish(){
       if(row)rows.push(row);
     }
     nsState=null;nsRender();
+    await nsRensaFoton();
     buildShelfOptions();renderBcEditor();
     await loadNewShelves();
     await nsRunAnalysisBatch(rows.map(r=>r.id),bc);
@@ -2585,6 +2706,20 @@ function nsKaglaVandra(kagla,ljus){
   };
   requestAnimationFrame(rit);
 }
+/* "Avbryt" på analyssteget (B1): det steget kör en bakgrundsprocess och
+   har därför ingen tillbaka-pil. Avbrytningen stoppar avläsningen efter
+   det foto som är igång och går vidare till hyllan. */
+let nsAnalysAvbruten=false;
+/* nsState är redan nollställt när analysen kör (nsFinish rensar det efter
+   uppladdningen), så varifrån guiden startades måste sparas separat. */
+let nsAvbrytTillHem=false;
+function nsAvbrytAnalys(){
+  nsAnalysAvbruten=true;
+  const b=document.getElementById("nsAnalysAvbryt");
+  if(b){b.disabled=true;b.textContent="Avbryter …"}
+  const h=document.getElementById("nsAnalysHint");
+  if(h)h.textContent="Avslutar avläsningen …";
+}
 async function nsRunAnalysisBatch(ids,bc){
   if(!ids||!ids.length){nsShowHylla(bc);return}
   const cam=document.getElementById("nsCam");if(cam)cam.style.display="none";
@@ -2605,7 +2740,8 @@ async function nsRunAnalysisBatch(ids,bc){
     <span class="ns-kagla"></span></div>
     <div><div class="ns-analys-count" id="nsAnalysCount"></div>
     <p class="ns-analys-hint" id="nsAnalysHint">Läser av hyllan …</p></div>
-    <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>`;
+    <div class="ns-analys-bar"><span id="nsAnalysBar" style="width:0%"></span></div>
+    <button class="ns-analys-avbryt" id="nsAnalysAvbryt" onclick="nsAvbrytAnalys()">Avbryt</button>`;
   const spines=[...el.querySelectorAll(".ns-rad-mork .ns-spine")];
   const countEl=document.getElementById("nsAnalysCount");
   const hintEl=document.getElementById("nsAnalysHint");
@@ -2619,9 +2755,11 @@ async function nsRunAnalysisBatch(ids,bc){
      vet ingenting om antalet förrän svaret kommer. Den gamla versionen
      räknade upp i takt med tiden och kunde landa på 18 innan sanningen
      (4) kom - en siffra som mätte väntan, inte böcker. */
+  nsAnalysAvbruten=false;
   const real=(async()=>{
     let total=0,titles=[],failed=0;
     for(const id of ids){
+      if(nsAnalysAvbruten)break;
       const r=await runAnalys("shelf",id,null,{silent:true});
       if(r&&r.ok){total+=r.titles.length;titles=titles.concat(r.titles)}else failed++;
     }
@@ -2635,10 +2773,26 @@ async function nsRunAnalysisBatch(ids,bc){
     const t=setInterval(()=>{
       const gatt=Date.now()-started;
       if(barEl)barEl.style.width=(96*gatt/(gatt+10000))+"%";
-      if(real.__done){clearInterval(t);resolve()}
+      if(real.__done||nsAnalysAvbruten){clearInterval(t);resolve()}
     },100);
     real.then(()=>{real.__done=true});
   });
+  /* Avbryter användaren lämnar vi avläsningen direkt. Vart man hamnar
+     beror på var man kom ifrån (beslut 28/10): den som är inne i
+     nyanvändarguiden för första gången går tillbaka till startsidan hon
+     just kom från - att landa på hyllsidan, en vy hon aldrig sett, vore
+     förvirrande. Den som startade guiden inifrån appen känner hyllsidan
+     och får den.
+
+     Inget raderas i något av fallen: fotona ligger kvar som egna
+     hyllplan utan boklista och kan läsas av senare. En uppladdad bild är
+     användarens arbete, inte skräp att städa bort. */
+  if(nsAnalysAvbruten){
+    el.style.display="none";
+    if(nsAvbrytTillHem){nsAvbrytTillHem=false;go("hem");renderHome();return}
+    nsShowHylla(bc,{avbruten:true});
+    return;
+  }
   const{total,titles,failed}=await real;
   /* Svaret har landat: käglan slocknar, siffran räknas upp från noll till
      det verkliga antalet och lika många ryggar tänds - blev det fler
@@ -2700,7 +2854,7 @@ function nsShowHylla(bc,opts){
     <div class="ns-hylla-head">
       <div class="ns-hylla-eyebrow">${saved?"Hylla":"Din hylla, digitalt"}</div>
       <h1 class="ns-hylla-name" id="nsHyllaName" title="Tryck för att byta namn">${esc(namn)}</h1>
-      <div class="ns-hylla-sub">${antal} hyllplan · ${total} böcker${pendingTotal?` · ${pendingTotal} väntar på granskning`:""}${opts.failed?` · ${opts.failed} foto${opts.failed>1?"n":""} gick inte att läsa av`:""}</div>
+      <div class="ns-hylla-sub">${antal} hyllplan · ${total} böcker${pendingTotal?` · ${pendingTotal} väntar på granskning`:""}${opts.failed?` · ${opts.failed} foto${opts.failed>1?"n":""} gick inte att läsa av`:""}${opts.avbruten?" · avläsningen avbröts":""}</div>
     </div>
     <div class="ns-hylla-planes">
       ${planer.map(({ph,pending})=>`<div class="ns-hylla-plane">
@@ -3140,7 +3294,7 @@ const nsBtn=document.getElementById("nsStart");
 if(nsBtn)nsBtn.addEventListener("click",nsStartWizard);
 window.nsPick=nsPick;window.nsBack=nsBack;window.nsCancel=nsCancel;window.nsSaveName=nsSaveName;
 window.nsPickExisting=nsPickExisting;window.nsType=nsType;window.nsCamShot=nsCamShot;window.nsToggleTips=nsToggleTips;
-window.nsDelaVal=nsDelaVal;window.nsDelaAvbryt=nsDelaAvbryt;window.nsDelaKlar=nsDelaKlar;
+window.nsAvbrytAnalys=nsAvbrytAnalys;window.nsTillInloggning=nsTillInloggning;window.nsDelaVal=nsDelaVal;window.nsDelaAvbryt=nsDelaAvbryt;window.nsDelaKlar=nsDelaKlar;
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
