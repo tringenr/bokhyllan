@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029132044";
+const DV="?v=20261029150557";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1268,7 +1268,7 @@ renderHomeViewSeg();
    Själva sökningen (mot Studentapan/Bokbörsen/Tradera) är fas B: ingen
    knapp i appen ännu, körs manuellt i en Claude-session på Thomas begäran
    (se claude/bokhyllan-projektplan.md). */
-const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Tradera"};
+const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Tradera",campusbokhandeln:"Campusbokhandeln"};
 let sellFilter="alla";
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
