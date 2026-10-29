@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029150557";
+const DV="?v=20261029150726";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2886,9 +2886,11 @@ async function nsRunAnalysisBatch(ids,bc){
    hör till just den här första landningen. Data (foton, antal, namn)
    kommer från placeList(), samma källa som Hem och Platser-vyn - ingen
    egen datahämtning här. */
+let nsHyllaSenast=null;
 function nsShowHylla(bc,opts){
   opts=opts||{};
   const el=document.getElementById("nsDone");if(!el)return;
+  nsHyllaSenast={bc,opts};
   const top=topBc(String(bc));
   const p=placeList().find(x=>x.bc===top);
   const saved=!!(sbUser&&!sbUser.is_anonymous);
@@ -2937,6 +2939,7 @@ function nsShowHylla(bc,opts){
           <p class="fine" style="text-align:center">Hyllan finns bara i den här telefonen tills du sparar den.</p>
         </div>`}
     <div class="ns-hylla-foot">
+      ${saved?`<button class="btn btn-primary" id="nsDoneHome" type="button" style="width:100%;margin-bottom:10px">Till Hem</button>`:""}
       <button class="btn-outline" id="nsDoneOut" type="button">Logga ut</button>
     </div>`;
   el.style.display="";
@@ -2960,6 +2963,10 @@ function nsShowHylla(bc,opts){
   if(!saved){
     el.querySelector("#nsHyllaSaveBtn").onclick=()=>nsShowAccount(bc,opts);
   }
+  /* Väg ut ur den sparade hyllsidan: lagret ligger över hela appen (z-index 91)
+     och göms annars bara av nsShowAccount/nsAddHyllplan. */
+  const homeBtn=el.querySelector("#nsDoneHome");
+  if(homeBtn)homeBtn.onclick=()=>{el.style.display="none";nsHyllaSenast=null;go("hem");renderHome()};
   el.querySelector("#nsDoneOut").onclick=async()=>{
     const varning=saved?"Logga ut?":"Det tillfälliga biblioteket försvinner för gott om du loggar ut utan att först spara hyllan ovan. Logga ut ändå?";
     if(!confirm(varning))return;
@@ -3261,6 +3268,9 @@ async function psSave(btn){
     const doneId=PS.mode==="analys"&&psFromPlace===PS.id?PS.id:null;
     nsOpenId=PS.id;psClose();
     buildShelfOptions();rebuildCatFilter();render();renderNsList();
+    /* Ligger hyllsidan kvar över appen ska den visa de nya antalen, inte
+       "väntar på granskning" för böcker som nu är inlagda. */
+    {const nd=document.getElementById("nsDone");if(nd&&nd.style.display!=="none"&&nsHyllaSenast)nsShowHylla(nsHyllaSenast.bc,nsHyllaSenast.opts)}
     if(doneId!=null){psFromPlace=null;
       const ok=await ask({title:"Klarmarkera fotot?",text:"Då räknas hyllplanet som klart"+(PH.some(x=>x.nsId===doneId&&x.shelves.length)?", och fotot ersätter ett äldre foto av samma hyllplan.":"."),
         buttons:[{label:"Klarmarkera",value:true,kind:"primary"},{label:"Senare",value:false}]});
@@ -3360,7 +3370,7 @@ window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
-window.nsAddHyllplan=nsAddHyllplan;
+window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
 /* ---------- Dela ---------- */
 const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
