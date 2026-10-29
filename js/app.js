@@ -1096,8 +1096,12 @@ window.showLoginScreen=showLoginScreen;
    inloggningen löst sig (klick-styrt, inte await-styrt). */
 async function afterAuthReady(){
   renderAuth();
+  /* Gäster (anonym session, sparas efter "Kom igång") ska alltid kunna
+     logga in från startsidan - länken göms bara för ett riktigt konto. */
   const loginLink=document.getElementById("homeEmptyLogin");
-  if(loginLink)loginLink.style.display=sbUser?"none":"";
+  if(loginLink){const riktig=!!(sbUser&&!sbUser.is_anonymous);
+    loginLink.style.display=riktig?"none":"";
+    if(!riktig)loginLink.onclick=showLoginScreen}
   if(!sbUser)return;
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}

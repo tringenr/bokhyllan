@@ -173,6 +173,11 @@ setTimeout(() => {
     if (d.querySelector(".tabbar").style.display === "none") fel.push("fliklisten återställs inte av go()");
   } catch (e) { fel.push("fel i kontrollen av inloggningsskärmens återställning: " + e.stack); }
 
+  // 2d. Inloggningslänken på startsidan ska visas för gäster (anonym session)
+  //     och bara döljas för ett riktigt konto, och ha en klickhanterare.
+  if (!/homeEmptyLogin[\s\S]{0,200}is_anonymous[\s\S]{0,200}onclick=showLoginScreen/.test(appSrc))
+    fel.push("afterAuthReady döljer inloggningslänken för gäster eller saknar klickhanterare (is_anonymous)");
+
   // 3. Kunde data/*.json läsas och parsas?
   for (const f of fs.readdirSync(path.join(ROOT, "data"))) {
     if (!f.endsWith(".json")) continue;
