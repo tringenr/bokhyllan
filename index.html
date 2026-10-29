@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261029150726">
+<link rel="stylesheet" href="css/style.css?v=20261029150900">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261029150726";
+  var MY="20261029150900";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -269,11 +269,42 @@
   <div class="page-head"><h1>Värdera</h1>
     <button class="round-btn" id="sellInfoBtn" aria-label="Om priserna"><i data-ic="info"></i></button>
   </div>
-  <div class="chips" id="sellFilters">
-    <button class="chip active" data-sf="alla">Alla</button>
-    <button class="chip" data-sf="sakra">Säkra pris</button>
-    <button class="chip" data-sf="topp25">Topp 25</button>
+  <!-- Sökfält och filterknapp, samma mönster som sökvyn men med Värderas
+       egna filter: säkerhet, hetta och kategori. Raderna i listan är
+       oförändrade - det här är ett tillägg ovanför dem, inte en omskrivning
+       (beslut 29/10: addera eller dra ifrån, gör inte om det som finns). -->
+  <div class="bp-searchrow sell-searchrow">
+    <div class="bp-search"><input id="sellQ" type="search" placeholder="Sök bland värderade" autocomplete="off" aria-label="Sök bland värderade böcker"></div>
+    <button class="bp-filter" id="sellFilterBtn" aria-label="Filter" aria-expanded="false">
+      <i data-ic="sliders-horizontal"></i><span class="bp-filter-dot" id="sellFilterDot" hidden></span>
+    </button>
   </div>
+  <div class="bp-filters" id="sellFilters" hidden>
+    <p class="flt-rubrik">Säkerhet</p>
+    <div class="chips" data-grp="unc">
+      <button class="chip active" data-v="">Alla</button>
+      <button class="chip" data-v="lag">Säkert pris</button>
+      <button class="chip" data-v="medel">Ganska säkert</button>
+      <button class="chip" data-v="hog">Osäkert</button>
+    </div>
+    <p class="flt-rubrik">Hetta</p>
+    <div class="chips" data-grp="heat">
+      <button class="chip active" data-v="">Alla</button>
+      <button class="chip" data-v="het">Het</button>
+      <button class="chip" data-v="medel">Medel</button>
+      <button class="chip" data-v="lag">Låg</button>
+    </div>
+    <p class="flt-rubrik">Kategori</p>
+    <div class="hs-chips bp-cats" id="sellCatChips"></div>
+  </div>
+  <!-- Ersätter det gamla chipet "Topp 25": antalet rader väljs i stället
+       för att vara låst till 25 (beslut 29/10). -->
+  <p class="sell-visar">Visar
+    <select id="sellLimit" aria-label="Antal böcker som visas">
+      <option value="25">25</option><option value="50">50</option>
+      <option value="100">100</option><option value="0" selected>alla</option>
+    </select>
+    böcker</p>
   <div id="sellList"></div>
   <p id="sellNote" class="fine"></p>
   <div class="sell-empty-msg" id="sellEmptyMsg" style="display:none">Listan är tom. Be Claude köra en ny värderingsrunda, så fylls den igen.</div>
@@ -402,6 +433,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261029150726"></script>
+<script src="js/app.js?v=20261029150900"></script>
 </body>
 </html>

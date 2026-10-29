@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029150726";
+const DV="?v=20261029150900";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1269,7 +1269,10 @@ renderHomeViewSeg();
    knapp i appen ännu, körs manuellt i en Claude-session på Thomas begäran
    (se claude/bokhyllan-projektplan.md). */
 const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Tradera",campusbokhandeln:"Campusbokhandeln"};
-let sellFilter="alla";
+/* Värderas egna filter. Skilda från sökvyns (fs/fCat/q): vyerna har olika
+   syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
+   = visa alla. */
+let sellQ="",sellUnc="",sellHeat="",sellCat="",sellLimit=0,sellFiltersOppna=false;
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
   const s=SELL,sum=s.summary;
@@ -1279,10 +1282,23 @@ function renderSell(){
   /* Nyare fält i första hand, gamla som fallback (se kommentar ovan). */
   const val=it=>it.estimated_value!=null?it.estimated_value:(it.low||0);
   const isSure=it=>it.uncertainty?it.uncertainty==="lag":!!it.checked;
+  /* Boken i katalogen slås upp här (inte bara i raden längre ner), eftersom
+     kategorifiltret behöver den - sell_items har ingen egen kategori. */
+  const bokFor=it=>(it.book_id&&data.find(x=>x.id===it.book_id))||
+    (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))))||null;
   let items=s.items.slice().sort((a,b)=>val(b)-val(a));
-  if(sellFilter==="sakra")items=items.filter(isSure);
-  if(sellFilter==="topp25")items=items.slice(0,25);
+  if(sellQ){const nq=sellQ.toLowerCase();items=items.filter(it=>String(it.title||"").toLowerCase().includes(nq))}
+  if(sellUnc)items=items.filter(it=>(it.uncertainty||(isSure(it)?"lag":""))===sellUnc);
+  if(sellHeat)items=items.filter(it=>(it.heat_score||it.heat)===sellHeat);
+  if(sellCat)items=items.filter(it=>{const b=bokFor(it);return b&&b.cat===sellCat});
+  const totalt=items.length;
+  if(sellLimit>0)items=items.slice(0,sellLimit);
+  sellSyncUI(totalt);
   const maxVal=Math.max(1,...items.map(val));
+  if(!items.length){
+    el.innerHTML=`<div class="sell-empty-msg">${sellQ?`Inga träffar på ”${esc(sellQ)}”.`:"Inga böcker matchar filtret."}</div>`;
+    document.getElementById("sellNote").textContent="";return;
+  }
   if(!items.length){el.innerHTML=`<div class="sell-empty-msg">Inga böcker matchar filtret.</div>`;document.getElementById("sellNote").textContent="";return}
   el.innerHTML=(sum?`<div class="card sell-sum"><span class="fine">Försiktig uppskattning, lägsta pris per titel</span>
       <span class="kr">ca ${fmtN(sum.summa)} kr</span>
@@ -1296,8 +1312,7 @@ function renderSell(){
          vid varje visning, och "Står i:"-raden tappades tyst bort så fort
          en titel rättades i katalogen (flödesrapporten 2026-10-26, punkt
          4.3). match_title-fallbacken finns kvar för poster utan book_id. */
-      const d=(it.book_id&&data.find(x=>x.id===it.book_id))||
-        (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))));
+      const d=bokFor(it);
       const loc=d&&d.shelf?locLabel(d.shelf):"";
       const sources=(SELL_PRICES[it.id]||[]);
       const u=it.uncertainty?`<span class="u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"";
@@ -1320,9 +1335,48 @@ function renderSell(){
 function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
 function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
 window.toggleSell=toggleSell;
-document.querySelectorAll("#sellFilters .chip").forEach(c=>c.addEventListener("click",()=>{
-  document.querySelectorAll("#sellFilters .chip").forEach(x=>x.classList.remove("active"));
-  c.classList.add("active");sellFilter=c.dataset.sf;renderSell()}));
+/* Håller filterknappen, pricken, kategorichipen och "Visar N böcker" i
+   takt med filtren. Kallas från renderSell() med antalet träffar före
+   antalsbegränsningen, så texten kan säga hur många som finns. */
+function sellSyncUI(totalt){
+  const aktiv=!!(sellUnc||sellHeat||sellCat);
+  if(aktiv)sellFiltersOppna=true;
+  const box=document.getElementById("sellFilters");
+  if(box)box.hidden=!sellFiltersOppna;
+  const btn=document.getElementById("sellFilterBtn");
+  if(btn){btn.setAttribute("aria-expanded",sellFiltersOppna?"true":"false");btn.classList.toggle("on",aktiv)}
+  const dot=document.getElementById("sellFilterDot");
+  if(dot)dot.hidden=!aktiv;
+  const visar=document.querySelector(".sell-visar");
+  if(visar)visar.lastChild.textContent=sellLimit>0&&totalt>sellLimit?` av ${totalt} böcker`:" böcker";
+  /* Kategorierna kommer ur katalogen, men bara de som faktiskt finns bland
+     de värderade böckerna - annars står där kategorier som aldrig ger träff. */
+  const cc=document.getElementById("sellCatChips");
+  if(cc&&SELL){
+    const kats=[...new Set((SELL.items||[]).map(it=>{
+      const b=(it.book_id&&data.find(x=>x.id===it.book_id))||
+        (it.match_title&&data.find(x=>x.title===it.match_title));
+      return b&&b.cat}).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"sv"));
+    const nytt=kats.map(c=>`<button class="hs-chip${c===sellCat?" on":""}" data-sc="${esc(c)}">${esc(c)}</button>`).join("");
+    if(cc.dataset.sig!==nytt){
+      cc.dataset.sig=nytt;cc.innerHTML=nytt;
+      cc.querySelectorAll("[data-sc]").forEach(b=>b.addEventListener("click",()=>{
+        sellCat=sellCat===b.dataset.sc?"":b.dataset.sc;renderSell()}));
+    }
+  }
+}
+document.querySelectorAll("#sellFilters .chips").forEach(grp=>{
+  grp.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+    grp.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");
+    if(grp.dataset.grp==="unc")sellUnc=c.dataset.v;else sellHeat=c.dataset.v;
+    renderSell();
+  }));
+});
+document.getElementById("sellFilterBtn")?.addEventListener("click",()=>{
+  sellFiltersOppna=!sellFiltersOppna;sellSyncUI(0);renderSell()});
+document.getElementById("sellQ")?.addEventListener("input",e=>{sellQ=e.target.value;renderSell()});
+document.getElementById("sellLimit")?.addEventListener("change",e=>{sellLimit=Number(e.target.value)||0;renderSell()});
 document.getElementById("sellInfoBtn")?.addEventListener("click",()=>{
   const p=document.getElementById("sellInfoPanel");if(p)p.open=!p.open});
 document.getElementById("sellClearBtn")?.addEventListener("click",async()=>{

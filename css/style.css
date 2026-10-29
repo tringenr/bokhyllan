@@ -1193,3 +1193,13 @@ body.ps-lock{overflow:hidden}
 .sr-loc svg{width:11px;height:11px;flex:none;opacity:.7}
 .sr-loc .var-link{text-decoration:underline;text-underline-offset:2px}
 .sr .badge{flex:none}
+
+/* Värdera: sökfält, filterknapp och antalsväljare (beslut 29/10).
+   Raderna i listan är oförändrade - det här sitter ovanför dem. */
+.sell-searchrow{margin:4px 0 14px}
+.flt-rubrik{font:600 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-secondary);margin:2px 0 -4px}
+.sell-visar{display:flex;align-items:center;gap:7px;margin:14px 0 10px;
+  font:500 13px var(--font-body);color:var(--text-secondary)}
+.sell-visar select{border:1px solid var(--border-default);border-radius:9px;background:var(--surface);
+  color:var(--fg);padding:5px 8px;font:600 13px var(--font-body)}
