@@ -996,6 +996,17 @@ function hideAppChrome(){
   if(panelEl)panelEl.classList.remove("open");
   if(panelScrimEl)panelScrimEl.classList.remove("open");
 }
+/* Motsatsen till hideAppChrome: göms inloggningsskärmarna och fliklisten
+   återställs. Körs först i go(), eftersom varje väg ut ur inloggningen eller
+   guiden (nsLamnaGuiden, Kom igång, tillbaka från Konto) går via go().
+   Lyckad inloggning laddar om sidan och behöver den inte. */
+function showAppChrome(){
+  const loginEl=document.getElementById("view-login"),forgotEl=document.getElementById("view-forgot");
+  const tabbar=document.querySelector(".tabbar");
+  if(loginEl)loginEl.style.display="none";
+  if(forgotEl)forgotEl.style.display="none";
+  if(tabbar)tabbar.style.display="";
+}
 /* Ryggrad-grafiken överst på Logga in-skärmen (login.html, LoggaIn):
    BOOKS.slice(0,6), samma NS_SPINE_COLORS/WIDTHS som Steg 5 Konto och
    Jobb A-animationen - men här bara en rad mot papper, ingen fotoruta. */
@@ -1155,6 +1166,7 @@ if(sbUser){
 const VIEWS=["hem","place","delade","salj","gaps","set"];
 function go(v,opts){
   curView=v;
+  showAppChrome();
   VIEWS.forEach(k=>{const el=document.getElementById("view-"+k);if(el)el.style.display=(k===v?"":"none")});
   if(v!=="hem")document.body.classList.remove("eg-lock");
   const homeish=["hem","place","gaps","set"].includes(v);
