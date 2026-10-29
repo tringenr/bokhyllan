@@ -174,7 +174,7 @@ i[data-ic] svg{width:100%;height:100%}
 .bk-loc .var-link i{width:11px;height:11px}
 .loc-dold{opacity:.7;font-style:italic}
 .bk .badge{cursor:pointer;max-width:130px;overflow:hidden;text-overflow:ellipsis}
-.lent-input{margin-top:4px;border:1px solid var(--border-default);background:var(--surface);border-radius:8px;padding:6px 8px;font:500 13px var(--font-body);width:100%}
+.lent-input{margin-top:4px;border:1px solid var(--border-default);background:var(--surface);border-radius:8px;padding:6px 8px;font:500 16px var(--font-body);width:100%}
 .var-link{color:var(--magenta-500);cursor:pointer}
 
 /* Hyllplanen på Hem stylas i "Hem v3"-blocket längre ner (.hv-grid/.hv-list/
