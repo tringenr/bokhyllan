@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029152407";
+const DV="?v=20261029152953";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -703,8 +703,7 @@ function ibVardeHtml(d){
         <div class="ib-spantal"><span>${fmtN(lag)} kr</span><span>${fmtN(hog)} kr</span></div>
       </div>`:""}
     </div>
-    ${kallor.length?`<span class="ib-eyebrow">Per sajt</span>
-      <ul class="sell-sources">${kallor.map(k=>`<li><span>${esc(SELL_SITES[k.site]||k.site)}</span>
+    ${kallor.length?`<ul class="sell-sources">${kallor.map(k=>`<li><span>${esc(SELL_SITES[k.site]||k.site)}</span>
         <span>${fmtN(k.price)} kr${k.url?` · <a href="${esc(k.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
   </div>`;
 }
@@ -714,17 +713,17 @@ function ibFaktaHtml(d){
   const sq=encodeURIComponent(d.title+" "+(d.author||""));
   const cats=[...new Set(data.map(x=>x.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
   const rad=(k,v)=>`<div class="ib-rad"><span>${k}</span><span>${v}</span></div>`;
+  /* Författaren står redan under titeln i rutans huvud - ingen egen rad.
+     Tom beskrivning får ingen mening alls; tystnad säger samma sak. */
   return `<div class="ib-fakta">
-    ${rad("Författare",esc(d.author||"–"))}
     ${rad("Kategori",`<select class="ib-catsel" onchange="setBookCat(${d.id},this.value)">${
       cats.map(c=>`<option${c===d.cat?" selected":""}>${esc(c)}</option>`).join("")}</select>`)}
-    ${rad("Hylla",d.shelf?esc(locLabel(d.shelf)):"<i>Ingen hylla angiven</i>")}
+    ${rad("Hylla",d.shelf?esc(locLabel(d.shelf)):"<i>ingen</i>")}
     ${it&&it.condition_note?rad("Skick",esc(it.condition_note)):""}
   </div>
-  ${info?`<p>${esc(info)}</p><p class="ib-src2">Sammanfattning skriven av Claude – kan innehålla fel.</p>`
-        :`<p class="fine">Ingen beskrivning inlagd ännu för den här boken.</p>`}
-  <p class="fine"><a href="https://www.goodreads.com/search?q=${sq}" target="_blank" rel="noopener">Sök på Goodreads →</a>
-   · <a href="https://www.adlibris.com/se/sok?q=${sq}" target="_blank" rel="noopener">Adlibris →</a></p>`;
+  ${info?`<p>${esc(info)}</p><p class="ib-src2">Skriven av Claude – kan innehålla fel.</p>`:""}
+  <p class="ib-lankar"><a href="https://www.goodreads.com/search?q=${sq}" target="_blank" rel="noopener">Goodreads</a>
+   <a href="https://www.adlibris.com/se/sok?q=${sq}" target="_blank" rel="noopener">Adlibris</a></p>`;
 }
 function showInfo(id,behallFlik){
   const d=data.find(x=>x.id===id);if(!d)return;
