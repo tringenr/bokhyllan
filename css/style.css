@@ -1250,3 +1250,35 @@ body.ps-lock{overflow:hidden}
 .ib-knappar{display:flex;gap:8px;margin-top:16px}
 .ib-knappar .btn{gap:6px;font-size:15px}
 .ib-knappar .btn svg{width:15px;height:15px}
+
+/* ================= DELA V1: mottagarflöde via länk ================= */
+.dela-screen{justify-content:flex-start}
+.dela-laddar{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:40vh}
+.dela-laddar .spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--brand-500);animation:dela-spin .8s linear infinite}
+@keyframes dela-spin{to{transform:rotate(360deg)}}
+.dela-intro{display:flex;flex-direction:column;min-height:100svh;padding:0!important}
+.dela-photo{height:38vh;min-height:220px;background:linear-gradient(145deg,var(--pink-500),var(--magenta-300) 55%,var(--orange-500));position:relative}
+.dela-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.38),transparent 60%)}
+.dela-intro-body{padding:24px 24px 0}
+.dela-intro-body .fine{margin:0 0 4px}
+.dela-name{display:block;font-style:italic;font:italic 400 28px/1.18 var(--font-display);color:var(--fg)}
+.dela-name-s{font-size:22px}
+.dela-name-xs{font-size:18px}
+.dela-intro-btn{margin:auto 24px 32px}
+.dela-hylla{padding-top:8px}
+.sh-head{position:sticky;top:0;background:var(--surface);z-index:5;padding-bottom:8px}
+.dela-h1{margin:0 0 10px;font:400 26px var(--font-display);color:var(--fg)}
+.dela-foot{text-align:center;margin:16px 0}
+.bk-title-ro{background:none;border:0;padding:0;text-align:left;font:600 15px var(--font-body);color:var(--fg);cursor:default}
+.dela-wish{flex:0 0 auto;white-space:nowrap}
+.dela-lvl-grp{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.dela-lvl{text-align:left;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);font:600 15px var(--font-body);color:var(--fg)}
+.dela-lvl.active{border-color:var(--brand-500);background:var(--brand-50,rgba(255,105,135,.08))}
+.dela-linkbox{display:flex;gap:8px;align-items:center;margin-top:6px}
+.dela-linkbox input{flex:1}
+.dela-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.dela-row:last-child{border-bottom:0}
+.dela-row-main{flex:1;min-width:0}
+.dela-row-main b{display:block;font-size:14px}
+.dela-row-main small{color:var(--fg-2);font-size:12px}
+.dela-row .btn{flex:0 0 auto}
