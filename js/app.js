@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029150900";
+const DV="?v=20261029152953";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -645,28 +645,114 @@ infoModal.innerHTML='<div class="info-box"><button class="info-close">✕</butto
 document.body.appendChild(infoModal);
 infoModal.addEventListener("click",e=>{if(e.target===infoModal||e.target.classList.contains("info-close"))infoModal.classList.remove("open")});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")infoModal.classList.remove("open")});
-function showInfo(id){
-  const d=data.find(x=>x.id===id);if(!d)return;
+/* ---------- Bokdetalj (design: screens-ovriga.html, Detail) ----------
+   Behåller den befintliga rutan (infoModal) och byter bara innehållet mot
+   designens tre flikar - beslut 29/10: addera eller dra ifrån, bygg inte
+   om det som fungerar. Omslag, beskrivning, kategoriväljare och de externa
+   länkarna som redan fanns ligger kvar, nu under Fakta.
+
+   "Sälj boken" ur designen är backloggad: värderingsrundorna körs manuellt
+   i en Claude-session, så appen kan inte lägga till en bok i listan själv -
+   knappen hade lett till en återvändsgränd. */
+let ibTab="fakta",ibBok=null;
+
+/* Värderingsposten för en bok, om den finns. De flesta böcker har ingen -
+   bara en minoritet av katalogen har gått genom en värderingsrunda. */
+function sellForBook(d){
+  if(!SELL||!SELL.items)return null;
+  return SELL.items.find(it=>it.book_id===d.id)||
+         SELL.items.find(it=>it.match_title&&(it.match_title===d.title||d.title.startsWith(it.match_title)))||null;
+}
+/* Hyllfotots rad för bokens hyllkod - behövs för att "Ändra" ska kunna
+   öppna rättningsvyn (psOpen). Böcker utan matchande foto saknar rad. */
+function rowForBook(d){
+  if(!d.shelf)return null;
+  return (window.__nsRows||[]).find(r=>shelfCodeForRow(r)===d.shelf)||null;
+}
+function ibSetTab(t){ibTab=t;if(ibBok!=null)showInfo(ibBok,true)}
+function ibAndra(){
+  const d=data.find(x=>x.id===ibBok);if(!d)return;
+  const r=rowForBook(d);
+  if(!r){toast("Den här boken hör inte till något hyllfoto – ändra kategorin här i rutan.");return}
+  infoModal.classList.remove("open");
+  psOpen("ratta",r.id);
+}
+function ibVardeHtml(d){
+  const it=sellForBook(d);
+  if(!it)return `<div class="ib-tom"><b>Inte värderad än</b>
+    <p class="fine">Boken har inte gått genom någon värderingsrunda, så det finns inget pris att visa.
+    Värderingarna körs i omgångar – nästa gång en körs kommer den här boken med.</p></div>`;
+  const kallor=(SELL_PRICES[it.id]||[]).filter(k=>k.price!=null);
+  const priser=kallor.map(k=>k.price);
+  const varde=it.estimated_value!=null?it.estimated_value:(it.low||null);
+  const lag=priser.length?Math.min(...priser):null;
+  const hog=priser.length?Math.max(...priser):null;
+  /* Intervallet räknas ur de verkliga sajtpriserna, inte ur ett påhittat
+     spann: designens markör ska stå någonstans som betyder något. */
+  const pos=(varde!=null&&lag!=null&&hog!=null&&hog>lag)?Math.max(0,Math.min(100,(varde-lag)/(hog-lag)*100)):50;
+  const h=HEAT[it.heat_score||it.heat];
+  const u=it.uncertainty?(it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"):"";
+  return `<div class="ib-varde">
+    <div class="card ib-kort">
+      <span class="ib-eyebrow">Indikerat pris</span>
+      <span class="ib-kr">${varde!=null?fmtN(varde)+" kr":"–"}</span>
+      ${u?`<span class="u ${esc(it.uncertainty)}">${u}</span>`:""}
+      ${h?`<span class="ib-hetta" style="color:${h[1]}">${h[0]}</span>`:""}
+      ${lag!=null&&hog!=null&&hog>lag?`<div class="ib-span">
+        <div class="ib-spanbar"><span class="ib-markor" style="left:${pos}%"></span></div>
+        <div class="ib-spantal"><span>${fmtN(lag)} kr</span><span>${fmtN(hog)} kr</span></div>
+      </div>`:""}
+    </div>
+    ${kallor.length?`<ul class="sell-sources">${kallor.map(k=>`<li><span>${esc(SELL_SITES[k.site]||k.site)}</span>
+        <span>${fmtN(k.price)} kr${k.url?` · <a href="${esc(k.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
+  </div>`;
+}
+function ibFaktaHtml(d){
   const info=BOOK_INFO[d.title];
-  document.getElementById("ibTitle").textContent=d.title;
-  document.getElementById("ibAuth").textContent=(d.author||"")+" · "+d.cat;
-  const q=encodeURIComponent(d.title+" "+(d.author||""));
-  document.getElementById("ibBody").innerHTML=(info?`<p>${info}</p>`:`<p style="color:var(--muted)">Ingen beskrivning inlagd ännu för den här boken.</p>`)+
-    `<p><a href="https://www.goodreads.com/search?q=${q}" target="_blank" rel="noopener">Sök på Goodreads →</a> · <a href="https://www.adlibris.com/se/sok?q=${q}" target="_blank" rel="noopener">Adlibris →</a></p>`;
+  const it=sellForBook(d);
+  const sq=encodeURIComponent(d.title+" "+(d.author||""));
   const cats=[...new Set(data.map(x=>x.cat))].sort((a,b)=>a.localeCompare(b,"sv"));
-  document.getElementById("ibBody").insertAdjacentHTML("beforeend",
-    `<div class="info-cat"><label style="font-size:.8rem;color:var(--muted)">Kategori:</label>
-     <select onchange="setBookCat(${id},this.value)">${cats.map(c=>`<option${c===d.cat?" selected":""}>${c}</option>`).join("")}</select></div>`);
-  document.getElementById("ibSrc").textContent=info?"Sammanfattning skriven av Claude – kan innehålla fel.":"";
+  const rad=(k,v)=>`<div class="ib-rad"><span>${k}</span><span>${v}</span></div>`;
+  /* Författaren står redan under titeln i rutans huvud - ingen egen rad.
+     Tom beskrivning får ingen mening alls; tystnad säger samma sak. */
+  return `<div class="ib-fakta">
+    ${rad("Kategori",`<select class="ib-catsel" onchange="setBookCat(${d.id},this.value)">${
+      cats.map(c=>`<option${c===d.cat?" selected":""}>${esc(c)}</option>`).join("")}</select>`)}
+    ${rad("Hylla",d.shelf?esc(locLabel(d.shelf)):"<i>ingen</i>")}
+    ${it&&it.condition_note?rad("Skick",esc(it.condition_note)):""}
+  </div>
+  ${info?`<p>${esc(info)}</p><p class="ib-src2">Skriven av Claude – kan innehålla fel.</p>`:""}
+  <p class="ib-lankar"><a href="https://www.goodreads.com/search?q=${sq}" target="_blank" rel="noopener">Goodreads</a>
+   <a href="https://www.adlibris.com/se/sok?q=${sq}" target="_blank" rel="noopener">Adlibris</a></p>`;
+}
+function showInfo(id,behallFlik){
+  const d=data.find(x=>x.id===id);if(!d)return;
+  if(!behallFlik){ibBok=id;ibTab="fakta"}
+  document.getElementById("ibTitle").textContent=d.title;
+  document.getElementById("ibAuth").textContent=[d.author,d.cat].filter(Boolean).join(" · ");
+  const flikar=[["varde","Värde"],["fakta","Fakta"],["historik","Historik"]];
+  const kropp=ibTab==="varde"?ibVardeHtml(d)
+    :ibTab==="historik"?`<div class="ib-tom"><b>Ingen historik än</b>
+        <p class="fine">Prishistorik visas när boken följts i 30 dagar.</p></div>`
+    :ibFaktaHtml(d);
+  document.getElementById("ibBody").innerHTML=
+    `<div class="ib-flikar">${flikar.map(([k,l])=>
+      `<button class="${ibTab===k?"on":""}" onclick="ibSetTab('${k}')">${l}</button>`).join("")}</div>
+     <div class="ib-kropp">${kropp}</div>
+     <div class="ib-knappar"><button class="btn btn-outline btn-sm" onclick="ibAndra()">${ic("pencil")}Ändra</button></div>`;
+  document.getElementById("ibSrc").textContent="";
   const slot=document.getElementById("ibCover");
-  slot.innerHTML='<div class="ib-ph">…</div>';
-  findCover(d).then(url=>{
-    slot.innerHTML = url
-      ? `<img src="${url}" alt="Omslag" onerror="this.parentNode.innerHTML=coverUploadHtml(${d.id})">`
-      : coverUploadHtml(d.id);
-  });
+  if(!behallFlik){
+    slot.innerHTML='<div class="ib-ph">…</div>';
+    findCover(d).then(url=>{
+      slot.innerHTML = url
+        ? `<img src="${url}" alt="Omslag" onerror="this.parentNode.innerHTML=coverUploadHtml(${d.id})">`
+        : coverUploadHtml(d.id);
+    });
+  }
   infoModal.classList.add("open");
 }
+
 function coverUploadHtml(id){
   return `<label class="ib-ph up">${ic("camera")}<span>Lägg till omslag</span>
     <input type="file" accept="image/*" style="display:none" onchange="uploadCover(${id},this)"></label>`;
@@ -3423,7 +3509,7 @@ window.nsAvbrytAnalys=nsAvbrytAnalys;window.nsTillInloggning=nsTillInloggning;wi
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
-window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
 /* ---------- Dela ---------- */
