@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029154313";
+const DV="?v=20261029174119";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -682,26 +682,41 @@ function ibVardeHtml(d){
   if(!it)return `<div class="ib-tom"><b>Inte värderad än</b>
     <p class="fine">Boken har inte gått genom någon värderingsrunda, så det finns inget pris att visa.
     Värderingarna körs i omgångar – nästa gång en körs kommer den här boken med.</p></div>`;
+  /* Väntar på kontroll: ingen prissiffra alls, bara länken till den
+     troliga sidan (Design 29/10 g). */
+  if(it.price_status==="vantar"){
+    const kalla=(SELL_PRICES[it.id]||[])[0];
+    return `<div class="ib-varde"><div class="card ib-kort">
+      <span class="ib-eyebrow">Väntar på kontroll</span>
+      <p class="fine">Sidan hittad men priset gick inte att läsa av automatiskt.</p>
+      ${kalla&&kalla.url?`<a href="${esc(kalla.url)}" target="_blank" rel="noopener">Öppna</a>`:""}
+    </div></div>`;
+  }
   const kallor=(SELL_PRICES[it.id]||[]).filter(k=>k.price!=null);
   const priser=kallor.map(k=>k.price);
-  const varde=it.estimated_value!=null?it.estimated_value:(it.low||null);
-  const lag=priser.length?Math.min(...priser):null;
-  const hog=priser.length?Math.max(...priser):null;
+  const auto=it.price_status==="automatiskt",osakert=it.price_status==="osakert";
+  const varde=auto||osakert?(it.price_low!=null?it.price_low:null):(it.estimated_value!=null?it.estimated_value:(it.low||null));
+  const lag=osakert&&it.price_low!=null?it.price_low:(priser.length?Math.min(...priser):null);
+  const hog=osakert&&it.price_high!=null?it.price_high:(priser.length?Math.max(...priser):null);
   /* Intervallet räknas ur de verkliga sajtpriserna, inte ur ett påhittat
      spann: designens markör ska stå någonstans som betyder något. */
   const pos=(varde!=null&&lag!=null&&hog!=null&&hog>lag)?Math.max(0,Math.min(100,(varde-lag)/(hog-lag)*100)):50;
   const h=HEAT[it.heat_score||it.heat];
   const u=it.uncertainty?(it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"):"";
+  /* Okontrollerat: "ca"-prefix och egen eyebrow (Design 29/10 e). Varierande:
+     ingen markör i spannet - det finns inget enskilt värde att placera
+     (Design 29/10 f) - och ingen egen prissiffra ovanför baren. */
   return `<div class="ib-varde">
     <div class="card ib-kort">
-      <span class="ib-eyebrow">Indikerat pris</span>
-      <span class="ib-kr">${varde!=null?fmtN(varde)+" kr":"–"}</span>
-      ${u?`<span class="u ${esc(it.uncertainty)}">${u}</span>`:""}
+      <span class="ib-eyebrow">${auto?"Okontrollerat pris":osakert?"Varierande pris":"Indikerat pris"}</span>
+      ${osakert?"":`<span class="ib-kr"${auto?' style="color:var(--ink-500)"':""}>${varde!=null?(auto?"ca ":"")+fmtN(varde)+" kr":"–"}</span>`}
+      ${auto?"":u?`<span class="u ${esc(it.uncertainty)}">${u}</span>`:""}
       ${h?`<span class="ib-hetta" style="color:${h[1]}">${h[0]}</span>`:""}
       ${lag!=null&&hog!=null&&hog>lag?`<div class="ib-span">
-        <div class="ib-spanbar"><span class="ib-markor" style="left:${pos}%"></span></div>
+        <div class="ib-spanbar">${osakert?"":`<span class="ib-markor" style="left:${pos}%"></span>`}</div>
         <div class="ib-spantal"><span>${fmtN(lag)} kr</span><span>${fmtN(hog)} kr</span></div>
       </div>`:""}
+      ${auto?`<p class="fine">Priset kan höra till en annan upplaga än din. Samma titel kan skilja flera hundra kronor mellan upplagor.</p>`:""}
     </div>
     ${kallor.length?`<ul class="sell-sources">${kallor.map(k=>`<li><span>${esc(SELL_SITES[k.site]||k.site)}</span>
         <span>${fmtN(k.price)} kr${k.url?` · <a href="${esc(k.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
@@ -725,6 +740,28 @@ function ibFaktaHtml(d){
   <p class="ib-lankar"><a href="https://www.goodreads.com/search?q=${sq}" target="_blank" rel="noopener">Goodreads</a>
    <a href="https://www.adlibris.com/se/sok?q=${sq}" target="_blank" rel="noopener">Adlibris</a></p>`;
 }
+/* Historik (Design 29/10 i): en rad per ersatt pris, nyast först. Laddas
+   bara när fliken faktiskt öppnas (sällan använd, ingen poäng att hämta
+   den i förväg för varje bok man råkar öppna). */
+let SELL_HISTORY={};
+async function loadSellHistory(itemId){
+  const{data:rows,error}=await sb.from("sell_price_history").select("*").eq("sell_item_id",itemId).order("replaced_at",{ascending:false});
+  if(error){console.warn("sell_price_history",error);SELL_HISTORY[itemId]=[];return}
+  SELL_HISTORY[itemId]=rows||[];
+  if(ibTab==="historik")showInfo(ibBok,true);
+}
+function ibHistorikHtml(d){
+  const it=sellForBook(d);
+  if(!it)return `<div class="ib-tom"><b>Ingen historik än</b>
+    <p class="fine">Tidigare priser visas här när boken värderas om.</p></div>`;
+  const rader=SELL_HISTORY[it.id];
+  if(rader===undefined){loadSellHistory(it.id);return `<div class="ib-tom"><p class="fine">Laddar…</p></div>`}
+  if(!rader.length)return `<div class="ib-tom"><b>Ingen historik än</b>
+    <p class="fine">Tidigare priser visas här när boken värderas om.</p></div>`;
+  const statusNamn={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris"};
+  return rader.map(r=>`<div class="ib-rad"><span>${esc(new Date(r.replaced_at).toLocaleDateString("sv-SE"))} · ${esc(SELL_SITES[r.site]||r.site)}</span>
+    <span>${r.price!=null?fmtN(r.price)+" kr":"–"} · ${esc(statusNamn[r.status]||r.status)}</span></div>`).join("");
+}
 function showInfo(id,behallFlik){
   const d=data.find(x=>x.id===id);if(!d)return;
   if(!behallFlik){ibBok=id;ibTab="fakta"}
@@ -732,8 +769,7 @@ function showInfo(id,behallFlik){
   document.getElementById("ibAuth").textContent=[d.author,d.cat].filter(Boolean).join(" · ");
   const flikar=[["varde","Värde"],["fakta","Fakta"],["historik","Historik"]];
   const kropp=ibTab==="varde"?ibVardeHtml(d)
-    :ibTab==="historik"?`<div class="ib-tom"><b>Ingen historik än</b>
-        <p class="fine">Prishistorik visas när boken följts i 30 dagar.</p></div>`
+    :ibTab==="historik"?ibHistorikHtml(d)
     :ibFaktaHtml(d);
   document.getElementById("ibBody").innerHTML=
     `<div class="ib-flikar">${flikar.map(([k,l])=>
@@ -1381,8 +1417,11 @@ function renderSell(){
   const emptyMsg=document.getElementById("sellEmptyMsg");
   if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";if(emptyMsg)emptyMsg.style.display="block";return}
   if(emptyMsg)emptyMsg.style.display="none";
-  /* Nyare fält i första hand, gamla som fallback (se kommentar ovan). */
-  const val=it=>it.estimated_value!=null?it.estimated_value:(it.low||0);
+  /* Nyare fält i första hand, gamla som fallback (se kommentar ovan).
+     "Väntar på kontroll" har inget pris att sortera på - den ska sorteras
+     sist (Design 29/10 g), inte först som 0 gjorde. */
+  const val=it=>it.price_status==="vantar"?-1:
+    (it.estimated_value!=null?it.estimated_value:(it.low!=null?it.low:(it.price_high!=null?it.price_high:(it.price_low!=null?it.price_low:0))));
   const isSure=it=>it.uncertainty?it.uncertainty==="lag":!!it.checked;
   /* Boken i katalogen slås upp här (inte bara i raden längre ner), eftersom
      kategorifiltret behöver den - sell_items har ingen egen kategori. */
@@ -1408,7 +1447,19 @@ function renderSell(){
       </div>`:"")+
     `<div>`+items.map((it,i)=>{
       const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
-      const priceLabel=it.estimated_value!=null?`${fmtN(it.estimated_value)} kr`:shortPrice(it.price);
+      /* Status från den nya prissökningen (Design 29/10): "ca"-prefix och
+         dämpad färg på okontrollerat, tomt streck på väntar, spann utan
+         medelvärde på varierande - tre samtidiga skillnader mot ett
+         kontrollerat pris, enligt Designs princip e). */
+      const auto=it.price_status==="automatiskt",vantar=it.price_status==="vantar",osakert=it.price_status==="osakert";
+      const priceLabel=
+        vantar?"–":
+        osakert&&it.price_low!=null&&it.price_high!=null?`${fmtN(it.price_low)}–${fmtN(it.price_high)} kr`:
+        auto?`ca ${fmtN(it.price_low!=null?it.price_low:it.estimated_value)} kr`:
+        it.estimated_value!=null?`${fmtN(it.estimated_value)} kr`:shortPrice(it.price);
+      const statusBadge=
+        auto?`<span class="u" style="color:var(--ink-500)">Okontrollerat</span>`:
+        vantar?`<span class="u" style="color:var(--ink-500)">Väntar på kontroll</span>`:"";
       /* book_id (satt en gång vid migreringen/när posten skapas) är den
          pålitliga kopplingen - före flytten matchades titelsträngen om
          vid varje visning, och "Står i:"-raden tappades tyst bort så fort
@@ -1417,14 +1468,16 @@ function renderSell(){
       const d=bokFor(it);
       const loc=d&&d.shelf?locLabel(d.shelf):"";
       const sources=(SELL_PRICES[it.id]||[]);
-      const u=it.uncertainty?`<span class="u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"";
+      const u=statusBadge||(it.uncertainty?`<span class="u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"");
       return `<div class="sell-row" id="sr-${i}"><button class="sell-head" onclick="toggleSell(${i})">
-          <span class="t">${esc(it.title)}</span><span class="p">${esc(priceLabel)}</span>
-          <span class="track"><span style="width:${Math.round(val(it)/maxVal*100)}%"></span></span>
+          <span class="t">${esc(it.title)}</span><span class="p"${auto?' style="color:var(--ink-500)"':""}>${esc(priceLabel)}</span>
+          <span class="track"><span style="width:${Math.round(Math.max(0,val(it))/maxVal*100)}%"></span></span>
           <span class="h" style="color:${h[1]}">${h[0]}</span></button>
         <div class="sell-more">${u}
+          ${auto?`<p class="fine">Priset kan höra till en annan upplaga än din. Samma titel kan skilja flera hundra kronor mellan upplagor.</p>`:""}
+          ${vantar&&sources[0]&&sources[0].url?`<p>Sidan hittad men priset gick inte att läsa av automatiskt. <a href="${esc(sources[0].url)}" target="_blank" rel="noopener">Öppna</a></p>`:""}
           ${it.condition_note?`<p><b>Villkor:</b> ${esc(it.condition_note)}</p>`:""}
-          ${!it.estimated_value&&shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}
+          ${!it.estimated_value&&!auto&&!vantar&&!osakert&&shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}
           ${it.heat_reason?`<p>${esc(it.heat_reason)}</p>`:(it.why?`<p>${esc(it.why)}</p>`:"")}
           ${loc?`<p>Står i: ${esc(loc)}</p>`:""}
           ${sources.length?`<ul class="sell-sources">${sources.map(src=>`<li><span>${esc(SELL_SITES[src.site]||src.site)}</span><span>${src.price!=null?fmtN(src.price)+" kr":"?"}${src.url?` · <a href="${esc(src.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
@@ -1505,6 +1558,118 @@ async function loadSell(){
   SELL={items:items||[],summary:meta.summary||null,note:meta.note||"",updated:meta.updated_date||""};
   renderSell();
 }
+
+/* ---------- Värdera böcker: urvalsark för automatisk prissökning (Tavily) ----------
+   Filtrerar HELA biblioteket (data), inte den redan värderade listan -
+   egna variabler (vardSel*), delar inte med sellCat/sellUnc/sellHeat
+   (beslut 29/10 om separata filter). Statusar och fält bekräftade med
+   Thomas och Design 29/10, se migrering 20261029163152 och
+   supabase/functions/prissok. */
+let vardSelStatus="",vardSelCats=new Set(),vardQ2="",vardAvbryt=false;
+const vardSheet=document.getElementById("vardSheet"),vardScrim=document.getElementById("vardScrim");
+function vardMatches(){
+  return data.filter(d=>{
+    const it=sellForBook(d),status=it?it.price_status:null;
+    if(vardSelStatus==="aldrig"){if(status)return false}
+    else if(vardSelStatus==="redan"){if(status!=="bekraftat"&&status!=="automatiskt")return false}
+    else if(vardSelStatus&&status!==vardSelStatus)return false;
+    if(vardSelCats.size&&!vardSelCats.has(d.cat))return false;
+    if(vardQ2){const nq=vardQ2.toLowerCase();
+      if(!(String(d.title||"").toLowerCase().includes(nq)||String(d.author||"").toLowerCase().includes(nq)))return false}
+    return true;
+  });
+}
+function vardSyncCount(){
+  const m=vardMatches();
+  const redan=m.filter(d=>{const it=sellForBook(d);return it&&(it.price_status==="bekraftat"||it.price_status==="automatiskt")}).length;
+  const utanForf=m.filter(d=>!String(d.author||"").trim()).length;
+  const rader=[`${m.length} böcker valda`];
+  if(redan)rader.push(`${redan} redan värderade`);
+  if(utanForf)rader.push(`${utanForf} saknar författare`);
+  rader.push(`ca ${m.length} sökkrediter`);
+  const el=document.getElementById("vardCount");if(el)el.textContent=rader.join(" · ");
+  const btn=document.getElementById("vardRunBtn");if(btn)btn.disabled=!m.length;
+}
+/* Skrollbar rad, valda chips flyttade först (Design 29/10 b) - så arket
+   aldrig blir högt oavsett hur många kategorier biblioteket har. */
+function renderVardCats(){
+  const cc=document.getElementById("vardCatChips");if(!cc)return;
+  const kats=[...new Set(data.map(x=>x.cat))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"sv"));
+  const ordnade=kats.slice().sort((a,b)=>(vardSelCats.has(b)?1:0)-(vardSelCats.has(a)?1:0));
+  cc.innerHTML=ordnade.map(c=>`<button class="hs-chip${vardSelCats.has(c)?" on":""}" data-vc="${esc(c)}">${esc(c)}</button>`).join("");
+  cc.querySelectorAll("[data-vc]").forEach(b=>b.addEventListener("click",()=>{
+    const c=b.dataset.vc;if(vardSelCats.has(c))vardSelCats.delete(c);else vardSelCats.add(c);
+    renderVardCats();vardSyncCount();
+  }));
+}
+function openVard(){
+  vardSelStatus="";vardSelCats=new Set();vardQ2="";
+  document.getElementById("vardQ").value="";
+  document.querySelectorAll("#vardStatusChips .chip").forEach(c=>c.classList.toggle("active",c.dataset.v===""));
+  document.getElementById("vardProgress").style.display="none";
+  document.getElementById("vardResult").style.display="none";
+  document.getElementById("vardActions").style.display="flex";
+  renderVardCats();vardSyncCount();
+  vardSheet.classList.add("open");vardScrim.classList.add("open");
+}
+function closeVard(){vardSheet.classList.remove("open");vardScrim.classList.remove("open")}
+document.getElementById("vardOpenBtn")?.addEventListener("click",openVard);
+vardScrim?.addEventListener("click",closeVard);
+document.getElementById("vardCancelBtn")?.addEventListener("click",closeVard);
+document.getElementById("vardResultClose")?.addEventListener("click",closeVard);
+document.getElementById("vardStopBtn")?.addEventListener("click",()=>{vardAvbryt=true});
+document.querySelectorAll("#vardStatusChips .chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll("#vardStatusChips .chip").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active");vardSelStatus=c.dataset.v;vardSyncCount();
+}));
+document.getElementById("vardQ")?.addEventListener("input",e=>{vardQ2=e.target.value;vardSyncCount()});
+/* Körningen går i omgångar om 25 (edge-funktionens gräns per anrop) - osynligt
+   för användaren, som bara ser en gemensam förloppsrad. En redan värderad bok
+   (bekräftat ELLER okontrollerat) får bara sökas om efter en bekräftelsedialog
+   - där sägs också att det gamla priset sparas i Historik (Bokdetalj). */
+document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
+  const m=vardMatches();if(!m.length)return;
+  const redan=m.filter(d=>{const it=sellForBook(d);return it&&(it.price_status==="bekraftat"||it.price_status==="automatiskt")});
+  let confirmOverwrite=false;
+  if(redan.length){
+    const flera=m.length>1;
+    const ok=await ask({title:"Redan värderade",
+      text:`${redan.length===m.length?(flera?"Böckerna":"Boken"):"Några av böckerna"} du har valt har redan fått en värdering. Det gamla priset sparas i Historik. Är du säker?`,
+      buttons:[{label:"Sök om",value:true,kind:"primary"},{label:"Avbryt",value:false}]});
+    if(!ok)return;
+    confirmOverwrite=true;
+  }
+  vardAvbryt=false;
+  document.getElementById("vardActions").style.display="none";
+  document.getElementById("vardProgress").style.display="block";
+  document.getElementById("vardResult").style.display="none";
+  const ids=m.map(d=>d.id);
+  const antal={automatiskt:0,vantar:0,osakert:0,ingen_traff:0,skippad_skyddad:0,fel:0};
+  for(let i=0;i<ids.length;i+=25){
+    if(vardAvbryt)break;
+    const chunk=ids.slice(i,i+25);
+    document.getElementById("vardProgressBar").style.width=Math.round(i/ids.length*100)+"%";
+    document.getElementById("vardProgressText").textContent=`Söker … ${i} av ${ids.length}`;
+    try{
+      const{data:res,error}=await sb.functions.invoke("prissok",{body:{book_ids:chunk,confirm_overwrite:confirmOverwrite}});
+      if(error)throw error;
+      (res&&res.resultat||[]).forEach(r=>{if(r.error)antal.fel++;else if(antal[r.status]!=null)antal[r.status]++});
+    }catch(e){antal.fel+=chunk.length;console.warn("prissok",e)}
+  }
+  document.getElementById("vardProgressBar").style.width="100%";
+  document.getElementById("vardProgress").style.display="none";
+  document.getElementById("vardResult").style.display="block";
+  const delar=[];
+  if(antal.automatiskt)delar.push(`${antal.automatiskt} okontrollerade priser`);
+  if(antal.vantar)delar.push(`${antal.vantar} väntar på kontroll`);
+  if(antal.osakert)delar.push(`${antal.osakert} varierande`);
+  if(antal.ingen_traff)delar.push(`${antal.ingen_traff} inget hittat`);
+  if(antal.skippad_skyddad)delar.push(`${antal.skippad_skyddad} hoppades över`);
+  if(antal.fel)delar.push(`${antal.fel} fel`);
+  document.getElementById("vardResultText").textContent=
+    (vardAvbryt?"Avbruten. ":"")+(delar.join(", ")||"Inget hann sökas.");
+  await loadSell();
+});
 
 /* ---------- Luckor ---------- */
 let GAPS=[],gapState={},gapFilter="open";

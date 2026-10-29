@@ -178,6 +178,20 @@ setTimeout(() => {
   if (!/homeEmptyLogin[\s\S]{0,200}is_anonymous[\s\S]{0,200}onclick=showLoginScreen/.test(appSrc))
     fel.push("afterAuthReady döljer inloggningslänken för gäster eller saknar klickhanterare (is_anonymous)");
 
+  // 2e. Värdera-urvalsarket (prissökning) ska öppnas, räkna och stängas utan
+  //     fel, och aldrig skriva över en skyddad rad utan bekräftelse.
+  try {
+    const d = window.document;
+    d.getElementById("vardOpenBtn").click();
+    if (!d.getElementById("vardSheet").classList.contains("open")) fel.push("vardOpenBtn öppnade inte urvalsarket");
+    const count = d.getElementById("vardCount").textContent;
+    if (!/sökkrediter/.test(count)) fel.push("vardCount visar inte antal sökkrediter: " + JSON.stringify(count));
+    d.getElementById("vardCancelBtn").click();
+    if (d.getElementById("vardSheet").classList.contains("open")) fel.push("vardCancelBtn stängde inte urvalsarket");
+  } catch (e) { fel.push("fel i Värdera-urvalsarket: " + e.stack); }
+  if (!/confirm_overwrite/.test(appSrc) || !/redan fått en värdering/.test(appSrc))
+    fel.push("prissökningen saknar bekräftelsedialogen för redan värderade böcker");
+
   // 3. Kunde data/*.json läsas och parsas?
   for (const f of fs.readdirSync(path.join(ROOT, "data"))) {
     if (!f.endsWith(".json")) continue;
