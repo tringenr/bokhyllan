@@ -149,7 +149,7 @@ bara datan som saknades.
 
 | Flöde | Funktion/vy i koden | Läge |
 |---|---|---|
-| Sök/bläddra/status | `render()`, `bookRow()`, filter på `#fShelf`/`#fCat`/`#q` | Fungerar |
+| Sök/bläddra/status | `render()`, `searchRow()` (träfflistan) / `bookRow()` (hyllvyn), filter på `#fShelf`/`#fCat`/`#q` | Fungerar. **OBS:** en fungerande sökning har funnits här hela tiden — raden "Sök i hyllan" längre ner i filen sa länge "inte byggd", vilket syftade på designens utförande, inte på att funktionen saknades. Den formuleringen fick 29/10 en tråd att bygga om en sökning som redan fanns. Skilj alltid på "funktionen saknas" och "följer inte designen" i den här filen |
 | Platshantering (byt namn, slå ihop, dela, dölj) | `renderBcEditor()`, `placeMerge` m.fl. | Fungerar |
 | Ny hylla (foto → kö → granskning → spara) | `uploadShelfPhoto`, `new_shelves`, analysera-anropet | Fungerar, men delar bildproblemet ovan |
 | Luckor | `gaps`/`gap_status`, samma analysflöde | Fungerar, delar bildproblemet |
@@ -240,9 +240,9 @@ men innehåller rosa — en fälla värd att känna till innan man läser filern
 
 | Skärm | Design säger | Byggt läge |
 |---|---|---|
-| Sök i hyllan | Autofokuserat sökfält, filterchips (Alla/Till salu/Het/Kurslitteratur), träfflista med plats+hylla, medelvärde, temperaturbadge | **Inte byggd.** Ingen sökvy i `index.html` |
-| Bokdetalj | Flikar värde/fakta/historik, knappar "Sälj boken"/"Ändra" | **Inte byggd** i detta utförande |
-| Värdering | Grönt totalkort, summa per sajt, böcker sorterbara på värde/temp/titel, CTA "Sälj de 3 hetaste" | **Byggd i annat utförande (PR #71, #72, mergade 27/10).** `view-salj`/`renderSell()` har lista, detaljpanel, filter och priser per sajt ur `sell_items`/`sell_price_sources`. Följer inte designens exakta utseende (inget totalkort i grönt, annan sortering) — inte avstämd punkt för punkt mot `screens-ovriga.html` |
+| Sök i hyllan | Autofokuserat sökfält, filterchips (Alla/Till salu/Het/Kurslitteratur), träfflista med plats+hylla, medelvärde, temperaturbadge | **Byggd (PR #81, mergad 29/10).** Panelen "Alla böcker" (`booksPanel`) ÄR sökvyn: stort autofokuserat fält, träffräknare, träfflista (`searchRow()`) med hyllkod och "sågs senast". Filtren ligger bakom en knapp till höger om fältet. **Medvetna avsteg, beslut 29/10:** inga priser och ingen temperatur i träffarna, och chipen "Till salu"/"Het" utgår — de hör till Värdera. Sökningen finns för att hitta en bok och se var den står; alla böcker är sökbara, även de utan värdering (vilket är de flesta). "Kurslitteratur" utgick: skissen avgör det på utgivningsår, som appen inte lagrar. Statusknappen tog prisets plats till höger i raden |
+| Bokdetalj | Flikar värde/fakta/historik, knappar "Sälj boken"/"Ändra" | **Byggd (PR #84, mergad 29/10).** Flikarna ligger i den befintliga rutan (`showInfo`/`infoModal`) — beslut 29/10 att inte bygga om den till en egen panel, bara byta innehållet. Värde: indikerat pris, säkerhet, hetta, prisintervall med markör räknat ur de verkliga sajtpriserna, priser per sajt. Fakta: kategori (redigerbar), hylla, skick, beskrivning, externa länkar. Historik: tom tills 30 dagars data. Böcker utan värdering får en rak förklaring i stället för tomma fält. **"Sälj boken" utelämnad och backloggad** — värderingsrundorna körs manuellt, appen kan inte lägga en bok i listan själv. "Ändra" öppnar `psOpen("ratta")` för hyllplanet boken står på |
+| Värdering | Grönt totalkort, summa per sajt, böcker sorterbara på värde/temp/titel, CTA "Sälj de 3 hetaste" | **Byggd i annat utförande (PR #71, #72, mergade 27/10; #83, mergad 29/10).** `view-salj`/`renderSell()` har lista, detaljpanel, priser per sajt ur `sell_items`/`sell_price_sources`, och sedan #83 ett sökfält med egna filter bakom en knapp (Säkerhet / Hetta / Kategori) samt raden "Visar N böcker" som ersatte chipet "Topp 25". Följer inte designens exakta utseende (inget totalkort i grönt, annan sortering) — inte avstämd punkt för punkt mot `screens-ovriga.html` |
 | Dela platsen | Hyllfoto, tre synlighetsnivåer, växel "Visa värdering", kopierbar länk | **Inte byggd.** `view-delade` existerar men inte detta utförande |
 
 ### Process för att undvika glapp framöver
@@ -259,4 +259,4 @@ Innan en skärm markeras klar:
 
 *Sammanställd ur koden i `tringenr/bokhyllan` (grepp över `js/app.js`, samtliga
 filer i `supabase/migrations/`, och `supabase/functions/analysera/index.ts`)
-samt produktionsdatabasen `zuesxdqifsnvhleiukum`, uppdaterad 21 oktober 2026.*
+samt produktionsdatabasen `zuesxdqifsnvhleiukum`. Senast uppdaterad 29 oktober 2026.*
