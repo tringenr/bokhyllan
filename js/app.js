@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029130920";
+const DV="?v=20261029132044";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -201,6 +201,10 @@ async function loadStatuses(){
 }
 const $=s=>document.querySelector(s);
 let fs="",fShelf="",fCat="",q="";
+/* Filterraderna i sökvyn är hopfällda som standard (se bpFilterSync).
+   Deklareras här, inte vid funktionen längre ner: render() körs redan vid
+   inläsning och hann annars läsa variabeln innan den fanns. */
+let bpFiltersOppna=false;
 function buildShelfOptions(){
   const sel=$("#fShelf");sel.innerHTML='<option value="">Alla hyllor</option>';
   const shelves=[...new Set(data.map(d=>d.shelf).filter(Boolean))].sort();
@@ -291,6 +295,7 @@ function render(){
   $("#stUt").textContent=data.filter(d=>d.status==="utlanad").length;
   $("#stFly").textContent=data.filter(d=>d.status==="flyter").length;
   $("#count").textContent=list.length+(list.length===1?" träff":" träffar");
+  if(typeof bpFilterSync==="function")bpFilterSync();
   if(window.__lt)window.__lt();
   $("#grid").innerHTML=list.length?list.map(searchRow).join("")
     :`<p class="pl-empty">${q?`Inga träffar på ”${esc(q)}”.`:"Inga böcker matchar filtret."}</p>`;
@@ -1162,13 +1167,29 @@ const qInput=document.getElementById("q");
 function openSearch(){hmSearchOv.hidden=false;hmSearchSlot.appendChild(qInput);fPanel.hidden=false;renderCatUI();qInput.focus()}
 function closeSearch(){hmSearchOv.hidden=true;fPanel.hidden=true}
 window.openSearch=openSearch;window.closeSearch=closeSearch;
-function openBooks(){closeSearch();bpSearchSlot.appendChild(qInput);booksPanel.hidden=false;document.body.classList.add("eg-lock");render();renderCatUI();qInput.focus()}
+function openBooks(){closeSearch();bpSearchSlot.appendChild(qInput);booksPanel.hidden=false;document.body.classList.add("eg-lock");render();renderCatUI();bpFilterSync();qInput.focus()}
+/* Filterknappen till höger om sökfältet fäller ut filtren. Hopfällt läge är
+   normalfallet; pricken på knappen visar att ett filter är aktivt så man
+   inte undrar varför listan är kortare än väntat. Öppnas automatiskt om ett
+   filter redan är satt när vyn öppnas (t.ex. via en kategori på Hem). */
+function bpFilterSync(){
+  const btn=document.getElementById("bpFilterBtn");
+  const box=document.getElementById("bpFilters");
+  const dot=document.getElementById("bpFilterDot");
+  const aktiv=!!(fs||fCat||fShelf);
+  if(aktiv)bpFiltersOppna=true;
+  if(box)box.hidden=!bpFiltersOppna;
+  if(btn){btn.setAttribute("aria-expanded",bpFiltersOppna?"true":"false");btn.classList.toggle("on",aktiv)}
+  if(dot)dot.hidden=!aktiv;
+}
+function bpToggleFilters(){bpFiltersOppna=!bpFiltersOppna;bpFilterSync()}
 function closeBooks(){booksPanel.hidden=true;document.body.classList.remove("eg-lock");hmSearchSlot.appendChild(qInput)}
 window.openBooks=openBooks;window.closeBooks=closeBooks;
 document.getElementById("hmSearchBtn").addEventListener("click",openSearch);
 document.getElementById("hmSearchClose").addEventListener("click",closeSearch);
 document.getElementById("hmTitleBtn").addEventListener("click",openBooks);
 document.getElementById("bpClose").addEventListener("click",closeBooks);
+document.getElementById("bpFilterBtn").addEventListener("click",bpToggleFilters);
 const fPanel=document.getElementById("fPanel");
 let catsAll=false;
 function catCounts(){const m={};data.forEach(d=>m[d.cat]=(m[d.cat]||0)+1);return m}

@@ -1156,8 +1156,19 @@ body.ps-lock{overflow:hidden}
    och kategorier under, träffräknare och träfflista. Inga priser och
    ingen temperatur - de hör till Värdera (beslut 29/10). */
 .books-panel .bp-head{margin-bottom:-4px}
-.bp-search{height:auto;padding:0 2px 10px;border-radius:0;background:none;
+.bp-searchrow{display:flex;align-items:flex-end;gap:10px}
+.bp-search{flex:1;min-width:0;height:auto;padding:0 2px 10px;border-radius:0;background:none;
   border-bottom:2px solid var(--border-default)}
+/* Filterknappen: samma underkant som sökfältet, så de står på en linje. */
+.bp-filter{position:relative;flex:none;width:42px;height:42px;margin-bottom:4px;
+  display:flex;align-items:center;justify-content:center;border-radius:12px;
+  border:1px solid var(--border-default);background:var(--surface);color:var(--fg)}
+.bp-filter svg{width:19px;height:19px}
+.bp-filter.on{border-color:var(--pink-500);color:var(--pink-500)}
+.bp-filter-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--pink-500)}
+.bp-filters{display:flex;flex-direction:column;gap:10px}
+.bp-filters[hidden]{display:none}
 .bp-search #q{font:700 26px var(--font-display);letter-spacing:-.02em}
 .bp-cats{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .bp-cats::-webkit-scrollbar{height:0}

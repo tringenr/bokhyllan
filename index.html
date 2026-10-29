@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261029130920">
+<link rel="stylesheet" href="css/style.css?v=20261029132044">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261029130920";
+  var MY="20261029132044";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -213,10 +213,20 @@
   <!-- Sökfältet: stort och autofokuserat, enligt screens-ovriga.html (Search).
        #q flyttas hit från headern (appendChild) - samma fält och samma
        lyssnare oavsett var man skrev senast, se kommentaren i js/app.js. -->
-  <div class="bp-search" id="bpSearchSlot"></div>
+  <!-- Sökfältet och filterknappen på samma rad. Filtren är dolda tills man
+       trycker på knappen (beslut 29/10) - de flesta sökningar är bara en
+       titel, och då ska listan börja direkt under fältet. Pricken visar
+       att ett filter är aktivt även när raderna är hopfällda. -->
+  <div class="bp-searchrow">
+    <div class="bp-search" id="bpSearchSlot"></div>
+    <button class="bp-filter" id="bpFilterBtn" aria-label="Filter" aria-expanded="false">
+      <i data-ic="sliders-horizontal"></i><span class="bp-filter-dot" id="bpFilterDot" hidden></span>
+    </button>
+  </div>
   <div id="listWrap" class="list-wrap">
     <!-- Status: "Flyter runt" utgår som filter (beslut 29/10) men finns kvar
          som status på boken och går att sätta från träfflistan. -->
+    <div class="bp-filters" id="bpFilters" hidden>
     <div class="chips" id="statusChips">
       <button class="chip active" data-s="">Alla</button>
       <button class="chip" data-s="hylla">På plats</button>
@@ -226,6 +236,7 @@
     <div class="controls">
       <select id="fShelf"></select>
       <select id="fCat" hidden><option value="">Alla kategorier</option></select>
+    </div>
     </div>
     <div class="hs-recent bp-recent" id="bpRecent"></div>
     <div class="lw-head"><span id="count"></span></div>
@@ -390,6 +401,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261029130920"></script>
+<script src="js/app.js?v=20261029132044"></script>
 </body>
 </html>
