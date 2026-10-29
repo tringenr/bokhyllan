@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261028193132";
+const DV="?v=20261029132044";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -201,6 +201,10 @@ async function loadStatuses(){
 }
 const $=s=>document.querySelector(s);
 let fs="",fShelf="",fCat="",q="";
+/* Filterraderna i sökvyn är hopfällda som standard (se bpFilterSync).
+   Deklareras här, inte vid funktionen längre ner: render() körs redan vid
+   inläsning och hann annars läsa variabeln innan den fanns. */
+let bpFiltersOppna=false;
 function buildShelfOptions(){
   const sel=$("#fShelf");sel.innerHTML='<option value="">Alla hyllor</option>';
   const shelves=[...new Set(data.map(d=>d.shelf).filter(Boolean))].sort();
@@ -235,6 +239,30 @@ function setLent(id,val){if(!sbUser)return;const d=data.find(x=>x.id===id);d.len
 document.querySelectorAll(`button[data-sbtn="${id}"]`).forEach(btn=>btn.textContent="Utlånad"+(d.lentTo?" → "+d.lentTo:""))}
 /* En bokrad: färgstreck efter kategori, titel (öppnar bokinfo), byline och
    status som badge. Tryck på badgen byter status. */
+/* Sökträffarnas rad (design: screens-ovriga.html, Search). Egen funktion,
+   inte bookRow() - den ritar också boklistan inne i hyllvyn (renderPlace),
+   och hyllvyn ska inte ändras av det här arbetet (projektplanens punkt 0).
+
+   Designens rad har pris och temperatur till höger. De hör till Värdera,
+   inte till sökningen: sökningen finns för att hitta en bok och se var den
+   står (beslut 29/10). Platsen till höger går därför till statusknappen,
+   så man kan markera en bok som utlånad direkt ur träfflistan precis som
+   i den gamla listan. */
+function searchRow(d){
+  const [label]=STATUS[d.status]||STATUS.hylla;
+  const tone={hylla:"b-success",utlanad:"b-warning",flyter:"b-brand"}[d.status]||"b-success";
+  const lent=d.status==="utlanad"&&d.lentTo?` → ${esc(d.lentTo)}`:"";
+  return `<button class="sr" onclick="showInfo(${d.id})">
+    <span class="sr-stripe" style="background:${catColor(d.cat)}"></span>
+    <span class="sr-main">
+      <span class="sr-title">${esc(d.title)}</span>
+      <span class="sr-by">${esc([d.author,d.cat].filter(Boolean).join(" · "))}</span>
+      <span class="sr-loc">${ic("map-pin")}<span class="${d.shelf?"":"loc-dold"}">${esc(locLabel(d.shelf))}</span>${
+        d.shelf?`<a class="var-link" onclick="event.stopPropagation();lbShelf('${d.shelf}',${d.id})">sågs senast${d.ts?" "+d.ts:""}</a>`:""}</span>
+    </span>
+    <span class="badge ${tone}" data-sbtn="${d.id}" onclick="event.stopPropagation();cycle(${d.id})">${label}${lent}</span>
+  </button>`;
+}
 function bookRow(d,opts){
   const [label]=STATUS[d.status]||STATUS.hylla;
   const tone={hylla:"b-success",utlanad:"b-warning",flyter:"b-brand"}[d.status]||"b-success";
@@ -266,14 +294,16 @@ function render(){
   $("#stHylla").textContent=data.filter(d=>d.status==="hylla").length;
   $("#stUt").textContent=data.filter(d=>d.status==="utlanad").length;
   $("#stFly").textContent=data.filter(d=>d.status==="flyter").length;
-  $("#count").textContent=list.length+" böcker visas";
+  $("#count").textContent=list.length+(list.length===1?" träff":" träffar");
+  if(typeof bpFilterSync==="function")bpFilterSync();
   if(window.__lt)window.__lt();
-  $("#grid").innerHTML=list.length?list.map(bookRow).join(""):`<p class="pl-empty">Inga böcker matchar.</p>`;
+  $("#grid").innerHTML=list.length?list.map(searchRow).join("")
+    :`<p class="pl-empty">${q?`Inga träffar på ”${esc(q)}”.`:"Inga böcker matchar filtret."}</p>`;
   renderSummary();renderHome();
   if(curView==="place")renderPlace();
   renderBcEditor();
 }
-$("#q").addEventListener("input",e=>{q=e.target.value;render();saveRecentSoon()});
+$("#q").addEventListener("input",e=>{q=e.target.value;render();renderRecent();saveRecentSoon()});
 $("#q").addEventListener("keydown",e=>{if(e.key==="Enter"&&q.trim())openBooks()});
 $("#fShelf").addEventListener("change",e=>{fShelf=e.target.value;render()});
 $("#fCat").addEventListener("change",e=>{fCat=e.target.value;render()});
@@ -1137,13 +1167,29 @@ const qInput=document.getElementById("q");
 function openSearch(){hmSearchOv.hidden=false;hmSearchSlot.appendChild(qInput);fPanel.hidden=false;renderCatUI();qInput.focus()}
 function closeSearch(){hmSearchOv.hidden=true;fPanel.hidden=true}
 window.openSearch=openSearch;window.closeSearch=closeSearch;
-function openBooks(){closeSearch();bpSearchSlot.appendChild(qInput);booksPanel.hidden=false;document.body.classList.add("eg-lock");render();qInput.focus()}
+function openBooks(){closeSearch();bpSearchSlot.appendChild(qInput);booksPanel.hidden=false;document.body.classList.add("eg-lock");render();renderCatUI();bpFilterSync();qInput.focus()}
+/* Filterknappen till höger om sökfältet fäller ut filtren. Hopfällt läge är
+   normalfallet; pricken på knappen visar att ett filter är aktivt så man
+   inte undrar varför listan är kortare än väntat. Öppnas automatiskt om ett
+   filter redan är satt när vyn öppnas (t.ex. via en kategori på Hem). */
+function bpFilterSync(){
+  const btn=document.getElementById("bpFilterBtn");
+  const box=document.getElementById("bpFilters");
+  const dot=document.getElementById("bpFilterDot");
+  const aktiv=!!(fs||fCat||fShelf);
+  if(aktiv)bpFiltersOppna=true;
+  if(box)box.hidden=!bpFiltersOppna;
+  if(btn){btn.setAttribute("aria-expanded",bpFiltersOppna?"true":"false");btn.classList.toggle("on",aktiv)}
+  if(dot)dot.hidden=!aktiv;
+}
+function bpToggleFilters(){bpFiltersOppna=!bpFiltersOppna;bpFilterSync()}
 function closeBooks(){booksPanel.hidden=true;document.body.classList.remove("eg-lock");hmSearchSlot.appendChild(qInput)}
 window.openBooks=openBooks;window.closeBooks=closeBooks;
 document.getElementById("hmSearchBtn").addEventListener("click",openSearch);
 document.getElementById("hmSearchClose").addEventListener("click",closeSearch);
 document.getElementById("hmTitleBtn").addEventListener("click",openBooks);
 document.getElementById("bpClose").addEventListener("click",closeBooks);
+document.getElementById("bpFilterBtn").addEventListener("click",bpToggleFilters);
 const fPanel=document.getElementById("fPanel");
 let catsAll=false;
 function catCounts(){const m={};data.forEach(d=>m[d.cat]=(m[d.cat]||0)+1);return m}
@@ -1152,12 +1198,20 @@ function renderCatUI(){
   const byCount=Object.keys(m).sort((a,b)=>m[b]-m[a]||a.localeCompare(b,"sv"));
   const shown=catsAll?byCount:byCount.slice(0,12);
   if(fCat&&!shown.includes(fCat))shown.push(fCat);
-  const cc=document.getElementById("catChips");
-  if(cc){cc.innerHTML=shown.map(c=>`<button class="hs-chip${c===fCat?" on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("")+
-      (byCount.length>12?`<button class="hs-more" id="catMore">${catsAll?"Färre":`+${byCount.length-12} fler`}</button>`:"");
+  /* Kategorierna ritas på två ställen: den lilla rutan på Hem (som öppnar
+     sökvyn vid klick) och sökvyns egen rad (som bara filtrerar - man är
+     redan framme). Fler kategorier än som får plats på en rad, därför en
+     egen rad som scrollar i sidled i stället för att trängas med
+     statusfiltren. */
+  [["catChips",true],["bpCatChips",false]].forEach(([id,oppna])=>{
+    const cc=document.getElementById(id);if(!cc)return;
+    cc.innerHTML=shown.map(c=>`<button class="hs-chip${c===fCat?" on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("")+
+      (byCount.length>12?`<button class="hs-more" data-more="1">${catsAll?"Färre":`+${byCount.length-12} fler`}</button>`:"");
     cc.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click",()=>{
-      fCat=fCat===b.dataset.c?"":b.dataset.c;$("#fCat").value=fCat;render();renderCatUI();openBooks()}));
-    const more=document.getElementById("catMore");if(more)more.addEventListener("click",()=>{catsAll=!catsAll;renderCatUI()});}
+      fCat=fCat===b.dataset.c?"":b.dataset.c;$("#fCat").value=fCat;render();renderCatUI();if(oppna)openBooks()}));
+    const more=cc.querySelector("[data-more]");
+    if(more)more.addEventListener("click",()=>{catsAll=!catsAll;renderCatUI()});
+  });
   renderRecent();
 }
 /* Senaste sökningar: sparas i telefonen när du slutat skriva en stund och
@@ -1171,10 +1225,17 @@ function saveRecentSoon(){clearTimeout(recentT);recentT=setTimeout(()=>{
   if(!data.some(d=>normTxt(d.title+" "+d.author).includes(normTxt(t))))return;
   recent=[t].concat(recent.filter(x=>x.toLowerCase()!==t.toLowerCase())).slice(0,5);
   try{localStorage.setItem(RECENT_KEY,JSON.stringify(recent))}catch(e){}renderRecent()},1500)}
+/* Senaste sökningar ritas på två ställen: den lilla rutan på Hem och
+   sökvyn (där bara när sökfältet är tomt - har man skrivit något är
+   träffarna intressantare än historiken). */
 function renderRecent(){
-  const el=document.getElementById("recentRow");if(!el)return;
-  el.innerHTML=recent.length?`${ic("history")}<span>${recent.map((t,i)=>`<button data-r="${i}">${esc(t)}</button>`).join(" · ")}</span>`:"";
-  el.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{q=recent[+b.dataset.r];$("#q").value=q;render();openBooks()}));
+  [["recentRow",false],["bpRecent",true]].forEach(([id,doljVidSok])=>{
+    const el=document.getElementById(id);if(!el)return;
+    const visa=recent.length&&!(doljVidSok&&q);
+    el.innerHTML=visa?`${ic("history")}<span>${recent.map((t,i)=>`<button data-r="${i}">${esc(t)}</button>`).join(" · ")}</span>`:"";
+    el.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{
+      q=recent[+b.dataset.r];$("#q").value=q;render();openBooks()}));
+  });
 }
 /* "Lägg till hylla" sist bland hyllorna: samma flöde som i Hyllor. */
 function addShelf(){openSet("platser");setTimeout(()=>{const b=document.getElementById("nsStart");if(b)b.click();

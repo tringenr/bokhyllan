@@ -1150,3 +1150,46 @@ body.ps-lock{overflow:hidden}
 .ns-analys-avbryt{display:block;margin:14px auto 0;border:none;background:none;
   color:rgba(253,251,249,.62);font:500 14px var(--font-body);text-decoration:underline}
 .ns-analys-avbryt[disabled]{opacity:.5;text-decoration:none}
+
+/* ---------- Sök i hyllan (design: screens-ovriga.html, Search) ----------
+   Panelen "Alla böcker" är nu sökvyn. Stort sökfält överst, statusfilter
+   och kategorier under, träffräknare och träfflista. Inga priser och
+   ingen temperatur - de hör till Värdera (beslut 29/10). */
+.books-panel .bp-head{margin-bottom:-4px}
+.bp-searchrow{display:flex;align-items:flex-end;gap:10px}
+.bp-search{flex:1;min-width:0;height:auto;padding:0 2px 10px;border-radius:0;background:none;
+  border-bottom:2px solid var(--border-default)}
+/* Filterknappen: samma underkant som sökfältet, så de står på en linje. */
+.bp-filter{position:relative;flex:none;width:42px;height:42px;margin-bottom:4px;
+  display:flex;align-items:center;justify-content:center;border-radius:12px;
+  border:1px solid var(--border-default);background:var(--surface);color:var(--fg)}
+.bp-filter svg{width:19px;height:19px}
+.bp-filter.on{border-color:var(--pink-500);color:var(--pink-500)}
+.bp-filter-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--pink-500)}
+.bp-filters{display:flex;flex-direction:column;gap:10px}
+.bp-filters[hidden]{display:none}
+.bp-search #q{font:700 26px var(--font-display);letter-spacing:-.02em}
+.bp-cats{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.bp-cats::-webkit-scrollbar{height:0}
+.bp-cats .hs-chip,.bp-cats .hs-more{flex:none;padding:6px 13px;font-size:12.5px}
+.bp-recent{padding:2px 0}
+.books-panel .lw-head{justify-content:flex-start}
+.books-panel #count{font:500 12px var(--font-body);color:var(--text-secondary)}
+
+/* Träffraden: färgstreck för kategori, titel/författare, hyllkod med
+   "sågs senast", och statusknappen där designen hade pris. */
+.sr{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:11px 12px;border:1px solid var(--border-default);border-radius:14px;
+  background:var(--surface);color:var(--fg)}
+.sr+.sr{margin-top:8px}
+.sr-stripe{width:5px;align-self:stretch;min-height:40px;border-radius:3px;flex:none}
+.sr-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sr-title{font:600 14.5px var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-by{font:400 12.5px var(--font-body);color:var(--text-secondary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-loc{display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+  font:400 11.5px var(--font-body);color:var(--text-secondary);margin-top:2px}
+.sr-loc svg{width:11px;height:11px;flex:none;opacity:.7}
+.sr-loc .var-link{text-decoration:underline;text-underline-offset:2px}
+.sr .badge{flex:none}
