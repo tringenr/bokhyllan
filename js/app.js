@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029174119";
+const DV="?v=20261029223414";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -119,6 +119,12 @@ let SELL_PRICES={};
 const HOMEVIEW_KEY="minbokhylla-homeview";
 let homeView="grid";
 try{homeView=localStorage.getItem(HOMEVIEW_KEY)||"grid"}catch(e){}
+/* Startsidan (#homeEmptyGuide) får inte visas förrän appen vet om du är
+   inloggad och har läst in dina hyllor. Första render() körs innan
+   getSession() och loadNewShelves() hunnit klart, så utan den här spärren
+   blinkade/låg startsidan kvar efter inloggning (sidan laddas om) trots att
+   du redan har hyllor. Sätts till true i uppstarten längre ner. */
+let homeReady=false;
 function flatIndex(gi,ii){let n=0;for(let k=0;k<gi;k++)n+=SHELF_IMGS[k].imgs.length;return n+ii}
 /* FLAT/SHELF_IMGS - källan för "sågs senast" (lbShelf) och bläddringen i
    helskärmsvyn (lbShow) - byggdes tidigare bara ur bc_photos, en tabell som
@@ -507,7 +513,7 @@ function renderHome(){
   const known=data.some(d=>d.shelf);
   const places=placeList();
   const guide=document.getElementById("homeEmptyGuide");
-  const firstRun=!sbUser||places.length===0;
+  const firstRun=homeReady&&(!sbUser||places.length===0);
   if(guide)guide.style.display=firstRun?"":"none";
   /* Första gången (ingen hylla än) tar guiden över hela skärmen (se
      .eg-card i style.css, position:fixed över rubrik och fliklist) -
@@ -1138,7 +1144,7 @@ async function afterAuthReady(){
   if(loginLink){const riktig=!!(sbUser&&!sbUser.is_anonymous);
     loginLink.style.display=riktig?"none":"";
     if(!riktig)loginLink.onclick=showLoginScreen}
-  if(!sbUser)return;
+  if(!sbUser){homeReady=true;renderHome();return}
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
   try{await loadBcPhotos();renderHome();if(curView==="place")renderPlace()}catch(e){console.warn("bcPhotos",e)}
@@ -1152,6 +1158,7 @@ async function afterAuthReady(){
      loadNewShelves anropar) lägger bara till/ersätter db:true-poster utan
      att nollställa resten av PH. */
   try{await loadNewShelves()}catch(e){console.warn("newShelves",e)}
+  homeReady=true;renderHome();
   try{await loadSell()}catch(e){console.warn("sell",e)}
   buildShelfOptions();
   try{await loadStatuses()}catch(e){console.warn("statuses",e)}
@@ -1197,7 +1204,7 @@ if(sbUser){
   /* Ingen sparad session: startsidans tomma läge (samma .eg-card som
      annars visas när biblioteket är tomt) visas direkt, med en extra
      "Har du redan ett konto? Logga in"-länk - ingen separat väljarskärm. */
-  renderHome();
+  homeReady=true;renderHome();
   const loginLink=document.getElementById("homeEmptyLogin");
   if(loginLink){loginLink.style.display="";loginLink.onclick=showLoginScreen}
 }
