@@ -155,6 +155,11 @@ setTimeout(() => {
     fel.push(`hittade bara ${anropade.size} onclick-funktioner att kontrollera — testet skannar troligen fel ställe`);
   }
 
+  // 2b. Den sparade hyllsidan (#nsDone) täcker hela appen och måste ha en
+  //     väg ut. nsShowHylla ska vara exporterad och bygga en "Till Hem"-knapp.
+  if (typeof window.nsShowHylla !== "function") fel.push("nsShowHylla är inte exporterad på window");
+  if (!/id="nsDoneHome"/.test(appSrc)) fel.push('hyllsidan saknar "Till Hem"-knappen (#nsDoneHome) — man fastnar i saved-läge');
+
   // 3. Kunde data/*.json läsas och parsas?
   for (const f of fs.readdirSync(path.join(ROOT, "data"))) {
     if (!f.endsWith(".json")) continue;
