@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029151950";
+const DV="?v=20261029152407";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -703,8 +703,6 @@ function ibVardeHtml(d){
         <div class="ib-spantal"><span>${fmtN(lag)} kr</span><span>${fmtN(hog)} kr</span></div>
       </div>`:""}
     </div>
-    ${it.condition_note?`<p class="fine"><b>Villkor:</b> ${esc(it.condition_note)}</p>`:""}
-    ${it.heat_reason?`<p class="fine">${esc(it.heat_reason)}</p>`:(it.why?`<p class="fine">${esc(it.why)}</p>`:"")}
     ${kallor.length?`<span class="ib-eyebrow">Per sajt</span>
       <ul class="sell-sources">${kallor.map(k=>`<li><span>${esc(SELL_SITES[k.site]||k.site)}</span>
         <span>${fmtN(k.price)} kr${k.url?` · <a href="${esc(k.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
@@ -721,7 +719,6 @@ function ibFaktaHtml(d){
     ${rad("Kategori",`<select class="ib-catsel" onchange="setBookCat(${d.id},this.value)">${
       cats.map(c=>`<option${c===d.cat?" selected":""}>${esc(c)}</option>`).join("")}</select>`)}
     ${rad("Hylla",d.shelf?esc(locLabel(d.shelf)):"<i>Ingen hylla angiven</i>")}
-    ${d.shelf?rad("Sågs senast",d.ts?esc(d.ts):"<i>okänt</i>"):""}
     ${it&&it.condition_note?rad("Skick",esc(it.condition_note)):""}
   </div>
   ${info?`<p>${esc(info)}</p><p class="ib-src2">Sammanfattning skriven av Claude – kan innehålla fel.</p>`
