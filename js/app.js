@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029152953";
+const DV="?v=20261029154313";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -996,6 +996,17 @@ function hideAppChrome(){
   if(panelEl)panelEl.classList.remove("open");
   if(panelScrimEl)panelScrimEl.classList.remove("open");
 }
+/* Motsatsen till hideAppChrome: göms inloggningsskärmarna och fliklisten
+   återställs. Körs först i go(), eftersom varje väg ut ur inloggningen eller
+   guiden (nsLamnaGuiden, Kom igång, tillbaka från Konto) går via go().
+   Lyckad inloggning laddar om sidan och behöver den inte. */
+function showAppChrome(){
+  const loginEl=document.getElementById("view-login"),forgotEl=document.getElementById("view-forgot");
+  const tabbar=document.querySelector(".tabbar");
+  if(loginEl)loginEl.style.display="none";
+  if(forgotEl)forgotEl.style.display="none";
+  if(tabbar)tabbar.style.display="";
+}
 /* Ryggrad-grafiken överst på Logga in-skärmen (login.html, LoggaIn):
    BOOKS.slice(0,6), samma NS_SPINE_COLORS/WIDTHS som Steg 5 Konto och
    Jobb A-animationen - men här bara en rad mot papper, ingen fotoruta. */
@@ -1085,8 +1096,12 @@ window.showLoginScreen=showLoginScreen;
    inloggningen löst sig (klick-styrt, inte await-styrt). */
 async function afterAuthReady(){
   renderAuth();
+  /* Gäster (anonym session, sparas efter "Kom igång") ska alltid kunna
+     logga in från startsidan - länken göms bara för ett riktigt konto. */
   const loginLink=document.getElementById("homeEmptyLogin");
-  if(loginLink)loginLink.style.display=sbUser?"none":"";
+  if(loginLink){const riktig=!!(sbUser&&!sbUser.is_anonymous);
+    loginLink.style.display=riktig?"none":"";
+    if(!riktig)loginLink.onclick=showLoginScreen}
   if(!sbUser)return;
   try{await loadBcNames()}catch(e){console.warn("bcNames",e)}
   try{await loadSpotNames()}catch(e){console.warn("spotNames",e)}
@@ -1155,6 +1170,7 @@ if(sbUser){
 const VIEWS=["hem","place","delade","salj","gaps","set"];
 function go(v,opts){
   curView=v;
+  showAppChrome();
   VIEWS.forEach(k=>{const el=document.getElementById("view-"+k);if(el)el.style.display=(k===v?"":"none")});
   if(v!=="hem")document.body.classList.remove("eg-lock");
   const homeish=["hem","place","gaps","set"].includes(v);

@@ -160,6 +160,24 @@ setTimeout(() => {
   if (typeof window.nsShowHylla !== "function") fel.push("nsShowHylla är inte exporterad på window");
   if (!/id="nsDoneHome"/.test(appSrc)) fel.push('hyllsidan saknar "Till Hem"-knappen (#nsDoneHome) — man fastnar i saved-läge');
 
+  // 2c. Inloggningsskärmen och fliklisten ska vara i rätt skick igen när man
+  //     lämnar inloggningen utan att logga in (A): go() återställer dem.
+  try {
+    const d = window.document, vis = (id) => d.getElementById(id).style.display !== "none";
+    window.showLoginScreen();
+    if (!vis("view-login")) fel.push("showLoginScreen visade inte inloggningsskärmen");
+    if (d.querySelector(".tabbar").style.display !== "none") fel.push("showLoginScreen dolde inte fliklisten");
+    window.go("hem");
+    if (vis("view-login")) fel.push("#view-login göms inte av go() — inloggningen ligger kvar över Hem");
+    if (vis("view-forgot")) fel.push("#view-forgot göms inte av go()");
+    if (d.querySelector(".tabbar").style.display === "none") fel.push("fliklisten återställs inte av go()");
+  } catch (e) { fel.push("fel i kontrollen av inloggningsskärmens återställning: " + e.stack); }
+
+  // 2d. Inloggningslänken på startsidan ska visas för gäster (anonym session)
+  //     och bara döljas för ett riktigt konto, och ha en klickhanterare.
+  if (!/homeEmptyLogin[\s\S]{0,200}is_anonymous[\s\S]{0,200}onclick=showLoginScreen/.test(appSrc))
+    fel.push("afterAuthReady döljer inloggningslänken för gäster eller saknar klickhanterare (is_anonymous)");
+
   // 3. Kunde data/*.json läsas och parsas?
   for (const f of fs.readdirSync(path.join(ROOT, "data"))) {
     if (!f.endsWith(".json")) continue;
