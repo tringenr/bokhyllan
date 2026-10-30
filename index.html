@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261030115841">
+<link rel="stylesheet" href="css/style.css?v=20261030123239">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261030115841";
+  var MY="20261030123239";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -52,6 +52,10 @@
           if(!j||!j.v||j.v===MY)return;
           if(sessionStorage.getItem("verReload")===j.v)return;  // undvik loop
           if(typing())return;  // skriver du något väntar vi till nästa gång
+      /* En pågående prissökning dör av en omladdning. Redan sökta böcker
+         är sparade, men resten av körningen försvinner tyst - vänta till
+         nästa kontroll i stället (beslut 30/10). */
+      if(window.__vardKorPagar)return;
           sessionStorage.setItem("verReload",j.v);
           location.replace(location.pathname+"?r="+j.v);
         }).catch(function(){});
@@ -578,6 +582,11 @@
      den redan värderade listan - egna variabler, delar inte med
      sellCat/sellUnc/sellHeat (beslut 29/10 om separata filter). -->
 <div class="scrim scrim-top" id="vardScrim"></div>
+<!-- Körremsan: visar en pågående prissökning i hela appen, och byter till
+     ett klart-läge när den är färdig. Blockerar ingenting - man kan
+     fortsätta med vad man höll på med (beslut 30/10). Ligger utanför
+     vyerna så den följer med oavsett flik. -->
+<div class="kor-remsa" id="korRemsa" hidden aria-live="polite"></div>
 <div class="sheet" id="vardSheet" role="dialog" aria-label="Välj böcker att värdera">
   <span class="grip"></span>
   <h2>Välj böcker att värdera</h2>
@@ -593,6 +602,11 @@
   </div>
   <div class="field"><span class="lbl">Kategori</span>
     <div class="hs-chips" id="vardCatChips" style="overflow-x:auto;flex-wrap:nowrap"></div>
+    <!-- Valda kategorier som egna etiketter: listan ovanför ligger still i
+         bokstavsordning (den sorterade tidigare om sig så att valet gled
+         iväg åt vänster under fingret), och valet syns här även när man
+         skrollat långt in i listan. -->
+    <div class="vard-valda" id="vardValdaCats" hidden></div>
   </div>
   <div class="field"><input id="vardQ" class="inp" type="search" placeholder="Sök titel eller författare" autocomplete="off"></div>
   <!-- Antalsval (Design 30/10, punkt 2): begränsar urvalet filtren ovan gav,
@@ -615,7 +629,10 @@
   <div id="vardProgress" style="display:none">
     <span class="progress"><span id="vardProgressBar" style="width:0%"></span></span>
     <p class="fine" id="vardProgressText"></p>
-    <button class="btn btn-ghost btn-sm" id="vardStopBtn" type="button">Avbryt</button>
+    <div class="vard-kor-knappar">
+      <button class="btn btn-outline btn-sm" id="vardBgBtn" type="button">Fortsätt i bakgrunden</button>
+      <button class="btn btn-ghost btn-sm" id="vardStopBtn" type="button">Avbryt sökningen</button>
+    </div>
   </div>
   <div id="vardResult" style="display:none"><p class="fine" id="vardResultText"></p>
     <button class="btn btn-primary" id="vardResultClose" type="button">Stäng</button></div>
@@ -629,6 +646,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261030115841"></script>
+<script src="js/app.js?v=20261030123239"></script>
 </body>
 </html>

@@ -1407,3 +1407,48 @@ body.ps-lock{overflow:hidden}
    konkurrera med den stora startknappen. */
 #vardListWrap[hidden]{display:none}
 #vardListWrap .page-head h1{display:flex;align-items:center;gap:10px}
+
+/* ---------- Körremsan för prissökningen (beslut 30/10) ----------
+   Ligger strax ovanför flikraden och syns i hela appen. Två lägen i samma
+   komponent: pågående sökning, och klart-notis som ligger kvar tills den
+   stängs. Blockerar ingenting - inget scrim, ingen modal. */
+.kor-remsa{position:fixed;left:0;right:0;z-index:72;display:flex;align-items:stretch;gap:0;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
+  background:var(--surface);border-top:1px solid var(--border-subtle);
+  box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+.kor-remsa[hidden]{display:none}
+.kor-remsa-yta{flex:1;min-width:0;display:flex;align-items:center;gap:11px;
+  border:none;background:none;color:var(--fg);padding:11px 16px;text-align:left;position:relative}
+.kor-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.kor-txt b{font:600 14px var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kor-txt small{font:400 12px var(--font-body);color:var(--text-secondary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kor-snurra{width:18px;height:18px;flex:none;border-radius:50%;
+  border:2px solid var(--border-default);border-top-color:var(--pink-500);
+  animation:korSnurr .9s linear infinite}
+@keyframes korSnurr{to{transform:rotate(360deg)}}
+.kor-ikon{width:20px;height:20px;flex:none;color:var(--success-500);display:flex}
+.kor-ikon svg{width:20px;height:20px}
+.kor-bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--border-subtle)}
+.kor-bar>span{display:block;height:100%;background:var(--pink-500);transition:width .3s ease}
+.kor-stang{flex:none;border:none;background:none;color:var(--text-secondary);
+  padding:0 14px;display:flex;align-items:center}
+.kor-stang svg{width:17px;height:17px}
+@media (prefers-reduced-motion:reduce){.kor-snurra{animation-duration:2.4s}}
+
+/* "Upp till toppen" och notisrutorna bor redan i samma remsa ovanför
+   flikraden - de flyttas upp medan körremsan syns, i stället för att
+   hamna under den (granskning 30/10). */
+body.har-remsa #toTop{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 62px)}
+body.har-remsa .toast{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 70px)}
+
+/* Valda kategorier som etiketter under den skrollbara raden. */
+.vard-valda{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.vard-valda[hidden]{display:none}
+.vard-tagg{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;
+  background:var(--pink-50);color:var(--pink-600);padding:6px 12px;font:600 13px var(--font-body)}
+.vard-tagg span[aria-hidden]{font-size:11px;opacity:.75}
+.vard-rensa{border:none;background:none;color:var(--text-secondary);
+  font:600 13px var(--font-body);padding:6px 4px;text-decoration:underline;text-underline-offset:3px}
+.vard-kor-knappar{display:flex;gap:8px;margin-top:10px}
+.vard-kor-knappar .btn{flex:1}
