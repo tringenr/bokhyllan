@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030115436";
+const DV="?v=20261030115841";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1932,6 +1932,7 @@ function go(v,opts){
   const homeish=["hem","place","gaps","set"].includes(v);
   document.querySelectorAll(".tabbar [data-tab]").forEach(t=>{
     const k=t.dataset.tab;t.classList.toggle("active",k==="hem"?homeish:k===v)});
+  if(v==="salj")vardVisaListan(false);
   if(v==="place")renderPlace();
   if(v==="gaps")renderGaps();
   if(v==="delade")renderDelade();
@@ -2134,6 +2135,133 @@ const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Trad
    syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
    = visa alla. */
 let sellQ="",sellUnc="",sellHeat="",sellCat="",sellLimit=0,sellFiltersOppna=false;
+/* ---------- Värderas startsida (design 30/10) ----------
+   Två tillstånd i samma vy: förstagångssidan med fotot i helskärm när
+   ingenting är värderat, och statusöversikten med topp fem när något är
+   det. Visas varje gång fliken öppnas - statusen ändras över tid, och en
+   sida som bara syns en gång går inte att hitta tillbaka till.
+
+   De fyra talen MÅSTE summera till antalet böcker i hyllan. En
+   statusöversikt som inte går ihop slutar man lita på. Kontrollen 30/10
+   mot produktionsdatan visade 830 böcker och 42 rader i sell_items, varav
+   3 utan både status och pris - de hade fallit mellan stolarna med en
+   rakare räkning (beslut 30/10: fjärde talet räknar böcker UTAN ANVÄNDBART
+   PRIS, inte bara böcker utan rad). */
+let vardVisarListan=false;
+
+/* Pris att sortera och visa på: samma fält och ordning som listan. */
+function vardPris(it){
+  if(!it)return null;
+  if(it.estimated_value!=null)return it.estimated_value;
+  if(it.low!=null)return it.low;
+  if(it.price_high!=null)return it.price_high;
+  if(it.price_low!=null)return it.price_low;
+  return null;
+}
+function vardStatusSiffror(){
+  const n={kontrollerat:0,okontrollerat:0,vantar:0,ovardera:0};
+  data.forEach(d=>{
+    const it=sellForBook(d);
+    const st=it&&it.price_status;
+    if(st==="bekraftat")n.kontrollerat++;
+    /* "Varierande pris" är också ett pris ingen människa bekräftat. */
+    else if(st==="automatiskt"||st==="osakert")n.okontrollerat++;
+    else if(st==="vantar")n.vantar++;
+    /* Allt annat - ingen rad alls, rad utan status, "inget hittat" - är
+       böcker som ännu saknar ett användbart pris. */
+    else n.ovardera++;
+  });
+  return n;
+}
+function vardTopp(antal){
+  if(!SELL||!SELL.items)return[];
+  return SELL.items
+    .map(it=>({it,pris:vardPris(it),bok:sellForBook2(it)}))
+    .filter(x=>x.pris!=null&&x.pris>0)
+    .sort((a,b)=>b.pris-a.pris)
+    .slice(0,antal);
+}
+/* Omvänt uppslag mot sellForBook(): från värderingsrad till bok. */
+function sellForBook2(it){
+  return (it.book_id&&data.find(x=>x.id===it.book_id))||
+    (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))))||null;
+}
+function vardVisaListan(v){
+  vardVisarListan=!!v;
+  const start=document.getElementById("vardStart"),lista=document.getElementById("vardListWrap");
+  if(start)start.hidden=vardVisarListan;
+  if(lista)lista.hidden=!vardVisarListan;
+  if(!vardVisarListan)renderVardStart();
+  window.scrollTo({top:0});
+}
+function renderVardStart(){
+  const el=document.getElementById("vardStart");if(!el)return;
+  if(vardVisarListan){el.hidden=true;return}
+  el.hidden=false;
+  const n=vardStatusSiffror();
+  const vardera=n.kontrollerat+n.okontrollerat+n.vantar;
+  const totalt=data.length;
+  if(!vardera){
+    /* Förstagångssidan: fotot bär. Två siffror, inte fyra - tre nollor i
+       rad säger ingenting. Bryter ur vyns sidmarginal och lämnar plats åt
+       flikraden i nederkanten. */
+    el.innerHTML=`<div class="vs-intro">
+      <img src="img/vardera-intro.jpg" alt="" aria-hidden="true">
+      <span class="vs-scrim"></span>
+      <div class="vs-intro-in">
+        <span class="vs-eyebrow">Värdera</span>
+        <h1>Vad är dina böcker värda idag?</h1>
+        <p>Vi söker upp priser på andrahandsmarknaden för böckerna i din hylla — innan du bestämmer vad du ska göra med dem.</p>
+        <div class="vs-tva">
+          <div><b>${fmtN(totalt)}</b><span>böcker i hyllan</span></div>
+          <div><b>0</b><span>värderade än</span></div>
+        </div>
+        <button class="btn vs-start" type="button" onclick="openVard()">Värdera dina böcker</button>
+      </div>
+    </div>`;
+    return;
+  }
+  const topp=vardTopp(5);
+  const kort=(tal,etikett,kl)=>`<div class="vs-stat${kl?" "+kl:""}"><b>${fmtN(tal)}</b><span>${etikett}</span></div>`;
+  el.innerHTML=`
+    <div class="vs-head">
+      <span class="vs-eyebrow">Värdera</span>
+      <h1>Vad är dina böcker värda idag?</h1>
+      <p>${fmtN(vardera)} ${vardera===1?"bok har":"böcker har"} ett pris just nu. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
+    </div>
+    <div class="vs-stats">
+      ${kort(n.kontrollerat,"Kontrollerat","ok")}
+      ${kort(n.okontrollerat,"Okontrollerat")}
+      ${kort(n.vantar,"Väntar på kontroll","wait")}
+      ${kort(n.ovardera,"Inte värderade än")}
+    </div>
+    <div class="vs-cta">
+      <button class="btn btn-primary" type="button" onclick="openVard()">Värdera fler böcker</button>
+      ${SELL&&SELL.updated?`<p class="fine vs-senast">Senast körd ${esc(vardDatum(SELL.updated))}.</p>`:""}
+    </div>
+    <button class="link-btn vs-tilllistan" type="button" onclick="vardVisaListan(true)">Visa alla värderade böcker →</button>
+    ${topp.length?`<p class="sub-h vs-subh">Mest värda just nu</p>
+      <div class="vs-topp">${topp.map((x,i)=>{
+        const okontrollerat=x.it.price_status==="automatiskt"||x.it.price_status==="osakert";
+        return `<div class="vs-tr">
+          <span class="vs-n">${i+1}</span>
+          <span class="vs-stripe" style="background:${catColor(x.bok?x.bok.cat:"")}"></span>
+          <span class="vs-tr-main">
+            <span class="vs-tr-t">${esc(x.it.title||(x.bok&&x.bok.title)||"")}</span>
+            ${x.bok&&x.bok.author?`<span class="vs-tr-by">${esc(x.bok.author)}</span>`:""}
+          </span>
+          <span class="vs-tr-p">${fmtN(x.pris)} kr${okontrollerat?`<small>okontrollerat</small>`:""}</span>
+        </div>`}).join("")}</div>`:""}`;
+}
+/* sell_meta.updated_date är ett datum, inte en tidpunkt - skriv ut det som
+   datum i stället för att hitta på "i går kväll" som skissen föreslog. */
+function vardDatum(d){
+  try{
+    const dt=new Date(d);
+    if(isNaN(dt))return String(d);
+    return dt.toLocaleDateString("sv-SE",{day:"numeric",month:"long"});
+  }catch(e){return String(d)}
+}
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
   const s=SELL,sum=s.summary;
@@ -2207,6 +2335,7 @@ function renderSell(){
           ${it.wanted_ad_url?`<p><a href="${esc(it.wanted_ad_url)}" target="_blank" rel="noopener">Någon söker efter den här boken</a></p>`:""}
           ${!sources.length&&it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
   document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+(s.updated?"Uppdaterad "+s.updated+".":"");
+  renderVardStart();
 }
 /* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
    raden fälls ut. "359 kr (uppl 5) / 175 kr (uppl 4)" -> "359 kr". */
@@ -2362,6 +2491,7 @@ function openVard(){
 }
 function closeVard(){vardSheet.classList.remove("open");vardScrim.classList.remove("open")}
 document.getElementById("vardOpenBtn")?.addEventListener("click",openVard);
+document.getElementById("vardBackBtn")?.addEventListener("click",()=>vardVisaListan(false));
 vardScrim?.addEventListener("click",closeVard);
 document.getElementById("vardCancelBtn")?.addEventListener("click",closeVard);
 document.getElementById("vardResultClose")?.addEventListener("click",closeVard);
@@ -4458,7 +4588,7 @@ window.nsAvbrytAnalys=nsAvbrytAnalys;window.nsTillInloggning=nsTillInloggning;wi
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
-window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.vardVisaListan=vardVisaListan;window.openVard=openVard;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
 /* ---------- Dela ----------
