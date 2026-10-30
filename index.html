@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261029225623">
+<link rel="stylesheet" href="css/style.css?v=20261030004144">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261029225623";
+  var MY="20261030004144";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -152,6 +152,55 @@
   <div id="forgotBody"></div>
 </section>
 
+<!-- ================= DELA (mottagarflöde via länk) =================
+     Egen helskärms-tillståndsmaskin, utanför VIEWS/tabbar - fångas vid
+     uppstart (startDelaFlow i js/app.js) innan afterAuthReady(), på samma
+     sätt som #view-login tar över hela skärmen. data-dv väljer vilket
+     delläge som visas; delaShow() växlar mellan dem. -->
+<section id="view-dela" class="login-screen dela-screen" style="display:none">
+  <div data-dv="laddar" class="dela-laddar"><span class="spin" aria-hidden="true"></span><p class="fine">Öppnar den delade hyllan…</p></div>
+  <div data-dv="fel" style="display:none">
+    <h1 class="login-title" style="font-size:26px">Något gick fel</h1>
+    <p class="fine login-sub">Länken kunde inte öppnas just nu. Kontrollera din uppkoppling och försök igen.</p>
+  </div>
+  <!-- Skärm 6: länktillstånd - bara de två låsta texterna. -->
+  <div data-dv="lankstatus" style="display:none">
+    <div id="delaLankBody"></div>
+  </div>
+  <!-- Skärm 0: intro. Bilden är gemensam/generisk (CSS-gradient), aldrig
+       ägarens eget hyllfoto. -->
+  <div data-dv="intro" class="dela-intro" style="display:none">
+    <div class="dela-photo" aria-hidden="true"></div>
+    <div class="dela-intro-body" id="delaIntroBody"></div>
+    <button class="btn btn-primary dela-intro-btn" id="delaOpenBtn">Öppna hyllan</button>
+  </div>
+  <!-- Skärm 1/2: delad hylla + sökning. -->
+  <div data-dv="hylla" class="dela-hylla" style="display:none">
+    <div class="sh-head">
+      <h1 class="dela-h1" id="delaHyllaTitel">Delad hylla</h1>
+      <div class="bp-search"><input id="delaQ" type="search" placeholder="Sök titel eller författare" autocomplete="off" aria-label="Sök i den delade hyllan"></div>
+    </div>
+    <div class="booklist" id="delaGrid"></div>
+    <p class="fine dela-foot">Du ser bara det som delats med dig. Priser visas aldrig här.</p>
+  </div>
+</section>
+
+<!-- Skärm 4: "Önskar låna" + konto, bottensheet över #view-dela. -->
+<div class="scrim" id="delaWishScrim"></div>
+<div class="sheet" id="delaWishSheet">
+  <h2>Önskar låna</h2>
+  <p class="fine" id="delaWishBookTitel"></p>
+  <div id="delaWishAcctBody">
+    <input class="inp" id="delaWName" placeholder="Ditt namn" autocomplete="name">
+    <input class="inp" id="delaWEmail" type="email" placeholder="E-post" autocomplete="username">
+    <input class="inp" id="delaWPass" type="password" placeholder="Lösenord (minst 6 tecken)" autocomplete="new-password">
+    <span class="err" id="delaWErr"></span>
+    <button class="btn btn-primary" id="delaWSubmit">Skapa konto och skicka</button>
+    <p class="fine" style="margin-top:10px">Har du redan ett konto? <button class="link-btn" id="delaWLogin" type="button">Logga in</button></p>
+    <button class="btn-outline" id="delaWCancel" type="button">Inte nu</button>
+  </div>
+</div>
+
 <main class="wrap">
 
 <!-- ================= HEM ================= -->
@@ -249,20 +298,41 @@
 
 <!-- ================= DELADE ================= -->
 <section id="view-delade" class="view" style="display:none">
-  <div class="page-head"><h1>Delade</h1><span class="badge b-warning">Kommer snart</span></div>
-  <div class="card share-card">
-    <div class="share-who"><span class="avatar avatar-48" id="shareAvatar"></span>
-      <div><b id="shareName">Min Bokhylla</b><small class="mono" id="shareMeta"></small></div></div>
-    <p>Dela ditt bibliotek med vänner och bekanta. De kan bläddra bland dina böcker och se vad som går att låna.</p>
-    <div class="btn-row">
-      <button class="btn btn-primary btn-sm" id="shareBtn">Bjud in</button>
-      <button class="btn btn-outline btn-sm" id="copyLink">Kopiera länk</button>
-    </div>
-    <p class="fine" id="shareMsg">Mottagaren ser titlar, författare och kategorier. Var böckerna står och vem som lånat dem syns bara för inloggade.</p>
+  <div class="page-head"><h1>Delade</h1>
+    <button class="btn btn-primary btn-sm" id="delaSkapaBtn" type="button">Dela en hylla</button>
   </div>
+
+  <h2 class="sub-h">Lånönskningar</h2>
+  <div id="delaWishList"><div class="empty">Inga lånönskningar än.</div></div>
+
+  <h2 class="sub-h">Mina delningar</h2>
+  <div id="delaMinaList"><div class="empty">Du har inte delat något än.</div></div>
+
   <h2 class="sub-h">Delat med dig</h2>
-  <div class="empty">Ingen har delat ett bibliotek med dig än.</div>
+  <div id="delaMedDigList"><div class="empty">Ingen har delat ett bibliotek med dig än.</div></div>
 </section>
+
+<!-- Skapa delning: nivåväljare (bibliotek/hylla/bok) + länk. Bottensheet,
+     samma mönster som övriga sheets (editSheet m.fl.). -->
+<div class="scrim" id="delaSkapaScrim"></div>
+<div class="sheet" id="delaSkapaSheet">
+  <h2>Dela en hylla</h2>
+  <div class="dela-lvl-grp" id="delaLvlGrp">
+    <button class="dela-lvl" data-lvl="library">Hela biblioteket</button>
+    <button class="dela-lvl" data-lvl="shelf">En hylla</button>
+    <button class="dela-lvl" data-lvl="book">En enskild bok</button>
+  </div>
+  <select class="inp" id="delaSkapaBc" hidden></select>
+  <select class="inp" id="delaSkapaBook" hidden></select>
+  <p class="fine">Mottagaren ser aldrig priser. Var böckerna står syns, utom vid delning av en enskild bok.</p>
+  <span class="err" id="delaSkapaErr"></span>
+  <button class="btn btn-primary" id="delaSkapaGor">Skapa länk</button>
+  <button class="btn-outline" id="delaSkapaAvbryt" type="button">Avbryt</button>
+  <div id="delaSkapaResultat" hidden>
+    <p class="fine">Länken är klar:</p>
+    <div class="dela-linkbox"><input class="inp" id="delaSkapaLankInput" readonly><button class="btn btn-outline btn-sm" id="delaSkapaKopiera">Kopiera</button></div>
+  </div>
+</div>
 
 <!-- ================= SÄLJ ================= -->
 <section id="view-salj" class="view" style="display:none">
@@ -471,6 +541,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261029225623"></script>
+<script src="js/app.js?v=20261030004144"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261029225623";
+const DV="?v=20261030004144";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -50,6 +50,12 @@ function toast(msg){const t=document.getElementById("toast");if(!t)return;t.text
 /* Bibliotekets namn och bild. Sparas i webbläsaren tills vidare - i databasen
    behövs en egen tabell (per konto) innan det kan följa med vid delning. */
 const PROFILE_KEY="minbokhylla-profile";
+/* Delning v1: token sparas i localStorage, inte bara i minnet, eftersom
+   både "Skapa konto" (updateUser, ingen reload) och "Logga in på
+   befintligt konto" (signInWithPassword, location.reload()) måste kunna
+   hitta den igen efteråt - en reload tömmer alla JS-variabler men inte
+   localStorage. Se startDelaFlow(). */
+const DELA_TOKEN_KEY="minbokhylla-dela-token";
 let profile={name:"Min Bokhylla",avatar:null};
 try{const pr=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(pr)profile={name:pr.name||"Min Bokhylla",avatar:pr.avatar||null}}catch(e){}
 const initials=n=>(n||"MB").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
@@ -1168,6 +1174,316 @@ async function afterAuthReady(){
   }).subscribe();
 }
 
+/* ================= DELA V1: mottagarflöde via länk =================
+   Egen tillståndsmaskin utanför VIEWS/go() - fångas vid uppstart, innan
+   afterAuthReady(), på samma sätt som showLoginScreen() tar över hela
+   skärmen. Byggregler (se rapporten för 29/10-30/10):
+   - Pris syns ALDRIG här - frågas aldrig, hämtas aldrig.
+   - Plats syns för alla nivåer utom vid delning av en enskild bok.
+   - Bara två länktillstånd (okänt/återkallat) - inget tredje.
+   - Introbilden är gemensam/generisk (CSS-gradient), aldrig ägarens
+     eget hyllfoto.
+   Token hålls kvar i localStorage tills en lånönskan lyckas (eller
+   länken visar sig okänd/återkallad) - se kommentaren vid
+   DELA_TOKEN_KEY. Det gör att boot-sekvensen längst ner i filen kan
+   anropa redeem_share_link() igen efter VARJE inloggning (nytt konto
+   eller befintligt), helt automatiskt, eftersom både "Skapa konto" och
+   "Logga in" redan laddar om sidan vid lyckat utfall. */
+let delaCtx=null; // {token,outcome,library_id,scope,bc,book_id}
+let delaBooks=[];
+let delaWishBookId=null;
+
+function delaShow(view){
+  document.querySelectorAll("#view-dela [data-dv]").forEach(el=>{el.style.display=(el.dataset.dv===view?"":"none")});
+}
+
+async function startDelaFlow(token){
+  hideAppChrome();
+  const el=document.getElementById("view-dela");
+  if(el)el.style.display="";
+  delaShow("laddar");
+  try{
+    if(!sbUser){
+      const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously({options:{data:{invited:true}}});
+      if(anonErr){console.warn("dela: anonym inloggning",anonErr);delaShow("fel");return}
+      sbUser=anonRes.user;
+    }
+    const {data:rows,error}=await sb.rpc("redeem_share_link",{p_token:token});
+    if(error){console.warn("redeem_share_link",error);delaShow("fel");return}
+    const r=rows&&rows[0];
+    if(!r||r.outcome==="okant"||r.outcome==="aterkallat"){
+      renderDelaLankstatus(r?r.outcome:"okant");
+      try{localStorage.removeItem(DELA_TOKEN_KEY)}catch(e){}
+      return;
+    }
+    delaCtx={token,library_id:r.library_id,scope:r.scope,bc:r.bc,book_id:r.book_id};
+    await renderDelaIntro();
+  }catch(e){console.warn("startDelaFlow",e);delaShow("fel")}
+}
+
+function renderDelaLankstatus(outcome){
+  const body=document.getElementById("delaLankBody");
+  if(!body)return;
+  const TXT={
+    okant:{h:"Länken fungerar inte",p:"Den här länken finns inte, eller är felstavad. Be den som delade att skicka en ny."},
+    aterkallat:{h:"Länken är inte längre giltig",p:"Den som delade har tagit bort delningen. Be om en ny länk om du fortfarande vill se hyllan."}
+  };
+  const t=TXT[outcome]||TXT.okant;
+  body.innerHTML=`<h1 class="login-title" style="font-size:26px">${esc(t.h)}</h1><p class="fine login-sub">${esc(t.p)}</p>`;
+  delaShow("lankstatus");
+}
+
+/* Introsidans namn: bryt efter kolon om titeln har ett sådant (kursiv
+   rad delas i två), annars minska graden stegvis över en viss längd -
+   så att en lång titel (fyra-fem ord) inte trycker ned knappen. */
+function delaHeadlineHtml(name){
+  const n=name||"";
+  const ci=n.indexOf(":");
+  if(ci>-1&&ci<n.length-1){
+    const a=n.slice(0,ci+1),b=n.slice(ci+1).trim();
+    return `<em class="dela-name">${esc(a)}<br>${esc(b)}</em>`;
+  }
+  const len=n.length;
+  const cls=len>40?"dela-name dela-name-xs":len>26?"dela-name dela-name-s":"dela-name";
+  return `<em class="${cls}">${esc(n)}</em>`;
+}
+
+async function renderDelaIntro(){
+  let name="";
+  try{
+    if(delaCtx.scope==="library"){
+      const {data}=await sb.from("libraries").select("name").eq("id",delaCtx.library_id).maybeSingle();
+      name=(data&&data.name)||"ett bibliotek";
+    } else if(delaCtx.scope==="shelf"){
+      const {data}=await sb.from("bc_names").select("name").eq("bc",delaCtx.bc).maybeSingle();
+      name=(data&&data.name)||("Hylla "+delaCtx.bc);
+    } else {
+      const {data}=await sb.from("manual_books").select("title").eq("id",delaCtx.book_id).maybeSingle();
+      name=(data&&data.title)||"en bok";
+    }
+  }catch(e){console.warn("delaIntroNamn",e)}
+  const body=document.getElementById("delaIntroBody");
+  if(body)body.innerHTML=`<p class="fine">Du har fått tillgång till</p>${delaHeadlineHtml(name)}`;
+  delaShow("intro");
+  const btn=document.getElementById("delaOpenBtn");
+  if(btn)btn.onclick=renderDelaShelf;
+}
+
+/* Skärm 1/2: delad hylla (read-only rader) + sökning. Platsen (locLabel)
+   visas för alla nivåer utom scope==="book" - en enskild delad bok ska
+   inte avslöja var den (eller grannböckerna på samma hyllkod) står. */
+function sharedBookRow(d){
+  const showLoc=delaCtx.scope!=="book";
+  const loc=showLoc?`<div class="bk-loc"><span class="${d.shelf?"":"loc-dold"}">${esc(locLabel(d.shelf))}</span></div>`:"";
+  return `<div class="bk"><span class="bk-stripe" style="background:${catColor(d.cat)}"></span>
+    <div class="bk-main"><span class="bk-title-ro">${esc(d.title)}</span>
+      <span class="bk-by">${esc([d.author,d.cat].filter(Boolean).join(" · "))}</span>${loc}</div>
+    <button class="btn btn-outline btn-sm dela-wish" onclick="delaWish(${d.id})">Önskar låna</button></div>`;
+}
+
+function renderDelaBooklist(){
+  const grid=document.getElementById("delaGrid");if(!grid)return;
+  const q=(document.getElementById("delaQ").value||"").trim().toLowerCase();
+  const list=!q?delaBooks:delaBooks.filter(d=>(d.title||"").toLowerCase().includes(q)||(d.author||"").toLowerCase().includes(q));
+  grid.innerHTML=list.length?list.map(sharedBookRow).join(""):'<div class="empty">Inga böcker hittades.</div>';
+}
+
+async function renderDelaShelf(){
+  delaShow("hylla");
+  const titelEl=document.getElementById("delaHyllaTitel");
+  if(titelEl)titelEl.textContent=delaCtx.scope==="book"?"Delad bok":"Delad hylla";
+  try{await loadBcNames()}catch(e){console.warn("dela: bcNames",e)}
+  const {data:rows,error}=await sb.from("manual_books").select("id,title,author,cat,shelf").eq("library_id",delaCtx.library_id).order("title");
+  if(error){console.warn("dela: manual_books",error);delaBooks=[]}
+  else delaBooks=rows||[];
+  renderDelaBooklist();
+  const qEl=document.getElementById("delaQ");
+  if(qEl)qEl.oninput=renderDelaBooklist;
+}
+window.delaWish=delaWish;
+
+/* Skärm 4: "Önskar låna" + konto. En redan riktig (icke-anonym) session
+   skickar lånönskan direkt - sheeten med namn/e-post/lösenord är bara
+   till för den som ännu inte har något konto att identifiera sig med. */
+async function delaWish(bookId){
+  delaWishBookId=bookId;
+  if(sbUser&&!sbUser.is_anonymous){
+    await delaSendWish();
+    return;
+  }
+  const bk=delaBooks.find(b=>b.id===bookId);
+  const t=document.getElementById("delaWishBookTitel");
+  if(t)t.textContent=bk?bk.title:"";
+  document.getElementById("delaWErr").textContent="";
+  document.getElementById("delaWName").value="";
+  document.getElementById("delaWEmail").value="";
+  document.getElementById("delaWPass").value="";
+  document.getElementById("delaWishScrim").classList.add("open");
+  document.getElementById("delaWishSheet").classList.add("open");
+}
+function delaWishClose(){
+  document.getElementById("delaWishScrim").classList.remove("open");
+  document.getElementById("delaWishSheet").classList.remove("open");
+}
+async function delaSendWish(){
+  if(!delaWishBookId)return;
+  const {error}=await sb.from("book_events").insert({book_id:delaWishBookId,event_type:"onskar_lana",actor_id:sbUser.id});
+  if(error){console.warn("dela: book_events insert",error);toast("Kunde inte skicka lånönskan just nu.");return}
+  delaWishClose();
+  /* Mottagarens ärende är uppfyllt - nu behövs inte längre att
+     redeem_share_link spelas om vid nästa inloggning. */
+  try{localStorage.removeItem(DELA_TOKEN_KEY)}catch(e){}
+  toast("Lånönskan skickad.");
+}
+document.getElementById("delaWishScrim")&&document.getElementById("delaWishScrim").addEventListener("click",delaWishClose);
+document.getElementById("delaWCancel")&&(document.getElementById("delaWCancel").onclick=delaWishClose);
+document.getElementById("delaWLogin")&&(document.getElementById("delaWLogin").onclick=()=>{delaWishClose();showLoginScreen()});
+document.getElementById("delaWSubmit")&&(document.getElementById("delaWSubmit").onclick=async()=>{
+  const name=document.getElementById("delaWName").value.trim();
+  const email=document.getElementById("delaWEmail").value.trim();
+  const pass=document.getElementById("delaWPass").value;
+  const errEl=document.getElementById("delaWErr");errEl.textContent="";
+  if(!email||pass.length<6){errEl.textContent="Fyll i e-post och ett lösenord på minst 6 tecken.";return}
+  const btn=document.getElementById("delaWSubmit");btn.disabled=true;btn.textContent="Skapar…";
+  /* updateUser på den redan anonyma (invited:true) sessionen - samma
+     auth.uid(), samma shelf_shares-rad som redan beviljats. Utlöser inte
+     handle_new_user igen (den körs bara vid INSERT i auth.users). */
+  const {data:res,error}=await sb.auth.updateUser({email,password:pass,data:name?{full_name:name}:undefined});
+  btn.disabled=false;btn.textContent="Skapa konto och skicka";
+  if(error){errEl.textContent=error.message||"Kunde inte skapa kontot.";return}
+  sbUser=res.user;
+  await delaSendWish();
+});
+
+/* ---------- Delade (ägarens vy): Lånönskningar, Mina delningar,
+   Delat med dig. Bara den minimala vyn skissen visar - inte de två
+   fulla sidorna (medveten, godkänd avvikelse i v1). ---------- */
+async function renderDelaWishList(){
+  const el=document.getElementById("delaWishList");if(!el)return;
+  const libId=await myLibraryId();if(!libId)return;
+  const {data:rows,error}=await sb.from("book_events")
+    .select("id,book_id,actor_id,response,created_at,manual_books(title,library_id)")
+    .eq("event_type","onskar_lana").order("created_at",{ascending:false});
+  if(error){console.warn("dela: book_events",error);return}
+  const mine=(rows||[]).filter(r=>r.manual_books&&r.manual_books.library_id===libId);
+  if(!mine.length){el.innerHTML='<div class="empty">Inga lånönskningar än.</div>';return}
+  const withMail=await Promise.all(mine.map(async r=>{
+    let mail="";
+    try{const {data:e}=await sb.rpc("book_event_actor_email",{p_book_id:r.book_id,p_actor_id:r.actor_id});mail=e||""}catch(e){}
+    return {...r,mail};
+  }));
+  el.innerHTML=withMail.map(r=>`<div class="dela-row">
+    <div class="dela-row-main"><b>${esc(r.manual_books.title)}</b><small>${esc(r.mail||"Okänd låntagare")}${r.response?" · "+esc(r.response):""}</small></div>
+    ${!r.response?`<button class="btn btn-outline btn-sm" onclick="delaWishRespond('${r.id}','accepterad')">Acceptera</button>
+     <button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','nekad')">Neka</button>`:""}
+  </div>`).join("");
+}
+async function delaWishRespond(eventId,resp){
+  const {error}=await sb.from("book_events").update({response:resp}).eq("id",eventId);
+  if(error){console.warn("dela: svara lånönskan",error);toast("Kunde inte spara svaret.");return}
+  await renderDelaWishList();
+}
+window.delaWishRespond=delaWishRespond;
+
+function delaScopeLabel(r){
+  if(r.scope==="library")return "Hela biblioteket";
+  if(r.scope==="shelf")return (bcNames&&bcNames[r.bc])||("Hylla "+r.bc);
+  return "En bok";
+}
+async function renderDelaMinaList(){
+  const el=document.getElementById("delaMinaList");if(!el)return;
+  const libId=await myLibraryId();if(!libId)return;
+  const [{data:links,error:e1},{data:grants,error:e2}]=await Promise.all([
+    sb.from("share_links").select("id,scope,bc,book_id,token,revoked_at,created_at").eq("library_id",libId).order("created_at",{ascending:false}),
+    sb.from("shelf_shares").select("id,scope,bc,book_id,level,revoked_at,redeemed_from").eq("library_id",libId)
+  ]);
+  if(e1||e2){console.warn("dela: mina delningar",e1||e2);return}
+  const redeemedFrom=new Set((grants||[]).filter(g=>!g.revoked_at).map(g=>g.redeemed_from));
+  const rows=(links||[]);
+  if(!rows.length){el.innerHTML='<div class="empty">Du har inte delat något än.</div>';return}
+  el.innerHTML=rows.map(r=>{
+    const status=r.revoked_at?"Återkallad":redeemedFrom.has(r.id)?"Inlöst":"Väntar på att lösas in";
+    return `<div class="dela-row">
+      <div class="dela-row-main"><b>${esc(delaScopeLabel(r))}</b><small>${esc(status)}</small></div>
+      ${!r.revoked_at?`<button class="btn-outline btn-sm" onclick="delaRevoke('${r.id}')">Återkalla</button>`:""}
+    </div>`;
+  }).join("");
+}
+async function delaRevoke(linkId){
+  if(!await ask({title:"Återkalla delningen?",text:"Mottagaren förlorar tillgången direkt.",buttons:[{label:"Avbryt",value:false},{label:"Återkalla",value:true,kind:"danger"}]}))return;
+  const {error}=await sb.rpc("revoke_share_link",{p_link_id:linkId});
+  if(error){console.warn("dela: revoke_share_link",error);toast("Kunde inte återkalla länken.");return}
+  await renderDelaMinaList();
+}
+window.delaRevoke=delaRevoke;
+
+async function renderDelaMedDigList(){
+  const el=document.getElementById("delaMedDigList");if(!el)return;
+  const libId=await myLibraryId();
+  const {data:rows,error}=await sb.from("shelf_shares").select("id,scope,bc,book_id,library_id,revoked_at").eq("recipient_id",sbUser?sbUser.id:"").is("revoked_at",null);
+  if(error){console.warn("dela: delat med dig",error);return}
+  const other=(rows||[]).filter(r=>r.library_id!==libId);
+  if(!other.length){el.innerHTML='<div class="empty">Ingen har delat ett bibliotek med dig än.</div>';return}
+  el.innerHTML=other.map(r=>`<div class="dela-row"><div class="dela-row-main"><b>${esc(delaScopeLabel(r))}</b></div></div>`).join("");
+}
+
+async function renderDelade(){
+  renderDelaWishList();
+  renderDelaMinaList();
+  renderDelaMedDigList();
+}
+
+/* Skapa delning: nivåväljare + skapande av share_links-rad. */
+let delaSkapaLvl=null;
+function delaSkapaOpen(){
+  delaSkapaLvl=null;
+  document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(b=>b.classList.remove("active"));
+  document.getElementById("delaSkapaBc").hidden=true;
+  document.getElementById("delaSkapaBook").hidden=true;
+  document.getElementById("delaSkapaErr").textContent="";
+  document.getElementById("delaSkapaResultat").hidden=true;
+  document.getElementById("delaSkapaScrim").classList.add("open");
+  document.getElementById("delaSkapaSheet").classList.add("open");
+}
+function delaSkapaClose(){
+  document.getElementById("delaSkapaScrim").classList.remove("open");
+  document.getElementById("delaSkapaSheet").classList.remove("open");
+}
+document.getElementById("delaSkapaBtn")&&(document.getElementById("delaSkapaBtn").onclick=delaSkapaOpen);
+document.getElementById("delaSkapaAvbryt")&&(document.getElementById("delaSkapaAvbryt").onclick=delaSkapaClose);
+document.getElementById("delaSkapaScrim")&&document.getElementById("delaSkapaScrim").addEventListener("click",delaSkapaClose);
+document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(b=>b.addEventListener("click",()=>{
+  delaSkapaLvl=b.dataset.lvl;
+  document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(x=>x.classList.toggle("active",x===b));
+  const bcSel=document.getElementById("delaSkapaBc"),bookSel=document.getElementById("delaSkapaBook");
+  bcSel.hidden=delaSkapaLvl!=="shelf";bookSel.hidden=delaSkapaLvl!=="book";
+  if(delaSkapaLvl==="shelf"&&!bcSel.options.length){
+    bcSel.innerHTML=topPlaces().map(bc=>`<option value="${esc(bc)}">${esc(bcNames[bc]||("Hylla "+bc))}</option>`).join("");
+  }
+  if(delaSkapaLvl==="book"&&!bookSel.options.length){
+    bookSel.innerHTML=data.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(d=>`<option value="${d.id}">${esc(d.title)}</option>`).join("");
+  }
+}));
+document.getElementById("delaSkapaGor")&&(document.getElementById("delaSkapaGor").onclick=async()=>{
+  const errEl=document.getElementById("delaSkapaErr");errEl.textContent="";
+  if(!delaSkapaLvl){errEl.textContent="Välj vad som ska delas.";return}
+  const libId=await myLibraryId();if(!libId){errEl.textContent="Hittar inte ditt bibliotek.";return}
+  const row={library_id:libId,scope:delaSkapaLvl,level:"read"};
+  if(delaSkapaLvl==="shelf")row.bc=document.getElementById("delaSkapaBc").value;
+  if(delaSkapaLvl==="book")row.book_id=+document.getElementById("delaSkapaBook").value;
+  const {data:res,error}=await sb.from("share_links").insert(row).select("token").maybeSingle();
+  if(error){console.warn("dela: skapa share_links",error);errEl.textContent="Kunde inte skapa länken just nu.";return}
+  const url=location.origin+location.pathname+"?dela="+res.token;
+  document.getElementById("delaSkapaLankInput").value=url;
+  document.getElementById("delaSkapaResultat").hidden=false;
+  renderDelaMinaList();
+});
+document.getElementById("delaSkapaKopiera")&&(document.getElementById("delaSkapaKopiera").onclick=()=>{
+  const url=document.getElementById("delaSkapaLankInput").value;
+  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+    .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
+});
+
 async function startAnon(){
   const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously();
   if(anonErr){console.warn("anonym inloggning",anonErr);showLoginScreen();return}
@@ -1198,7 +1514,26 @@ async function startFromGuide(){
 }
 window.startFromGuide=startFromGuide;
 
-if(sbUser){
+/* Delning v1: en delningslänk (?dela=<token> eller en token kvarbliven i
+   localStorage sedan tidigare, se DELA_TOKEN_KEY) tar över uppstarten
+   helt - innan afterAuthReady() och innan det vanliga vägvalet nedan,
+   oavsett om besökaren redan har en sparad session eller inte (en
+   inloggad ägare som råkar öppna sin egen delade länk löses in mot sin
+   egen, redan inloggade identitet precis som vem som helst annan). */
+let delaBootToken=null;
+try{delaBootToken=new URLSearchParams(location.search).get("dela")||localStorage.getItem(DELA_TOKEN_KEY)||null}catch(e){delaBootToken=new URLSearchParams(location.search).get("dela")||null}
+if(delaBootToken){
+  try{localStorage.setItem(DELA_TOKEN_KEY,delaBootToken)}catch(e){}
+  /* Token flyttas till localStorage - strippa den ur URL:en så att en
+     omladdning efter en skickad lånönskan (DELA_TOKEN_KEY redan borttagen
+     då) inte triggar flödet igen bara för att länken råkar ligga kvar i
+     adressfältet eller webbläsarhistoriken. */
+  try{
+    const u=new URL(location.href);
+    if(u.searchParams.has("dela")){u.searchParams.delete("dela");history.replaceState(null,"",u.toString())}
+  }catch(e){}
+  startDelaFlow(delaBootToken);
+} else if(sbUser){
   afterAuthReady();
 } else {
   /* Ingen sparad session: startsidans tomma läge (samma .eg-card som
@@ -1221,6 +1556,7 @@ function go(v,opts){
     const k=t.dataset.tab;t.classList.toggle("active",k==="hem"?homeish:k===v)});
   if(v==="place")renderPlace();
   if(v==="gaps")renderGaps();
+  if(v==="delade")renderDelade();
   closePanel();
   if(!(opts&&opts.keepScroll))scrollTo({top:0});
 }
@@ -3700,42 +4036,13 @@ window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
 window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
-/* ---------- Dela ---------- */
-const shareSheet=document.createElement("div");shareSheet.className="share-sheet";
-shareSheet.innerHTML=`<div class="share-box"><h3>Dela ditt bibliotek</h3>
-  <textarea id="shareTxt"></textarea>
-  <div class="share-acts">
-    <button id="shareNative">Dela…</button>
-    <button class="ghost" id="shareCopy">Kopiera text</button>
-    <button class="ghost" id="shareClose">Stäng</button>
-  </div></div>`;
-document.body.appendChild(shareSheet);
-shareSheet.addEventListener("click",e=>{if(e.target===shareSheet)shareSheet.classList.remove("open")});
-document.getElementById("shareClose")&&0;
-shareSheet.querySelector("#shareClose").onclick=()=>shareSheet.classList.remove("open");
-shareSheet.querySelector("#shareCopy").onclick=()=>{
-  navigator.clipboard.writeText(shareSheet.querySelector("#shareTxt").value)
-    .then(()=>toast("Texten är kopierad"),()=>alert("Kunde inte kopiera"))};
-shareSheet.querySelector("#shareNative").onclick=async()=>{
-  const text=shareSheet.querySelector("#shareTxt").value;
-  if(navigator.share){try{await navigator.share({title:profile.name,text})}catch(e){}}
-  else shareSheet.querySelector("#shareCopy").click();
-};
-document.getElementById("shareBtn").addEventListener("click",()=>{
-  const n=data.length, cats=[...new Set(data.map(d=>d.cat))].length;
-  shareSheet.querySelector("#shareTxt").value=
-`Titta i min bokhylla! ${n} böcker i ${cats} kategorier — allt från buddhism och terapi till kokböcker och fantasy.
-
-Vill du låna någon? Eller bara prata om en? Hör av dig.
-
-${location.href}`;
-  shareSheet.classList.add("open");
-});
-document.getElementById("copyLink").addEventListener("click",()=>{
-  const url=location.origin+location.pathname;
-  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
-    .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
-});
+/* ---------- Dela ----------
+   Den gamla "skicka ett textmeddelande om biblioteket"-genvägen (#shareBtn/
+   #copyLink i Delade-fliken) utgår här - Delade-fliken är ombyggd för
+   Delning v1:s riktiga länkar med faktisk läsbehörighet (se delaSkapaBtn/
+   DELA V1 nedan), som ersätter den. navigator.share-knappen för att dela
+   själva APPEN (Inställningar > "Dela appen", #shareAppBtn) är en annan
+   funktion och påverkas inte. */
 window.__lt=()=>renderCatUI();window.__lt();
 
 if(sbUser){
