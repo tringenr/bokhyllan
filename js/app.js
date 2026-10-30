@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030123239";
+const DV="?v=20261030153314";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1796,11 +1796,25 @@ function dpSync(){
   if(sub)sub.textContent=n===0?"Inget valt än":"";
 }
 
+/* UX-fix 30/10 (Thomas): efter att länken skapats var skärmen rörig -
+   urvalet, "Dela N böcker"-knappen och "Avbryt" låg kvar trots att inget
+   av det längre betydde något ("Avbryt" lät osäkert - avbryter det
+   delningen som redan skapades?). I stället ersätts HELA urvalet av bara
+   länken + en enda tydlig knapp ("Klar") när den är klar. */
+function dpShowResultat(){
+  document.getElementById("dpStepGrid").hidden=true;
+  document.getElementById("dpStepShelf").hidden=true;
+  document.getElementById("dpStepBooks").hidden=true;
+  document.querySelector("#delaSkapaSheet .pickbar").hidden=true;
+  document.getElementById("delaSkapaResultat").hidden=false;
+}
+
 function delaSkapaOpen(){
   dpMode="shelf";dpWholeLib=false;dpSelShelves=new Set();dpSelPlans=new Map();dpSelBooks=new Set();
   dpCurBc=null;dpBookCat="";dpBookBc="";
   document.getElementById("delaSkapaErr").textContent="";
   document.getElementById("delaSkapaResultat").hidden=true;
+  document.querySelector("#delaSkapaSheet .pickbar").hidden=false;
   document.getElementById("dpStepGrid").hidden=false;
   document.getElementById("dpStepShelf").hidden=true;
   document.getElementById("dpStepBooks").hidden=true;
@@ -1848,7 +1862,7 @@ document.getElementById("delaSkapaGor")&&(document.getElementById("delaSkapaGor"
   if(error||!res||!res.length){console.warn("dela: skapa share_links",error);errEl.textContent="Kunde inte skapa länken just nu.";return}
   const url=location.origin+location.pathname+"?dela="+res.map(r=>r.token).join(",");
   document.getElementById("delaSkapaLankInput").value=url;
-  document.getElementById("delaSkapaResultat").hidden=false;
+  dpShowResultat();
   renderDelaMinaList();
 });
 document.getElementById("delaSkapaKopiera")&&(document.getElementById("delaSkapaKopiera").onclick=()=>{
@@ -1856,6 +1870,7 @@ document.getElementById("delaSkapaKopiera")&&(document.getElementById("delaSkapa
   (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
     .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
 });
+document.getElementById("delaSkapaKlar")&&(document.getElementById("delaSkapaKlar").onclick=delaSkapaClose);
 
 async function startAnon(){
   const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously();
