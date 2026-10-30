@@ -182,8 +182,10 @@ setTimeout(() => {
   //     fel, och aldrig skriva över en skyddad rad utan bekräftelse.
   try {
     const d = window.document;
-    d.getElementById("vardOpenBtn").click();
-    if (!d.getElementById("vardSheet").classList.contains("open")) fel.push("vardOpenBtn öppnade inte urvalsarket");
+    // "Välj böcker" i listans huvud togs bort 30/10 - sökningen startas
+    // från Värderas startsida. Testet går samma väg som användaren.
+    window.openVard();
+    if (!d.getElementById("vardSheet").classList.contains("open")) fel.push("openVard öppnade inte urvalsarket");
     const count = d.getElementById("vardCount").textContent;
     if (!/sökkrediter/.test(count)) fel.push("vardCount visar inte antal sökkrediter: " + JSON.stringify(count));
     d.getElementById("vardCancelBtn").click();
