@@ -1457,3 +1457,16 @@ body.har-remsa .toast{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px)
   font:600 13px var(--font-body);padding:6px 4px;text-decoration:underline;text-underline-offset:3px}
 .vard-kor-knappar{display:flex;gap:8px;margin-top:10px}
 .vard-kor-knappar .btn{flex:1}
+
+/* ---------- Värderingslistan: tre kategorier (30/10) ----------
+   Raden visar vad man kan göra, inte vad sökmotorn tyckte. "Kolla själv"
+   får en synlig länk under rubriken; förut låg den gömd i den fällda
+   delen bakom ett streck. */
+.sell-head .p small{font-size:13px;font-weight:500;color:var(--ink-500)}
+.sr-kalla{grid-column:2;justify-self:end;font-size:12px;color:var(--ink-500);line-height:1.2}
+.sr-oppna{display:block;padding:2px 0 8px;font-size:14px;font-weight:600;color:var(--pink-600);text-decoration:none}
+.sr-oppna:active{opacity:.6}
+.sell-row.sr-inget .sell-head .t{color:var(--ink-500)}
+.sell-sum-lankar{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:6px}
+.sell-sum-lankar .link-btn{font-size:14px}
+.sell-sortera{margin-left:10px;color:var(--ink-500)}
