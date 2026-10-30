@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030103210";
+const DV="?v=20261030105713";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -4094,5 +4094,16 @@ if(sbUser){
   for(const [name,fn] of [["manualBooks",loadManualBooks],["statuses",loadStatuses],["gaps",loadGaps],["catEdits",loadCatEdits],["covers",loadCoverOverrides],["newShelves",loadNewShelves]]){
     try{await fn()}catch(e){console.warn(name+" misslyckades:",e)}
   }
+  /* Fynd 30/10: "Kategori" kunde visas helt tom i Värdera-arket, med
+     "0 böcker valda" trots ett bibliotek fullt av kategoriserade böcker.
+     Orsak: loadManualBooks() (ovan) är async och data (den globala
+     katalogen renderVardCats/vardMatches läser) är fortfarande tom om
+     man hinner trycka "Välj böcker" innan den raden är klar - t.ex.
+     direkt efter en sidomladdning (versionskollen i index.html gör en
+     automatisk sådan vid ny version). Ingen felbanner visas (felet
+     fångas tyst av try/catch ovan, och det är egentligen inget fel -
+     bara en kapplöpning). Om arket redan hann öppnas för tomt: rita om
+     det nu när katalogen äntligen finns. */
+  if(vardSheet&&vardSheet.classList.contains("open")){renderVardCats();vardSyncCount()}
 }
 })();
