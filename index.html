@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261030123239">
+<link rel="stylesheet" href="css/style.css?v=20261030153314">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261030123239";
+  var MY="20261030153314";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -397,9 +397,13 @@
     <p class="fine dp-locnote" id="dpLocNote" hidden>Var böckerna står visas inte vid delning av enstaka böcker</p>
     <button class="btn-outline" id="delaSkapaAvbryt" type="button">Avbryt</button>
   </div>
+  <!-- Ersätter hela urvalet + knappraden när länken är klar (UX-fix
+       30/10): ett enda tydligt nästa steg i stället för kvarvarande
+       Dela-knapp/Avbryt som inte längre betyder något. -->
   <div id="delaSkapaResultat" hidden>
-    <p class="fine">Länken är klar:</p>
+    <p class="dp-resultat-tx">Skicka länken till den du vill dela med:</p>
     <div class="dela-linkbox"><input class="inp" id="delaSkapaLankInput" readonly><button class="btn btn-outline btn-sm" id="delaSkapaKopiera">Kopiera</button></div>
+    <button class="btn btn-primary btn-block" id="delaSkapaKlar" type="button" style="margin-top:14px">Klar</button>
   </div>
 </div>
 
@@ -646,6 +650,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261030123239"></script>
+<script src="js/app.js?v=20261030153314"></script>
 </body>
 </html>

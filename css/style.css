@@ -1274,6 +1274,7 @@ body.ps-lock{overflow:hidden}
 .btn-block{width:100%}
 .dela-linkbox{display:flex;gap:8px;align-items:center;margin-top:6px}
 .dela-linkbox input{flex:1}
+.dp-resultat-tx{font:600 14.5px var(--font-body);color:var(--fg)}
 .dela-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .dela-row:last-child{border-bottom:0}
 .dela-row-main{flex:1;min-width:0}
