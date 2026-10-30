@@ -1378,7 +1378,11 @@ body.ps-lock{overflow:hidden}
 .vs-head p{font:400 14px/1.55 var(--font-body);color:var(--text-secondary);margin:12px 0 0;max-width:38ch}
 .vs-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:22px}
 .vs-stat{background:var(--surface);border:1px solid var(--border-default);border-radius:12px;
-  padding:14px;display:flex;flex-direction:column;gap:3px}
+  padding:14px;display:flex;flex-direction:column;gap:3px;text-align:left;color:var(--fg);
+  position:relative;transition:border-color var(--duration-fast)}
+.vs-stat:not([disabled]){cursor:pointer}
+.vs-stat:not([disabled]):active{border-color:var(--pink-500)}
+.vs-stat[disabled]{opacity:.55}
 .vs-stat b{font:600 25px/1 var(--font-mono,monospace);font-variant-numeric:tabular-nums}
 .vs-stat span{font:400 12.5px/1.35 var(--font-body);color:var(--text-secondary)}
 .vs-stat.ok b{color:var(--success-500)}

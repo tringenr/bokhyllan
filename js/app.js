@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030153314";
+const DV="?v=20261030165253";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2149,7 +2149,7 @@ const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Trad
 /* Värderas egna filter. Skilda från sökvyns (fs/fCat/q): vyerna har olika
    syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
    = visa alla. */
-let sellQ="",sellUnc="",sellHeat="",sellCat="",sellLimit=0,sellFiltersOppna=false;
+let sellQ="",sellUnc="",sellHeat="",sellCat="",sellStatus="",sellLimit=0,sellFiltersOppna=false;
 /* ---------- Värderas startsida (design 30/10) ----------
    Två tillstånd i samma vy: förstagångssidan med fotot i helskärm när
    ingenting är värderat, och statusöversikten med topp fem när något är
@@ -2201,8 +2201,19 @@ function sellForBook2(it){
   return (it.book_id&&data.find(x=>x.id===it.book_id))||
     (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))))||null;
 }
-function vardVisaListan(v){
+/* status: öppnar listan filtrerad på ett price_status, så att siffrorna på
+   startsidan leder någonstans. Utan det låg t.ex. "4 väntar på kontroll"
+   sorterade allra sist i listan, under alla prissatta böcker, utan att
+   något pekade dit (Thomas 30/10). */
+function vardVisaListan(v,status){
   vardVisarListan=!!v;
+  if(v&&status!==undefined){
+    sellStatus=status||"";
+    sellFiltersOppna=!!sellStatus;
+    document.querySelectorAll('#sellFilters [data-grp="status"] .chip').forEach(c=>
+      c.classList.toggle("active",c.dataset.v===sellStatus));
+    if(typeof renderSell==="function")renderSell();
+  }
   const start=document.getElementById("vardStart"),lista=document.getElementById("vardListWrap");
   if(start)start.hidden=vardVisarListan;
   if(lista)lista.hidden=!vardVisarListan;
@@ -2237,7 +2248,12 @@ function renderVardStart(){
     return;
   }
   const topp=vardTopp(5);
-  const kort=(tal,etikett,kl)=>`<div class="vs-stat${kl?" "+kl:""}"><b>${fmtN(tal)}</b><span>${etikett}</span></div>`;
+  /* Rutorna är vägar in i listan. "Inte värderade än" är undantaget: de
+     böckerna har ingen rad i sell_items och finns alltså inte i listan -
+     där öppnas urvalsrutan med "Aldrig sökt" förvalt i stället för att
+     visa en tom lista. */
+  const kort=(tal,etikett,kl,handling)=>`<button class="vs-stat${kl?" "+kl:""}" type="button"
+      ${tal?`onclick="${handling}"`:"disabled"}><b>${fmtN(tal)}</b><span>${etikett}</span></button>`;
   el.innerHTML=`
     <div class="vs-head">
       <span class="vs-eyebrow">Värdera</span>
@@ -2245,16 +2261,16 @@ function renderVardStart(){
       <p>${fmtN(vardera)} ${vardera===1?"bok har":"böcker har"} ett pris just nu. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
     </div>
     <div class="vs-stats">
-      ${kort(n.kontrollerat,"Kontrollerat","ok")}
-      ${kort(n.okontrollerat,"Okontrollerat")}
-      ${kort(n.vantar,"Väntar på kontroll","wait")}
-      ${kort(n.ovardera,"Inte värderade än")}
+      ${kort(n.kontrollerat,"Kontrollerat","ok",`vardVisaListan(true,'bekraftat')`)}
+      ${kort(n.okontrollerat,"Okontrollerat","",`vardVisaListan(true,'automatiskt')`)}
+      ${kort(n.vantar,"Väntar på kontroll","wait",`vardVisaListan(true,'vantar')`)}
+      ${kort(n.ovardera,"Inte värderade än","",`vardOppnaAldrig()`)}
     </div>
     <div class="vs-cta">
       <button class="btn btn-primary" type="button" onclick="openVard()">Värdera fler böcker</button>
       ${SELL&&SELL.updated?`<p class="fine vs-senast">Senast körd ${esc(vardDatum(SELL.updated))}.</p>`:""}
     </div>
-    <button class="link-btn vs-tilllistan" type="button" onclick="vardVisaListan(true)">Visa alla värderade böcker →</button>
+    <button class="link-btn vs-tilllistan" type="button" onclick="vardVisaListan(true,'')">Visa alla värderade böcker →</button>
     ${topp.length?`<p class="sub-h vs-subh">Mest värda just nu</p>
       <div class="vs-topp">${topp.map((x,i)=>{
         const okontrollerat=x.it.price_status==="automatiskt"||x.it.price_status==="osakert";
@@ -2295,6 +2311,7 @@ function renderSell(){
     (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))))||null;
   let items=s.items.slice().sort((a,b)=>val(b)-val(a));
   if(sellQ){const nq=sellQ.toLowerCase();items=items.filter(it=>String(it.title||"").toLowerCase().includes(nq))}
+  if(sellStatus)items=items.filter(it=>it.price_status===sellStatus);
   if(sellUnc)items=items.filter(it=>(it.uncertainty||(isSure(it)?"lag":""))===sellUnc);
   if(sellHeat)items=items.filter(it=>(it.heat_score||it.heat)===sellHeat);
   if(sellCat)items=items.filter(it=>{const b=bokFor(it);return b&&b.cat===sellCat});
@@ -2361,7 +2378,7 @@ window.toggleSell=toggleSell;
    takt med filtren. Kallas från renderSell() med antalet träffar före
    antalsbegränsningen, så texten kan säga hur många som finns. */
 function sellSyncUI(totalt){
-  const aktiv=!!(sellUnc||sellHeat||sellCat);
+  const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus);
   if(aktiv)sellFiltersOppna=true;
   const box=document.getElementById("sellFilters");
   if(box)box.hidden=!sellFiltersOppna;
@@ -2391,7 +2408,8 @@ document.querySelectorAll("#sellFilters .chips").forEach(grp=>{
   grp.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
     grp.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
     c.classList.add("active");
-    if(grp.dataset.grp==="unc")sellUnc=c.dataset.v;else sellHeat=c.dataset.v;
+    const g=grp.dataset.grp;
+    if(g==="unc")sellUnc=c.dataset.v;else if(g==="status")sellStatus=c.dataset.v;else sellHeat=c.dataset.v;
     renderSell();
   }));
 });
@@ -2511,9 +2529,23 @@ function renderKorRemsa(){
   }
 }
 /* Tryck på remsan under körning: tillbaka till arket och förloppet. */
+/* "Inte värderade än": böckerna finns inte i värderingslistan, de har
+   aldrig sökts. Urvalsrutan med "Aldrig sökt" förvalt är den enda
+   meningsfulla destinationen. */
+function vardOppnaAldrig(){
+  openVard();
+  if(vardKorPagar())return;
+  vardSelStatus="aldrig";
+  document.querySelectorAll("#vardStatusChips .chip").forEach(c=>
+    c.classList.toggle("active",c.dataset.v==="aldrig"));
+  vardSyncCount();
+}
 function vardOppnaKor(){go("salj");openVard()}
 /* Tryck på klart-notisen: till Värdera, och notisen är avklarad. */
-function vardOppnaKlar(){vardKlar=null;renderKorRemsa();go("salj")}
+/* Notisen tar en till LISTAN, inte startsidan: go("salj") tvingar fram
+   startsidan, så stod man redan där hände ingenting alls utom att remsan
+   försvann - det såg ut som att knappen var trasig (Thomas 30/10). */
+function vardOppnaKlar(){vardKlar=null;renderKorRemsa();go("salj");vardVisaListan(true,"")}
 function vardStangKlar(){vardKlar=null;renderKorRemsa()}
 
 /* Skrollbar rad, valda chips flyttade först (Design 29/10 b) - så arket
@@ -4685,7 +4717,7 @@ window.nsAvbrytAnalys=nsAvbrytAnalys;window.nsTillInloggning=nsTillInloggning;wi
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
-window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.vardVisaListan=vardVisaListan;window.vardOppnaKor=vardOppnaKor;window.vardOppnaKlar=vardOppnaKlar;window.vardStangKlar=vardStangKlar;window.openVard=openVard;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.vardVisaListan=vardVisaListan;window.vardOppnaAldrig=vardOppnaAldrig;window.vardOppnaKor=vardOppnaKor;window.vardOppnaKlar=vardOppnaKlar;window.vardStangKlar=vardStangKlar;window.openVard=openVard;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
 /* ---------- Dela ----------
