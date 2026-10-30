@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031114003";
+const DV="?v=20261031141918";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2155,7 +2155,9 @@ const STATUS_NAMN={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"
    Status), men sellKat lever kvar som intern variabel - startsidans rutor
    navigerar hit med den (vardVisaListan). Delas mellan rubriken och
    listans summeringskort. */
-const KAT_NAMN={pris:"Pris finns",kolla:"Kolla själv",inget:"Inget hittat",osokt:"Osökta"};
+/* okontr är inte en egen kategori utan "pris" minus de bekräftade - talet
+   i totalkortet leder hit, så rubriken behöver ett namn även för den. */
+const KAT_NAMN={pris:"Pris finns",okontr:"Okontrollerat pris",kolla:"Kolla själv",inget:"Inget hittat",osokt:"Osökta"};
 /* Värderas egna filter. Skilda från sökvyns (fs/fCat/q): vyerna har olika
    syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
    = visa alla. sellFiltersOppna styr nu filterARKET (Design 31/10), inte
@@ -2231,18 +2233,32 @@ function vardStatusSiffror(){
    items: valfri lista att räkna på i stället för hela SELL.items - så att
    både startsidans totalsumma (alla böcker) och listans summeringskort
    (bara det som matchar aktivt filter, Thomas 31/10) kan använda samma
-   räkning i stället för att hitta på en egen. */
+   räkning i stället för att hitta på en egen.
+
+   Två summor, inte en (beslut 30/10). Ett okontrollerat pris får aldrig
+   räknas in i totalen - det kan höra till en annan upplaga och skilja
+   flera hundra kronor. Men det får inte heller gömmas, så det får ett
+   eget tal under totalen med egen väg in i listan.
+   Kontrollerat = price_status "bekraftat". Raderna från fas 1, som har
+   pris men ingen status alls, räknas som okontrollerade: ingen människa
+   har sagt ja till dem. */
 function vardTotal(items){
-  const t={summa:0,medPris:0,sokta:0,utanPris:0,okontrollerade:0,kolla:0,ingen:0};
+  const t={summa:0,antal:0,okontrSumma:0,okontrAntal:0,sokta:0,utanPris:0,kolla:0,ingen:0};
   (items||(SELL&&SELL.items)||[]).forEach(it=>{
     t.sokta++;
-    const k=vardKategori(it);
-    if(k==="pris"){
-      t.summa+=vardPris(it);t.medPris++;
-      if(it.price_status==="automatiskt"||it.price_status==="osakert")t.okontrollerade++;
-    }else{t.utanPris++;if(k==="kolla")t.kolla++;else t.ingen++}
+    if(vardKategori(it)!=="pris"){
+      t.utanPris++;if(vardKategori(it)==="kolla")t.kolla++;else t.ingen++;return;
+    }
+    const p=vardPris(it);
+    if(it.price_status==="bekraftat"){t.summa+=p;t.antal++}
+    else{t.okontrSumma+=p;t.okontrAntal++}
   });
   return t;
+}
+/* Sant för en bok i pris-kategorin som ingen bekräftat - samma regel som
+   vardTotal, så talet i kortet och raderna i listan kan aldrig glida isär. */
+function vardOkontrollerat(it){
+  return vardKategori(it)==="pris"&&it.price_status!=="bekraftat";
 }
 function vardTopp(antal){
   if(!SELL||!SELL.items)return[];
@@ -2328,8 +2344,8 @@ function renderVardStart(){
      använder på hela hyllan), och ritas om varje gång sidan renderas, så
      den ligger alltid i takt med sell_items - oavsett om en värdering
      tillkommer, ändras eller en bok försvinner från hyllan. Samma
-     "okontrollerade"-brasklapp som listans kort, eftersom summan kan
-     innehålla opålitliga automatpriser (Beslut 2). */
+     uppdelning som listans kort: summan rymmer bara kontrollerade priser,
+     de okontrollerade står för sig (beslut 30/10, Thomas "bryt ut dem"). */
   const tot=vardTotal();
   el.innerHTML=`
     <div class="vs-head">
@@ -2338,7 +2354,7 @@ function renderVardStart(){
       <p>${fmtN(n.pris)} av ${fmtN(vardera)} sökta ${vardera===1?"bok har":"böcker har"} ett pris. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
       <div class="vs-summa">
         <span class="kr">${fmtN(tot.summa)} kr</span>
-        <span class="fine">Uppskattat värde, ${fmtN(tot.medPris)} av ${fmtN(tot.sokta)} värderade böcker${tot.okontrollerade?` · ${fmtN(tot.okontrollerade)} av dem okontrollerade`:""}</span>
+        <span class="fine">Kontrollerat pris på ${fmtN(tot.antal)} av ${fmtN(tot.sokta)} värderade böcker${tot.okontrAntal?` · ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} till`:""}</span>
       </div>
     </div>
     <div class="vs-stats">
@@ -2398,7 +2414,10 @@ function renderSell(){
     sellSort==="hetta"?(a,b)=>hettaRang(b)-hettaRang(a)||val(b)-val(a):
     (a,b)=>val(b)-val(a));
   if(sellQ){const nq=sellQ.toLowerCase();items=items.filter(it=>String(it.title||"").toLowerCase().includes(nq))}
-  if(sellKat)items=items.filter(it=>vardKategori(it)===sellKat);
+  /* "okontr" är inte en egen kategori utan pris-kategorin minus de
+     bekräftade - talet i totalkortet ska leda till exakt de raderna. */
+  if(sellKat==="okontr")items=items.filter(vardOkontrollerat);
+  else if(sellKat)items=items.filter(it=>vardKategori(it)===sellKat);
   if(sellStatus)items=items.filter(it=>it.price_status===sellStatus);
   if(sellUnc)items=items.filter(it=>(it.uncertainty||(isSure(it)?"lag":""))===sellUnc);
   if(sellHeat)items=items.filter(it=>(it.heat_score||it.heat)===sellHeat);
@@ -2430,8 +2449,8 @@ function renderSell(){
   const tot=vardTotal(filtreratUrval);
   el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
       <span class="kr">${fmtN(tot.summa)} kr</span>
-      <span class="fine">${fmtN(tot.medPris)} av ${fmtN(tot.sokta)} sökta böcker har ett pris${tot.okontrollerade?` · ${fmtN(tot.okontrollerade)} av dem okontrollerade`:""}</span>
-      ${!aktivtFilter&&tot.utanPris?`<span class="sell-sum-lankar">${tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>`:""}
+      <span class="fine">kontrollerat pris på ${fmtN(tot.antal)} av ${fmtN(tot.sokta)} sökta böcker</span>
+      <span class="sell-sum-lankar">${tot.okontrAntal?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','okontr')">+ ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} böcker →</button>`:""}${!aktivtFilter&&tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${!aktivtFilter&&tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>
       </div>`+
     `<div>`+items.map((it,i)=>{
       const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
