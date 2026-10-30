@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030115207";
+const DV="?v=20261030115436";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -57,7 +57,31 @@ const PROFILE_KEY="minbokhylla-profile";
    localStorage. Se startDelaFlow(). */
 const DELA_TOKEN_KEY="minbokhylla-dela-token";
 let profile={name:"Min Bokhylla",avatar:null};
-try{const pr=JSON.parse(localStorage.getItem(PROFILE_KEY)||"null");if(pr)profile={name:pr.name||"Min Bokhylla",avatar:pr.avatar||null}}catch(e){}
+/* Titel och bild hör till kontot: sparas under en nyckel per användar-id och
+   läses först när vi vet vem som är inloggad (loadProfile, anropas där
+   sbUser sätts). Utloggad visas alltid standardtiteln. Tillfällig lösning -
+   den följer inte med mellan enheter förrän profilen ligger i databasen,
+   se backloggen ("Profil (titel och bild) i databasen"). */
+const profKey=()=>sbUser&&sbUser.id?PROFILE_KEY+":"+sbUser.id:null;
+function loadProfile(){
+  profile={name:"Min Bokhylla",avatar:null};
+  const k=profKey();
+  try{
+    if(k){
+      let raw=localStorage.getItem(k);
+      /* Engångsflytt: den gamla nyckeln var gemensam för alla konton i
+         webbläsaren. Första riktiga (ej anonyma) kontot som loggar in tar
+         över den, sedan tas den bort så ingen annan ärver den. */
+      if(!raw&&!sbUser.is_anonymous){
+        const old=localStorage.getItem(PROFILE_KEY);
+        if(old){localStorage.setItem(k,old);localStorage.removeItem(PROFILE_KEY);raw=old}
+      }
+      const pr=JSON.parse(raw||"null");
+      if(pr)profile={name:pr.name||"Min Bokhylla",avatar:pr.avatar||null};
+    }
+  }catch(e){}
+  renderProfile();
+}
 const initials=n=>(n||"MB").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
 function paintAvatar(el,av,name){if(!el)return;el.style.backgroundImage=av?`url("${av}")`:"none";el.textContent=av?"":initials(name)}
 function renderProfile(){
@@ -1011,6 +1035,7 @@ window.setBookCat=setBookCat;window.uploadCover=uploadCover;
 
 const {data:sess}=await sb.auth.getSession();
 if(sess&&sess.session)sbUser=sess.session.user;
+loadProfile();
 
 /* PR 5: länken i återställningsmejlet landar här med en färdig
    "recovery"-session - Supabase-klienten läser token ur URL:en automatiskt
@@ -1981,8 +2006,10 @@ document.getElementById("edFile").addEventListener("change",e=>{
   img.src=url;e.target.value="";
 });
 document.getElementById("edSave").addEventListener("click",()=>{
+  const k=profKey();
+  if(!k){alert("Logga in eller kom igång för att ändra titeln.");return}
   profile={name:(document.getElementById("edName").value||"").trim()||"Min Bokhylla",avatar:draft.avatar};
-  try{localStorage.setItem(PROFILE_KEY,JSON.stringify(profile))}catch(e){alert("Kunde inte spara i webbläsaren - bilden kan vara för stor.")}
+  try{localStorage.setItem(k,JSON.stringify(profile))}catch(e){alert("Kunde inte spara i webbläsaren - bilden kan vara för stor.")}
   renderProfile();closeEdit();toast("Sparat");
 });
 /* ---------- Boklistan (sök) ---------- */
