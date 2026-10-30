@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030170354";
+const DV="?v=20261030183036";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -3279,7 +3279,26 @@ let gapAdded={};
    if(sbUser)-blocket längre ner i filen - utloggade användare fastnar på
    inloggningsskärmen och anropet görs aldrig för dem. */
 async function loadManualBooks(){
-  const {data:rows}=await sb.from("manual_books").select("*");
+  /* 30/10: hela boklistan kunde bli tom ("0 böcker", Värdera 0/0) fast
+     databasen hade alla 800. Vid uppstarten förnyar Supabase-klienten
+     inloggningstoken, och den här frågan gick iväg samtidigt med den gamla,
+     utgångna token och fick 401. Felet lästes aldrig, så appen tolkade det
+     som ett tomt bibliotek - utan försök nummer två och utan någon notis
+     (hyllorna och bilderna kommer ur andra frågor som gick igenom).
+     Nu: läs felet, förnya sessionen och försök igen (högst tre gånger),
+     och säg till om det ändå inte går i stället för att visa nollor. */
+  let rows=null,error=null;
+  for(let f=0;f<3;f++){
+    ({data:rows,error}=await sb.from("manual_books").select("*"));
+    if(!error)break;
+    console.warn("manual_books försök "+(f+1),error);
+    await new Promise(r=>setTimeout(r,600));
+    try{
+      if(f===0&&sb.auth.getSession)await sb.auth.getSession();
+      else if(sb.auth.refreshSession)await sb.auth.refreshSession();
+    }catch(e){console.warn("förnya session",e)}
+  }
+  if(error){toast("Kunde inte läsa in böckerna just nu. Ladda om appen.");return}
   if(rows)rows.forEach(r=>{
     /* Bokens id är manual_books.id rakt av. Den gamla förskjutningen med en
        miljon (från tiden då böckerna låg i en fil) gör att databasens regler
