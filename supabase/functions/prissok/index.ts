@@ -1,5 +1,5 @@
-// Permanent prissökning mot Studentapan, Bokbörsen och Tradera, via Tavily.
-// Ersätter testfunktionen test-tavily-pricesearch.
+// Permanent prissökning via Tavily. Såld-sajter: se ALL_SITES/PAUSED_SITES
+// nedan. Ersätter testfunktionen test-tavily-pricesearch.
 //
 // Metod och lärdomar landade i claude/rapport-tavily-chrome-pristest-2026-10-29.md
 // och claude/sparningsark-tavily-pristest-2026-10-29.md. Fält bekräftade med
@@ -25,6 +25,27 @@
 // "automatiskt" skrivs ALDRIG över "bekraftat" utan att confirm_overwrite är
 // satt - se bekräftelsedialogen i appen. Det som skrivs över flyttas först
 // till sell_price_history, aldrig raderat.
+//
+// Fix 30/10 (Småbugg-uppdraget): Access-Control-Allow-Headers saknade
+// "apikey" och "x-client-info", som supabase-js' sb.functions.invoke()
+// alltid skickar med. Preflighten (OPTIONS) kom tillbaka 200, men webbläsaren
+// vägrade sedan skicka själva POST-anropet eftersom svaret inte tillät alla
+// headrar den riktiga anropet ville sända - syntes i edge-loggen som en
+// ensam OPTIONS|200 utan någon efterföljande POST alls. Resultat: VARJE
+// körning av Värdera har misslyckats tyst sedan lansering (sell_items har
+// aldrig haft en enda searched_at-rad) och klientens try/catch har bokat
+// hela chunken som "fel".
+//
+// Ändring 30/10 (Thomas, efter utredningen i
+// claude/rapport-smabugg-prissok-bara-campusbokhandeln-2026-10-30.md):
+// Bokbörsen gav noll användbara träffar i produktion (0 av 7 i den
+// utredningen, samma mönster som i de manuella testrundorna) - PAUSAD, inte
+// borttagen (ta bort raden i PAUSED_SITES för att återaktivera). Campusbok-
+// handeln var den enda källa som faktiskt gett bekräftade priser hittills
+// (den manuella 27/10-rundan) - TILLAGD i den automatiska sökningen. Den
+// behandlas som Bokbörsen/Tradera (andrahandsmarknad per definition, inget
+// separat "begagnad"-krav som för Studentapan) - det var så dess priser
+// accepterades i 27/10-rundan, utan undantag noterat där.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -32,12 +53,17 @@ const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
 
-const TARGET_SITES = ["studentapan.se", "bokborsen.se", "tradera.com"];
+// Hela listan sajter funktionen känner till - PAUSED_SITES dras ifrån innan
+// den skickas till Tavily. Pausa/återaktivera genom att lägga till/ta bort
+// en rad i PAUSED_SITES, inte genom att röra ALL_SITES eller siteOf().
+const ALL_SITES = ["studentapan.se", "bokborsen.se", "tradera.com", "campusbokhandeln.se"];
+const PAUSED_SITES = ["bokborsen.se"]; // Pausad 30/10 - se kommentaren ovan.
+const TARGET_SITES = ALL_SITES.filter((s) => !PAUSED_SITES.includes(s));
 const MAX_BOOKS_PER_CALL = 25;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -52,7 +78,7 @@ const json = (body: unknown, status = 200) =>
 // återfinns i sidtiteln - inte ett procenttal.
 
 function normalize(s: string): string {
-  return s.toLowerCase().replace(/["""'']/g, "").replace(/[():,.\-–—?!|]/g, " ").replace(/\s+/g, " ").trim();
+  return s.toLowerCase().replace(/[""""'']/g, "").replace(/[():,.\-–—?!|]/g, " ").replace(/\s+/g, " ").trim();
 }
 // Stryker en avslutande upplage-/årsparentes, t.ex. "(uppl 2)", "(3:e uppl.)",
 // "(2017)" - annars matchar nästan ingen katalogtitel någonsin, eftersom
@@ -80,9 +106,10 @@ function extractPriceFromTitle(title: string): number | null {
   const n = parseInt(m[1].replace(/\s/g, ""), 10);
   return Number.isFinite(n) && n > 0 && n < 5000 ? n : null;
 }
-// Beslutat 29/10: bara begagnatpris räknas. Bokbörsen och Tradera är
-// andrahandsmarknader per definition. Studentapan säljer både nytt och
-// begagnat - utan att öppna sidan (det är Chrome-steget, görs separat
+// Beslutat 29/10: bara begagnatpris räknas. Bokbörsen, Tradera och
+// Campusbokhandeln är andrahandsmarknader per definition (Campusbokhandeln
+// tillagd 30/10 - se kommentaren högst upp). Studentapan säljer både nytt
+// och begagnat - utan att öppna sidan (det är Chrome-steget, görs separat
 // manuellt) kan vi bara läsa av det sidtiteln/utdraget själva säger. Säger
 // ingetdera "begagnad"/"begagnat" filtreras Studentapan-träffen INTE bort,
 // men priset sparas som väntar på kontroll i stället för automatiskt -
@@ -94,6 +121,7 @@ function siteOf(url: string): string {
   if (url.includes("studentapan.se")) return "studentapan";
   if (url.includes("bokborsen.se")) return "bokborsen";
   if (url.includes("tradera.com")) return "tradera";
+  if (url.includes("campusbokhandeln.se")) return "campusbokhandeln";
   return "";
 }
 
@@ -169,7 +197,7 @@ Deno.serve(async (req) => {
 
       const starka = kandidater.filter((h) => h.strong);
       const meddPris = starka
-        .filter((h) => h.site === "bokborsen" || h.site === "tradera" || studentapanAnvandaSomBegagnat(h.title, h.snippet))
+        .filter((h) => h.site === "bokborsen" || h.site === "tradera" || h.site === "campusbokhandeln" || studentapanAnvandaSomBegagnat(h.title, h.snippet))
         .map((h) => ({ ...h, price: extractPriceFromTitle(h.title) }))
         .filter((h) => h.price !== null) as (typeof starka[number] & { price: number })[];
 
