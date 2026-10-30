@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030115841";
+const DV="?v=20261030123239";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2462,19 +2462,84 @@ function vardSyncCount(){
     if(visa)fine.textContent=`Nästa körning tar nästa ${vardLimit} av dem som inte sökts än.`;
   }
 }
+/* ---------- Prissökningens status (beslut 30/10) ----------
+   Körningen levde tidigare bara inuti knapptrycket: stängde man arket
+   fortsatte den osynligt och resultatet landade i ett ark som inte var
+   öppet. Nu finns den som ett eget tillstånd, så att remsan kan visa den i
+   hela appen och arket kan visa den igen om man öppnar det. */
+let vardKor=null;   /* {klara,totalt,pagar} medan den går */
+let vardKlar=null;  /* {text} tills notisen stängs */
+function vardKorPagar(){return !!(vardKor&&vardKor.pagar)}
+
+function renderKorRemsa(){
+  const el=document.getElementById("korRemsa");if(!el)return;
+  /* Syns inte när arket är öppet - då visar arket samma förlopp några
+     centimeter ovanför, och två räknare ser ut som två sökningar. */
+  const arketOppet=vardSheet&&vardSheet.classList.contains("open");
+  const visa=(vardKorPagar()||vardKlar)&&!arketOppet;
+  el.hidden=!visa;
+  document.body.classList.toggle("har-remsa",!!visa);
+  if(!visa){el.innerHTML="";return}
+  if(vardKorPagar()){
+    const p=vardKor.totalt?Math.round(vardKor.klara/vardKor.totalt*100):0;
+    el.innerHTML=`<button class="kor-remsa-yta" type="button" onclick="vardOppnaKor()">
+        <span class="kor-snurra" aria-hidden="true"></span>
+        <span class="kor-txt"><b>Söker priser</b><small>${vardKor.klara} av ${vardKor.totalt}</small></span>
+        <span class="kor-bar"><span style="width:${p}%"></span></span>
+      </button>`;
+  }else{
+    el.innerHTML=`<button class="kor-remsa-yta klar" type="button" onclick="vardOppnaKlar()">
+        <span class="kor-ikon" aria-hidden="true">${ic("circle-check")}</span>
+        <span class="kor-txt"><b>Värderingen klar</b><small>${esc(vardKlar.text)}</small></span>
+      </button>
+      <button class="kor-stang" type="button" aria-label="Stäng" onclick="vardStangKlar()">${ic("x")}</button>`;
+  }
+}
+/* Tryck på remsan under körning: tillbaka till arket och förloppet. */
+function vardOppnaKor(){go("salj");openVard()}
+/* Tryck på klart-notisen: till Värdera, och notisen är avklarad. */
+function vardOppnaKlar(){vardKlar=null;renderKorRemsa();go("salj")}
+function vardStangKlar(){vardKlar=null;renderKorRemsa()}
+
 /* Skrollbar rad, valda chips flyttade först (Design 29/10 b) - så arket
    aldrig blir högt oavsett hur många kategorier biblioteket har. */
 function renderVardCats(){
   const cc=document.getElementById("vardCatChips");if(!cc)return;
   const kats=[...new Set(data.map(x=>x.cat))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"sv"));
-  const ordnade=kats.slice().sort((a,b)=>(vardSelCats.has(b)?1:0)-(vardSelCats.has(a)?1:0));
-  cc.innerHTML=ordnade.map(c=>`<button class="hs-chip${vardSelCats.has(c)?" on":""}" data-vc="${esc(c)}">${esc(c)}</button>`).join("");
+  /* Ligger still i bokstavsordning. Listan sorterade tidigare om sig så
+     att valda chips hoppade först - men raden skrollar i sidled, så det
+     valda gled iväg åt vänster under fingret och syntes inte längre
+     (Thomas 30/10). Valet visas i stället som etiketter under raden. */
+  cc.innerHTML=kats.map(c=>`<button class="hs-chip${vardSelCats.has(c)?" on":""}" data-vc="${esc(c)}">${esc(c)}</button>`).join("");
   cc.querySelectorAll("[data-vc]").forEach(b=>b.addEventListener("click",()=>{
     const c=b.dataset.vc;if(vardSelCats.has(c))vardSelCats.delete(c);else vardSelCats.add(c);
     renderVardCats();vardSyncCount();
   }));
+  const valda=document.getElementById("vardValdaCats");
+  if(valda){
+    const lista=[...vardSelCats].sort((a,b)=>a.localeCompare(b,"sv"));
+    valda.hidden=!lista.length;
+    valda.innerHTML=lista.length?lista.map(c=>
+      `<button class="vard-tagg" type="button" data-av="${esc(c)}">${esc(c)}<span aria-hidden="true">✕</span>
+        <span class="sr-only">Ta bort ${esc(c)}</span></button>`).join("")+
+      `<button class="vard-rensa" type="button" id="vardRensaCats">Rensa alla</button>`:"";
+    valda.querySelectorAll("[data-av]").forEach(b=>b.addEventListener("click",()=>{
+      vardSelCats.delete(b.dataset.av);renderVardCats();vardSyncCount();}));
+    const r=document.getElementById("vardRensaCats");
+    if(r)r.addEventListener("click",()=>{vardSelCats=new Set();renderVardCats();vardSyncCount()});
+  }
 }
 function openVard(){
+  /* Pågår en sökning ska arket visa den, inte nollställa filtren och
+     erbjuda en andra körning ovanpå den första (granskning 30/10). */
+  if(vardKorPagar()){
+    vardSheet.classList.add("open");vardScrim.classList.add("open");
+    document.getElementById("vardActions").style.display="none";
+    document.getElementById("vardResult").style.display="none";
+    document.getElementById("vardProgress").style.display="block";
+    renderKorRemsa();
+    return;
+  }
   vardSelStatus="";vardSelCats=new Set();vardQ2="";
   /* vardLimit nollställs INTE här (beslut 30/10) - en kostnadsinställning
      som ska gälla omgång efter omgång tills man själv ändrar den, inte ett
@@ -2488,14 +2553,18 @@ function openVard(){
   document.getElementById("vardActions").style.display="flex";
   renderVardCats();vardSyncCount();
   vardSheet.classList.add("open");vardScrim.classList.add("open");
+  renderKorRemsa();
 }
-function closeVard(){vardSheet.classList.remove("open");vardScrim.classList.remove("open")}
+function closeVard(){vardSheet.classList.remove("open");vardScrim.classList.remove("open");renderKorRemsa()}
 document.getElementById("vardOpenBtn")?.addEventListener("click",openVard);
 document.getElementById("vardBackBtn")?.addEventListener("click",()=>vardVisaListan(false));
 vardScrim?.addEventListener("click",closeVard);
 document.getElementById("vardCancelBtn")?.addEventListener("click",closeVard);
 document.getElementById("vardResultClose")?.addEventListener("click",closeVard);
 document.getElementById("vardStopBtn")?.addEventListener("click",()=>{vardAvbryt=true});
+/* Lämnar sökningen utan att stoppa den - remsan tar över och flikarna
+   blir åtkomliga igen (scrimen låg ovanpå flikraden). */
+document.getElementById("vardBgBtn")?.addEventListener("click",closeVard);
 document.querySelectorAll("#vardStatusChips .chip").forEach(c=>c.addEventListener("click",()=>{
   document.querySelectorAll("#vardStatusChips .chip").forEach(x=>x.classList.remove("active"));
   c.classList.add("active");vardSelStatus=c.dataset.v;vardSyncCount();
@@ -2533,11 +2602,17 @@ document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
   document.getElementById("vardProgress").style.display="block";
   document.getElementById("vardResult").style.display="none";
   const ids=m.map(d=>d.id);
+  /* Körningen blir ett eget tillstånd här, inte bara en slinga i den här
+     funktionen: remsan och arket läser den, och verGuard i index.html
+     skjuter upp en automatisk omladdning medan den pågår. */
+  vardKor={klara:0,totalt:ids.length,pagar:true};
+  vardKlar=null;window.__vardKorPagar=true;renderKorRemsa();
   const antal={automatiskt:0,vantar:0,osakert:0,ingen_traff:0,skippad_skyddad:0,fel:0};
   let i=0;
   for(;i<ids.length;i+=25){
     if(vardAvbryt)break;
     const chunk=ids.slice(i,i+25);
+    vardKor.klara=i;renderKorRemsa();
     document.getElementById("vardProgressBar").style.width=Math.round(i/ids.length*100)+"%";
     document.getElementById("vardProgressText").textContent=`Söker … ${i} av ${ids.length}`;
     try{
@@ -2566,6 +2641,13 @@ document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
   let text=(vardAvbryt?"Avbruten. ":"")+(delar.join(", ")||"Inget hann sökas.");
   if(vardLimit>0&&kvar>0)text+=` ${kvar} kvar att söka.`;
   document.getElementById("vardResultText").textContent=text;
+  /* Körningen är slut: remsan byter till klart-läget och ligger kvar tills
+     den stängs eller trycks på. Blockerar inget. Arket är öppet om man
+     stannade kvar - då visar det resultatrutan och remsan håller sig
+     dold tills arket stängs. */
+  vardKor=null;window.__vardKorPagar=false;
+  vardKlar={text:(delar.join(", ")||(vardAvbryt?"Avbruten":"Inget nytt"))};
+  renderKorRemsa();
   await loadSell();
 });
 
@@ -4588,7 +4670,7 @@ window.nsAvbrytAnalys=nsAvbrytAnalys;window.nsTillInloggning=nsTillInloggning;wi
 window.nsDelaLaggTill=nsDelaLaggTill;window.nsDelaAterstall=nsDelaAterstall;
 window.nsCloseTips=nsCloseTips;window.nsToggleMulti=nsToggleMulti;
 window.nsDelShot=nsDelShot;window.nsShotLabel=nsShotLabel;
-window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.vardVisaListan=vardVisaListan;window.openVard=openVard;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
+window.nsFinish=nsFinish;window.nsToggle=nsToggle;window.nsRotate=nsRotate;window.nsUndo=nsUndo;window.nsAnalyse=nsAnalyse;window.psOpen=psOpen;window.vardVisaListan=vardVisaListan;window.vardOppnaKor=vardOppnaKor;window.vardOppnaKlar=vardOppnaKlar;window.vardStangKlar=vardStangKlar;window.openVard=openVard;window.ibSetTab=ibSetTab;window.ibAndra=ibAndra;window.nsView=nsView;window.nsViewRotate=nsViewRotate;window.nsDone=nsDone;window.nsReopen=nsReopen;
 window.nsAddHyllplan=nsAddHyllplan;window.nsShowHylla=nsShowHylla;
 
 /* ---------- Dela ----------
