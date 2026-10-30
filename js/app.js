@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030113623";
+const DV="?v=20261030115436";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1214,7 +1214,7 @@ async function afterAuthReady(){
    anropa redeem_share_link() igen efter VARJE inloggning (nytt konto
    eller befintligt), helt automatiskt, eftersom både "Skapa konto" och
    "Logga in" redan laddar om sidan vid lyckat utfall. */
-let delaCtx=null; // {token,outcome,library_id,scope,bc,book_id}
+let delaCtx=null; // {tokens,library_id,scope,bc:[],book_id:[]}
 let delaBooks=[];
 let delaWishBookId=null;
 
@@ -1222,26 +1222,67 @@ function delaShow(view){
   document.querySelectorAll("#view-dela [data-dv]").forEach(el=>{el.style.display=(el.dataset.dv===view?"":"none")});
 }
 
-async function startDelaFlow(token){
+/* DELA_TOKEN_KEY höll tidigare EN bar token-sträng. Flerval (Fråga A)
+   gör att en länk nu kan bunta flera tokens (?dela=token1,token2,...),
+   så nyckeln håller numera en JSON-lista - med bakåtkompatibel läsning
+   av en gammal bar sträng som en lista med ett element, så att en länk
+   kvarbliven i någons localStorage sedan innan den här ändringen
+   fortsätter fungera precis som förut. */
+function delaReadTokenKey(){
+  try{
+    const raw=localStorage.getItem(DELA_TOKEN_KEY);
+    if(!raw)return [];
+    try{const v=JSON.parse(raw);return Array.isArray(v)?v:[String(v)]}
+    catch(e){return [raw]} // äldre bar sträng, inte JSON
+  }catch(e){return []}
+}
+function delaWriteTokenKey(tokens){
+  try{localStorage.setItem(DELA_TOKEN_KEY,JSON.stringify(tokens))}catch(e){}
+}
+
+/* Tar emot en array av tokens (en ensam token funkar också). Varje token
+   löses in var för sig mot den OFÖRÄNDRADE redeem_share_link() - ett
+   misslyckat token i en bunt stoppar inte de andra (feltolerant, se
+   granskningens varv 1). Avvikande bibliotek eller scope mot den FÖRSTA
+   lyckade token i samma bunt ignoreras tyst (kan bara uppstå via en
+   handknåpad URL, aldrig via appens egen "Dela"-knapp - varv 3). */
+async function startDelaFlow(tokens){
   hideAppChrome();
   const el=document.getElementById("view-dela");
   if(el)el.style.display="";
   delaShow("laddar");
+  const list=(Array.isArray(tokens)?tokens:[tokens]).filter(Boolean);
+  if(!list.length){delaShow("fel");return}
   try{
     if(!sbUser){
       const {data:anonRes,error:anonErr}=await sb.auth.signInAnonymously({options:{data:{invited:true}}});
       if(anonErr){console.warn("dela: anonym inloggning",anonErr);delaShow("fel");return}
       sbUser=anonRes.user;
     }
-    const {data:rows,error}=await sb.rpc("redeem_share_link",{p_token:token});
-    if(error){console.warn("redeem_share_link",error);delaShow("fel");return}
-    const r=rows&&rows[0];
-    if(!r||r.outcome==="okant"||r.outcome==="aterkallat"){
-      renderDelaLankstatus(r?r.outcome:"okant");
+    let ctx=null,lastOutcome="okant",anyOk=false;
+    for(const token of list){
+      let r=null;
+      try{
+        const {data:rows,error}=await sb.rpc("redeem_share_link",{p_token:token});
+        if(error){console.warn("redeem_share_link",error);continue}
+        r=rows&&rows[0];
+      }catch(e){console.warn("redeem_share_link",e);continue}
+      if(!r||r.outcome==="okant"||r.outcome==="aterkallat"){lastOutcome=r?r.outcome:"okant";continue}
+      anyOk=true;
+      if(!ctx){
+        ctx={tokens:[token],library_id:r.library_id,scope:r.scope,bc:r.scope==="shelf"?[r.bc]:[],book_id:r.scope==="book"?[r.book_id]:[]};
+      } else if(ctx.library_id===r.library_id&&ctx.scope===r.scope){
+        ctx.tokens.push(token);
+        if(r.scope==="shelf")ctx.bc.push(r.bc);
+        if(r.scope==="book")ctx.book_id.push(r.book_id);
+      }
+    }
+    if(!anyOk||!ctx){
+      renderDelaLankstatus(lastOutcome);
       try{localStorage.removeItem(DELA_TOKEN_KEY)}catch(e){}
       return;
     }
-    delaCtx={token,library_id:r.library_id,scope:r.scope,bc:r.bc,book_id:r.book_id};
+    delaCtx=ctx;
     await renderDelaIntro();
   }catch(e){console.warn("startDelaFlow",e);delaShow("fel")}
 }
@@ -1273,6 +1314,11 @@ function delaHeadlineHtml(name){
   return `<em class="${cls}">${esc(n)}</em>`;
 }
 
+/* Rubriken för en bunt (flera hyllor/hyllplan/böcker i samma länk) är en
+   interim-text beslutad i planeringen 30/10 - Design har inte sett den
+   ännu, men Thomas gav klartecken att bygga vidare utan att vänta. En
+   ensam del (bc.length<=1 / book_id.length<=1) beter sig precis som
+   förut. */
 async function renderDelaIntro(){
   let name="";
   try{
@@ -1280,11 +1326,29 @@ async function renderDelaIntro(){
       const {data}=await sb.from("libraries").select("name").eq("id",delaCtx.library_id).maybeSingle();
       name=(data&&data.name)||"ett bibliotek";
     } else if(delaCtx.scope==="shelf"){
-      const {data}=await sb.from("bc_names").select("name").eq("bc",delaCtx.bc).maybeSingle();
-      name=(data&&data.name)||("Hylla "+delaCtx.bc);
+      const bcs=delaCtx.bc||[];
+      if(bcs.length<=1){
+        const bc=bcs[0];
+        if(String(bc).includes(":")){
+          try{await loadBcNames()}catch(e){console.warn("dela: bcNames",e)}
+          const top=topBc(String(bc).split(":")[0]);
+          const {data}=await sb.from("bc_names").select("name").eq("bc",top).maybeSingle();
+          name=`${(data&&data.name)||("Hylla "+top)} · ${dpPlanLabel(bc)}`;
+        } else {
+          const {data}=await sb.from("bc_names").select("name").eq("bc",bc).maybeSingle();
+          name=(data&&data.name)||("Hylla "+bc);
+        }
+      } else {
+        name=bcs.length+" hyllor";
+      }
     } else {
-      const {data}=await sb.from("manual_books").select("title").eq("id",delaCtx.book_id).maybeSingle();
-      name=(data&&data.title)||"en bok";
+      const ids=delaCtx.book_id||[];
+      if(ids.length<=1){
+        const {data}=await sb.from("manual_books").select("title").eq("id",ids[0]).maybeSingle();
+        name=(data&&data.title)||"en bok";
+      } else {
+        name=ids.length+" böcker";
+      }
     }
   }catch(e){console.warn("delaIntroNamn",e)}
   const body=document.getElementById("delaIntroBody");
@@ -1384,14 +1448,14 @@ document.getElementById("delaWSubmit")&&(document.getElementById("delaWSubmit").
    Delat med dig. Bara den minimala vyn skissen visar - inte de två
    fulla sidorna (medveten, godkänd avvikelse i v1). ---------- */
 async function renderDelaWishList(){
-  const el=document.getElementById("delaWishList");if(!el)return;
-  const libId=await myLibraryId();if(!libId)return;
+  const el=document.getElementById("delaWishList");if(!el)return false;
+  const libId=await myLibraryId();if(!libId)return false;
   const {data:rows,error}=await sb.from("book_events")
     .select("id,book_id,actor_id,response,created_at,manual_books(title,library_id)")
     .eq("event_type","onskar_lana").order("created_at",{ascending:false});
-  if(error){console.warn("dela: book_events",error);return}
+  if(error){console.warn("dela: book_events",error);return false}
   const mine=(rows||[]).filter(r=>r.manual_books&&r.manual_books.library_id===libId);
-  if(!mine.length){el.innerHTML='<div class="empty">Inga lånönskningar än.</div>';return}
+  if(!mine.length){el.innerHTML='<div class="empty">Inga lånönskningar än.</div>';return false}
   const withMail=await Promise.all(mine.map(async r=>{
     let mail="";
     try{const {data:e}=await sb.rpc("book_event_actor_email",{p_book_id:r.book_id,p_actor_id:r.actor_id});mail=e||""}catch(e){}
@@ -1402,6 +1466,7 @@ async function renderDelaWishList(){
     ${!r.response?`<button class="btn btn-outline btn-sm" onclick="delaWishRespond('${r.id}','accepterad')">Acceptera</button>
      <button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','nekad')">Neka</button>`:""}
   </div>`).join("");
+  return true;
 }
 async function delaWishRespond(eventId,resp){
   const {error}=await sb.from("book_events").update({response:resp}).eq("id",eventId);
@@ -1410,22 +1475,42 @@ async function delaWishRespond(eventId,resp){
 }
 window.delaWishRespond=delaWishRespond;
 
+/* Ett hyllplan har ingen egen rad i bc_names - bara delen efter ":" i en
+   boks eget shelf-fält (t.ex. "6:S1"). Samma namnmönster som locLabel
+   använder för planet självt, utan "plats"-delen. */
+function dpPlanLabel(shelf){
+  const parts=String(shelf).split(":"),bc=parts[0],rest=parts[1]||"";
+  if(!rest)return bcNames[bc]||("Hylla "+bc);
+  const sec=rest[0],plan=rest.slice(1);
+  if(sec==="L")return spotNames[shelf]||"löst";
+  return (sec==="S"||sec==="K")?("Hyllplan "+plan):(SEC[sec]+" plan "+plan);
+}
 function delaScopeLabel(r){
   if(r.scope==="library")return "Hela biblioteket";
-  if(r.scope==="shelf")return (bcNames&&bcNames[r.bc])||("Hylla "+r.bc);
+  if(r.scope==="shelf"){
+    if(String(r.bc).includes(":")){
+      const top=topBc(String(r.bc).split(":")[0]);
+      return `${bcNames[top]||("Hylla "+top)} · ${dpPlanLabel(r.bc)}`;
+    }
+    return bcNames[r.bc]||("Hylla "+r.bc);
+  }
   return "En bok";
 }
+/* Returnerar {active,revoked} - tomt läge (Design 30/10) avgörs av om
+   NÅGON av de tre listorna har innehåll, inte bara den här, men
+   "Tidigare delningar (N)"-länken i tomma läget räknar bara återkallade
+   länkar här, så antalet behöver räknas upp ändå. */
 async function renderDelaMinaList(){
-  const el=document.getElementById("delaMinaList");if(!el)return;
-  const libId=await myLibraryId();if(!libId)return;
+  const el=document.getElementById("delaMinaList");if(!el)return{active:false,revoked:0};
+  const libId=await myLibraryId();if(!libId)return{active:false,revoked:0};
   const [{data:links,error:e1},{data:grants,error:e2}]=await Promise.all([
     sb.from("share_links").select("id,scope,bc,book_id,token,revoked_at,created_at").eq("library_id",libId).order("created_at",{ascending:false}),
     sb.from("shelf_shares").select("id,scope,bc,book_id,level,revoked_at,redeemed_from").eq("library_id",libId)
   ]);
-  if(e1||e2){console.warn("dela: mina delningar",e1||e2);return}
+  if(e1||e2){console.warn("dela: mina delningar",e1||e2);return{active:false,revoked:0}}
   const redeemedFrom=new Set((grants||[]).filter(g=>!g.revoked_at).map(g=>g.redeemed_from));
   const rows=(links||[]);
-  if(!rows.length){el.innerHTML='<div class="empty">Du har inte delat något än.</div>';return}
+  if(!rows.length){el.innerHTML='<div class="empty">Du har inte delat något än.</div>';return{active:false,revoked:0}}
   el.innerHTML=rows.map(r=>{
     const status=r.revoked_at?"Återkallad":redeemedFrom.has(r.id)?"Inlöst":"Väntar på att lösas in";
     return `<div class="dela-row">
@@ -1433,6 +1518,7 @@ async function renderDelaMinaList(){
       ${!r.revoked_at?`<button class="btn-outline btn-sm" onclick="delaRevoke('${r.id}')">Återkalla</button>`:""}
     </div>`;
   }).join("");
+  return {active:rows.some(r=>!r.revoked_at),revoked:rows.filter(r=>r.revoked_at).length};
 }
 async function delaRevoke(linkId){
   if(!await ask({title:"Återkalla delningen?",text:"Mottagaren förlorar tillgången direkt.",buttons:[{label:"Avbryt",value:false},{label:"Återkalla",value:true,kind:"danger"}]}))return;
@@ -1443,30 +1529,283 @@ async function delaRevoke(linkId){
 window.delaRevoke=delaRevoke;
 
 async function renderDelaMedDigList(){
-  const el=document.getElementById("delaMedDigList");if(!el)return;
+  const el=document.getElementById("delaMedDigList");if(!el)return false;
   const libId=await myLibraryId();
   const {data:rows,error}=await sb.from("shelf_shares").select("id,scope,bc,book_id,library_id,revoked_at").eq("recipient_id",sbUser?sbUser.id:"").is("revoked_at",null);
-  if(error){console.warn("dela: delat med dig",error);return}
+  if(error){console.warn("dela: delat med dig",error);return false}
   const other=(rows||[]).filter(r=>r.library_id!==libId);
-  if(!other.length){el.innerHTML='<div class="empty">Ingen har delat ett bibliotek med dig än.</div>';return}
+  if(!other.length){el.innerHTML='<div class="empty">Ingen har delat ett bibliotek med dig än.</div>';return false}
   el.innerHTML=other.map(r=>`<div class="dela-row"><div class="dela-row-main"><b>${esc(delaScopeLabel(r))}</b></div></div>`).join("");
+  return true;
 }
 
+/* Tomt läge (Design 30/10, punkt 1): visas bara om INGEN av de tre
+   listorna har något innehåll alls - en lånönskan att svara på, eller
+   något delat med dig, är lika mycket ett skäl att se fullt läge som en
+   egen aktiv delning. "Tidigare delningar (N)" räknar bara återkallade
+   länkar i Mina delningar (de andra två har ingen "återkallad"-status). */
 async function renderDelade(){
-  renderDelaWishList();
-  renderDelaMinaList();
-  renderDelaMedDigList();
+  const [hasWish,mina,hasMedDig]=await Promise.all([renderDelaWishList(),renderDelaMinaList(),renderDelaMedDigList()]);
+  const tomt=document.getElementById("delaTomtLage"),fullt=document.getElementById("delaFulltLage");
+  if(!tomt||!fullt)return;
+  const visaTomt=!hasWish&&!mina.active&&!hasMedDig;
+  tomt.hidden=!visaTomt;fullt.hidden=visaTomt;
+  const tb=document.getElementById("delaTidigareBtn");
+  if(tb){tb.hidden=!mina.revoked;document.getElementById("delaTidigareN").textContent=mina.revoked}
 }
 
-/* Skapa delning: nivåväljare + skapande av share_links-rad. */
-let delaSkapaLvl=null;
+/* Skapa delning: visuellt urval (Design 30/10, punkt 2) i stället för
+   rullgardiner. Tre steg i samma ark (dpStepGrid/dpStepShelf/dpStepBooks).
+
+   Flerval mot share_links (Fråga A, väg 2b - svaret i planen 30/10): INTE
+   ett delat token över flera rader (det hade krävt att släppa token-
+   kolumnens unik-villkor och skriva om redeem_share_link). I stället: ett
+   urval med flera delar blir flera separata share_links-rader i samma
+   insert, var sin egen token, och länken buntar alla tokens kommaseparerat
+   (?dela=token1,token2,...). Mottagarsidan löser in var token för sig mot
+   den OFÖRÄNDRADE redeem_share_link() - se startDelaFlow(tokens). Varje
+   buntad rad är sedan fristående återkallningsbar (revoke_share_link tar
+   bara ett id, verifierat mot den livedriftsatta funktionen).
+
+   En bunt är alltid enhetlig - antingen bara hyllor (scope "shelf") eller
+   bara böcker (scope "book"), aldrig blandat. Gaffeln i gränssnittet gör
+   det omöjligt att välja båda samtidigt, men vi litar inte tyst på det -
+   se den explicita kontrollen i #delaSkapaGor nedan (Varv 4). */
+let dpMode="shelf";
+let dpWholeLib=false;
+let dpSelShelves=new Set();     // hela hyllor (topBc-koder)
+let dpSelPlans=new Map();       // topBc -> Set(hyllplanskoder, t.ex. "6:S1")
+let dpSelBooks=new Set();       // bok-id
+let dpCurBc=null;               // vilken hylla man är inne i (steg 2)
+let dpBookCat="",dpBookBc="";   // aktiva filterchips i "enskilda böcker"
+
+/* "Ryggar som reserv" (öppen punkt 3 i uppdraget, Teknik avgör billigast):
+   deterministiska stapel-"ryggar" från samma palett som bokryggarna i
+   övriga appen, i stället för en tom ruta med namn - billigare att bygga
+   och återanvänder ett mönster som redan finns, inget nytt utseende. */
+function dpSpineBars(seed){
+  let h=0;for(const ch of String(seed))h=(h*31+ch.charCodeAt(0))|0;
+  const n=5+(Math.abs(h)%4);
+  let out="";
+  for(let i=0;i<n;i++){
+    h=(h*31+i)|0;
+    const w=3+(Math.abs(h)%5);
+    out+=`<i style="min-width:${w}px;background:${PAL[Math.abs(h)%PAL.length]}"></i>`;
+  }
+  return out;
+}
+
+function dpRenderGrid(){
+  const grid=document.getElementById("dpGrid");if(!grid)return;
+  const places=placeList();
+  grid.innerHTML=places.map(p=>{
+    const on=dpSelShelves.has(p.bc);
+    const img=p.cover?`<img src="${p.cover}" alt="">`:`<div class="noimg">${dpSpineBars(p.bc)}</div>`;
+    const planCount=shelvesIn(p.members).length;
+    return `<div class="dp-card${on?" on":""}" data-bc="${esc(p.bc)}">
+      <div class="img">${img}</div>
+      <div class="tx"><b>${esc(p.name)}</b><small>${planCount} plan · ${p.count} böcker</small></div>
+      <div class="tick"><i data-ic="check"></i></div>
+      <button class="dp-deeper" type="button" data-deeper="${esc(p.bc)}">Välj hyllplan ›</button>
+    </div>`;
+  }).join("")||'<div class="empty">Inga hyllor än.</div>';
+  fillIcons(grid);
+  const allBtn=document.getElementById("dpAllBtn");
+  if(allBtn)allBtn.classList.toggle("on",dpWholeLib);
+  const allN=document.getElementById("dpAllN");
+  if(allN)allN.textContent=data.length+" böcker";
+}
+document.getElementById("dpGrid")&&document.getElementById("dpGrid").addEventListener("click",e=>{
+  const deeper=e.target.closest("[data-deeper]");
+  if(deeper){dpOpenShelf(deeper.dataset.deeper);return}
+  const card=e.target.closest(".dp-card");if(!card)return;
+  const bc=card.dataset.bc;
+  dpWholeLib=false;
+  if(dpSelShelves.has(bc))dpSelShelves.delete(bc);
+  else{dpSelShelves.add(bc);dpSelPlans.delete(bc)}
+  dpRenderGrid();dpSync();
+});
+document.getElementById("dpAllBtn")&&(document.getElementById("dpAllBtn").onclick=()=>{
+  dpWholeLib=!dpWholeLib;
+  if(dpWholeLib){dpSelShelves.clear();dpSelPlans.clear()}
+  dpRenderGrid();dpSync();
+});
+
+function dpOpenShelf(bc){
+  dpCurBc=bc;
+  document.getElementById("dpStepGrid").hidden=true;
+  document.getElementById("dpStepShelf").hidden=false;
+  dpRenderShelf();
+}
+function dpRenderShelf(){
+  const bc=dpCurBc;if(!bc)return;
+  const mem=membersOf(bc);
+  const titel=document.getElementById("dpShelfTitel");
+  if(titel)titel.textContent=bcNames[bc]||("Hylla "+bc);
+  const plans=shelvesIn(mem);
+  const wholeBtn=document.getElementById("dpShelfWholeBtn");
+  if(wholeBtn){
+    wholeBtn.innerHTML=`<span>Hela hyllan</span><small>${plans.length} plan · ${booksIn(mem).length} böcker</small>`;
+    wholeBtn.classList.toggle("on",dpSelShelves.has(bc));
+  }
+  const planSel=dpSelPlans.get(bc)||new Set();
+  const list=document.getElementById("dpPlanList");
+  if(list){
+    list.innerHTML=plans.map(sh=>{
+      const on=planSel.has(sh);
+      const photo=PH.find(p=>!p.replaced&&(p.shelves||[]).includes(sh));
+      const img=photo?`<img src="${photo.thumb}" alt="">`:`<div class="noimg">${dpSpineBars(sh)}</div>`;
+      const n=data.filter(d=>d.shelf===sh).length;
+      return `<button class="dp-plan${on?" on":""}" type="button" data-shelf="${esc(sh)}">
+        <div class="img">${img}</div>
+        <div class="tick"><i data-ic="check"></i></div>
+        <div class="meta"><span>${esc(dpPlanLabel(sh))}</span><span>${n} böcker</span></div>
+      </button>`;
+    }).join("")||'<div class="empty">Inga hyllplan hittades.</div>';
+    fillIcons(list);
+  }
+}
+document.getElementById("dpShelfWholeBtn")&&(document.getElementById("dpShelfWholeBtn").onclick=()=>{
+  const bc=dpCurBc;if(!bc)return;
+  dpWholeLib=false;
+  if(dpSelShelves.has(bc))dpSelShelves.delete(bc);
+  else{dpSelShelves.add(bc);dpSelPlans.delete(bc)}
+  dpRenderShelf();dpSync();
+});
+document.getElementById("dpPlanList")&&document.getElementById("dpPlanList").addEventListener("click",e=>{
+  const btn=e.target.closest(".dp-plan");if(!btn)return;
+  const bc=dpCurBc;if(!bc)return;
+  const sh=btn.dataset.shelf;
+  dpWholeLib=false;dpSelShelves.delete(bc);
+  let set=dpSelPlans.get(bc);if(!set){set=new Set();dpSelPlans.set(bc,set)}
+  if(set.has(sh))set.delete(sh);else set.add(sh);
+  if(!set.size)dpSelPlans.delete(bc);
+  dpRenderShelf();dpSync();
+});
+document.getElementById("dpBackBtn")&&(document.getElementById("dpBackBtn").onclick=()=>{
+  dpCurBc=null;
+  document.getElementById("dpStepShelf").hidden=true;
+  document.getElementById("dpStepGrid").hidden=false;
+  dpRenderGrid();dpSync();
+});
+
+function dpBooksFiltered(){
+  const q=(document.getElementById("dpBookQ").value||"").trim().toLowerCase();
+  return data.filter(d=>{
+    if(dpBookCat&&d.cat!==dpBookCat)return false;
+    if(dpBookBc&&(!d.shelf||topBc(d.shelf.split(":")[0])!==dpBookBc))return false;
+    if(q&&!((d.title||"").toLowerCase().includes(q)||(d.author||"").toLowerCase().includes(q)))return false;
+    return true;
+  }).sort((a,b)=>(a.title||"").localeCompare(b.title||""));
+}
+function dpRenderBookChips(){
+  const cats=[...new Set(data.map(d=>d.cat).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const bcs=topPlaces();
+  const catEl=document.getElementById("dpCatChips");
+  if(catEl)catEl.innerHTML=`<button class="hs-chip${!dpBookCat?" on":""}" data-cat="">Alla kategorier</button>`+
+    cats.map(c=>`<button class="hs-chip${dpBookCat===c?" on":""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+  const bcEl=document.getElementById("dpBcChips");
+  if(bcEl)bcEl.innerHTML=`<button class="hs-chip${!dpBookBc?" on":""}" data-bc="">Alla hyllor</button>`+
+    bcs.map(bc=>`<button class="hs-chip${dpBookBc===bc?" on":""}" data-bc="${esc(bc)}">${esc(bcNames[bc]||("Hylla "+bc))}</button>`).join("");
+}
+function dpRenderBooks(){
+  const list=dpBooksFiltered();
+  const countEl=document.getElementById("dpBookCount");
+  if(countEl)countEl.textContent=list.length+" böcker";
+  const listEl=document.getElementById("dpBookList");
+  if(listEl)listEl.innerHTML=list.map(d=>{
+    const on=dpSelBooks.has(d.id);
+    return `<div class="dp-brow${on?" on":""}" data-id="${d.id}">
+      <span class="dp-box">${on?'<i data-ic="check"></i>':""}</span>
+      <span><span class="t">${esc(d.title)}</span><small class="by">${esc(d.author||"")}</small></span>
+    </div>`;
+  }).join("")||'<div class="empty">Inga böcker hittades.</div>';
+  fillIcons(listEl);
+}
+document.getElementById("dpBookQ")&&document.getElementById("dpBookQ").addEventListener("input",dpRenderBooks);
+document.getElementById("dpCatChips")&&document.getElementById("dpCatChips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-cat]");if(!b)return;
+  dpBookCat=b.dataset.cat;dpRenderBookChips();dpRenderBooks();
+});
+document.getElementById("dpBcChips")&&document.getElementById("dpBcChips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-bc]");if(!b)return;
+  dpBookBc=b.dataset.bc;dpRenderBookChips();dpRenderBooks();
+});
+document.getElementById("dpBookList")&&document.getElementById("dpBookList").addEventListener("click",e=>{
+  const row=e.target.closest(".dp-brow");if(!row)return;
+  const id=+row.dataset.id;
+  if(dpSelBooks.has(id))dpSelBooks.delete(id);else dpSelBooks.add(id);
+  dpRenderBooks();dpSync();
+});
+
+function dpSyncSeg(){
+  document.querySelectorAll("#dpSeg [data-mode],#dpSegB [data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===dpMode));
+}
+document.querySelectorAll("#dpSeg [data-mode],#dpSegB [data-mode]").forEach(b=>b.addEventListener("click",()=>{
+  const m=b.dataset.mode;if(m===dpMode)return;
+  dpMode=m;dpSyncSeg();
+  if(m==="shelf"){
+    document.getElementById("dpStepBooks").hidden=true;
+    document.getElementById("dpStepShelf").hidden=true;
+    document.getElementById("dpStepGrid").hidden=false;
+    dpRenderGrid();
+  } else {
+    document.getElementById("dpStepGrid").hidden=true;
+    document.getElementById("dpStepShelf").hidden=true;
+    document.getElementById("dpStepBooks").hidden=false;
+    dpRenderBookChips();dpRenderBooks();
+  }
+  dpSync();
+}));
+
+/* Gemensamma knappraden: text/aktiverat läge enligt punkt 2.5 i
+   uppdraget. dpLocNote syns bara i "enskilda böcker" - platsen ska
+   fortfarande döljas när en enskild bok delas (samma regel som i
+   sharedBookRow för mottagarsidan). */
+function dpSync(){
+  const btn=document.getElementById("delaSkapaGor");if(!btn)return;
+  const note=document.getElementById("dpLocNote");if(note)note.hidden=dpMode!=="book";
+  const sub=document.getElementById("dpSub");
+  let n=0,text="Välj något att dela";
+  if(dpMode==="shelf"){
+    if(dpWholeLib){n=1;text=`Dela Hela bokhyllan · ${data.length} böcker`}
+    else{
+      const planEntries=[...dpSelPlans.entries()].flatMap(([bc,set])=>[...set].map(sh=>({bc,sh})));
+      n=dpSelShelves.size+planEntries.length;
+      if(n===1){
+        if(dpSelShelves.size===1){
+          const bc=[...dpSelShelves][0];
+          text=`Dela ${bcNames[bc]||("Hylla "+bc)} · ${booksIn(membersOf(bc)).length} böcker`;
+        } else {
+          const sh=planEntries[0].sh;
+          text=`Dela ${dpPlanLabel(sh)} · ${data.filter(d=>d.shelf===sh).length} böcker`;
+        }
+      } else if(n>1){
+        let total=0;
+        for(const bc of dpSelShelves)total+=booksIn(membersOf(bc)).length;
+        for(const e of planEntries)total+=data.filter(d=>d.shelf===e.sh).length;
+        text=`Dela ${n} hyllor · ${total} böcker`;
+      }
+    }
+  } else {
+    n=dpSelBooks.size;
+    text=n===1?"Dela 1 bok":n>1?`Dela ${n} böcker`:"Välj något att dela";
+  }
+  btn.disabled=n===0;
+  btn.textContent=n===0?"Välj något att dela":text;
+  if(sub)sub.textContent=n===0?"Inget valt än":"";
+}
+
 function delaSkapaOpen(){
-  delaSkapaLvl=null;
-  document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(b=>b.classList.remove("active"));
-  document.getElementById("delaSkapaBc").hidden=true;
-  document.getElementById("delaSkapaBook").hidden=true;
+  dpMode="shelf";dpWholeLib=false;dpSelShelves=new Set();dpSelPlans=new Map();dpSelBooks=new Set();
+  dpCurBc=null;dpBookCat="";dpBookBc="";
   document.getElementById("delaSkapaErr").textContent="";
   document.getElementById("delaSkapaResultat").hidden=true;
+  document.getElementById("dpStepGrid").hidden=false;
+  document.getElementById("dpStepShelf").hidden=true;
+  document.getElementById("dpStepBooks").hidden=true;
+  const bq=document.getElementById("dpBookQ");if(bq)bq.value="";
+  dpSyncSeg();dpRenderGrid();dpSync();
   document.getElementById("delaSkapaScrim").classList.add("open");
   document.getElementById("delaSkapaSheet").classList.add("open");
 }
@@ -1475,30 +1814,39 @@ function delaSkapaClose(){
   document.getElementById("delaSkapaSheet").classList.remove("open");
 }
 document.getElementById("delaSkapaBtn")&&(document.getElementById("delaSkapaBtn").onclick=delaSkapaOpen);
+document.getElementById("delaTomtKomIgang")&&(document.getElementById("delaTomtKomIgang").onclick=delaSkapaOpen);
+document.getElementById("delaTidigareBtn")&&(document.getElementById("delaTidigareBtn").onclick=()=>{
+  document.getElementById("delaTomtLage").hidden=true;
+  document.getElementById("delaFulltLage").hidden=false;
+});
 document.getElementById("delaSkapaAvbryt")&&(document.getElementById("delaSkapaAvbryt").onclick=delaSkapaClose);
 document.getElementById("delaSkapaScrim")&&document.getElementById("delaSkapaScrim").addEventListener("click",delaSkapaClose);
-document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(b=>b.addEventListener("click",()=>{
-  delaSkapaLvl=b.dataset.lvl;
-  document.querySelectorAll("#delaLvlGrp .dela-lvl").forEach(x=>x.classList.toggle("active",x===b));
-  const bcSel=document.getElementById("delaSkapaBc"),bookSel=document.getElementById("delaSkapaBook");
-  bcSel.hidden=delaSkapaLvl!=="shelf";bookSel.hidden=delaSkapaLvl!=="book";
-  if(delaSkapaLvl==="shelf"&&!bcSel.options.length){
-    bcSel.innerHTML=topPlaces().map(bc=>`<option value="${esc(bc)}">${esc(bcNames[bc]||("Hylla "+bc))}</option>`).join("");
-  }
-  if(delaSkapaLvl==="book"&&!bookSel.options.length){
-    bookSel.innerHTML=data.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(d=>`<option value="${d.id}">${esc(d.title)}</option>`).join("");
-  }
-}));
+
 document.getElementById("delaSkapaGor")&&(document.getElementById("delaSkapaGor").onclick=async()=>{
   const errEl=document.getElementById("delaSkapaErr");errEl.textContent="";
-  if(!delaSkapaLvl){errEl.textContent="Välj vad som ska delas.";return}
   const libId=await myLibraryId();if(!libId){errEl.textContent="Hittar inte ditt bibliotek.";return}
-  const row={library_id:libId,scope:delaSkapaLvl,level:"read",created_by:sbUser.id};
-  if(delaSkapaLvl==="shelf")row.bc=document.getElementById("delaSkapaBc").value;
-  if(delaSkapaLvl==="book")row.book_id=+document.getElementById("delaSkapaBook").value;
-  const {data:res,error}=await sb.from("share_links").insert(row).select("token").maybeSingle();
-  if(error){console.warn("dela: skapa share_links",error);errEl.textContent="Kunde inte skapa länken just nu.";return}
-  const url=location.origin+location.pathname+"?dela="+res.token;
+  let rows=[];
+  if(dpMode==="shelf"){
+    if(dpWholeLib){
+      rows=[{library_id:libId,scope:"library",level:"read",created_by:sbUser.id}];
+    } else {
+      for(const bc of dpSelShelves)rows.push({library_id:libId,scope:"shelf",bc,level:"read",created_by:sbUser.id});
+      for(const [,set] of dpSelPlans)for(const sh of set)rows.push({library_id:libId,scope:"shelf",bc:sh,level:"read",created_by:sbUser.id});
+    }
+  } else {
+    for(const id of dpSelBooks)rows.push({library_id:libId,scope:"book",book_id:id,level:"read",created_by:sbUser.id});
+  }
+  if(!rows.length){errEl.textContent="Välj något att dela.";return}
+  /* Varv 4 i granskningen: en bunt måste vara enhetlig. Gaffeln gör det
+     redundant i sig, men vi litar inte tyst på den - stoppa här om något
+     trots allt blandar scope. */
+  if(new Set(rows.map(r=>r.scope)).size>1){errEl.textContent="Internt fel: blandat urval. Försök igen.";return}
+  const btn=document.getElementById("delaSkapaGor"),prevText=btn.textContent;
+  btn.disabled=true;btn.textContent="Skapar…";
+  const {data:res,error}=await sb.from("share_links").insert(rows).select("token");
+  btn.disabled=false;btn.textContent=prevText;
+  if(error||!res||!res.length){console.warn("dela: skapa share_links",error);errEl.textContent="Kunde inte skapa länken just nu.";return}
+  const url=location.origin+location.pathname+"?dela="+res.map(r=>r.token).join(",");
   document.getElementById("delaSkapaLankInput").value=url;
   document.getElementById("delaSkapaResultat").hidden=false;
   renderDelaMinaList();
@@ -1545,11 +1893,16 @@ window.startFromGuide=startFromGuide;
    oavsett om besökaren redan har en sparad session eller inte (en
    inloggad ägare som råkar öppna sin egen delade länk löses in mot sin
    egen, redan inloggade identitet precis som vem som helst annan). */
-let delaBootToken=null;
-try{delaBootToken=new URLSearchParams(location.search).get("dela")||localStorage.getItem(DELA_TOKEN_KEY)||null}catch(e){delaBootToken=new URLSearchParams(location.search).get("dela")||null}
-if(delaBootToken){
-  try{localStorage.setItem(DELA_TOKEN_KEY,delaBootToken)}catch(e){}
-  /* Token flyttas till localStorage - strippa den ur URL:en så att en
+let delaBootTokens=[];
+try{
+  const qp=new URLSearchParams(location.search).get("dela");
+  delaBootTokens=qp?qp.split(",").map(s=>s.trim()).filter(Boolean):delaReadTokenKey();
+}catch(e){
+  try{const qp=new URLSearchParams(location.search).get("dela");delaBootTokens=qp?qp.split(",").map(s=>s.trim()).filter(Boolean):[]}catch(e2){delaBootTokens=[]}
+}
+if(delaBootTokens.length){
+  delaWriteTokenKey(delaBootTokens);
+  /* Tokens flyttade till localStorage - strippa dem ur URL:en så att en
      omladdning efter en skickad lånönskan (DELA_TOKEN_KEY redan borttagen
      då) inte triggar flödet igen bara för att länken råkar ligga kvar i
      adressfältet eller webbläsarhistoriken. */
@@ -1557,7 +1910,7 @@ if(delaBootToken){
     const u=new URL(location.href);
     if(u.searchParams.has("dela")){u.searchParams.delete("dela");history.replaceState(null,"",u.toString())}
   }catch(e){}
-  startDelaFlow(delaBootToken);
+  startDelaFlow(delaBootTokens);
 } else if(sbUser){
   afterAuthReady();
 } else {

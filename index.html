@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261030113623">
+<link rel="stylesheet" href="css/style.css?v=20261030115436">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261030113623";
+  var MY="20261030115436";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -296,38 +296,103 @@
 <!-- ================= PLATS ================= -->
 <section id="view-place" class="view" style="display:none"></section>
 
-<!-- ================= DELADE ================= -->
+<!-- ================= DELADE =================
+     Två lägen (Design 30/10): tomt läge (ingen AKTIV delning - en
+     återkallad räknas inte) och fullt läge (dagens listvy, oförändrad).
+     Bygget väljer läge i renderDelade(), ingen av de två är display:none
+     i markupen i sig - JS sätter hidden på rätt del. -->
 <section id="view-delade" class="view" style="display:none">
-  <div class="page-head"><h1>Delade</h1>
-    <button class="btn btn-primary btn-sm" id="delaSkapaBtn" type="button">Dela en hylla</button>
+  <!-- Tomt läge: punkt 1 i uppdraget. Ingen sidrubrik ("Delade" står redan
+       i tabbaren), ingen #delaSkapaBtn i sidhuvudet - läsningen ska sluta
+       i "Kom igång", inte börja där. -->
+  <div id="delaTomtLage" hidden>
+    <div class="dela-hero">
+      <img src="img/dela-hero.jpg" alt="">
+      <div class="dela-hero-scrim"></div>
+      <div class="dela-hero-in"><em class="dela-hero-tx">Dela dina böcker med andra</em></div>
+    </div>
+    <div class="dela-tomt-body">
+      <p class="fine">Skicka en länk. De ser dina böcker, var de står, och kan be att få låna.</p>
+      <button class="btn btn-primary btn-block" id="delaTomtKomIgang" type="button" style="margin-top:18px">Kom igång</button>
+      <button class="quiet-link" id="delaTidigareBtn" type="button" hidden>Tidigare delningar (<span id="delaTidigareN">0</span>)</button>
+    </div>
   </div>
 
-  <h2 class="sub-h">Lånönskningar</h2>
-  <div id="delaWishList"><div class="empty">Inga lånönskningar än.</div></div>
+  <!-- Fullt läge: dagens vy, oförändrad bortsett från att den nu kan
+       döljas helt. Visas även när bara "Tidigare delningar" öppnats
+       trots att inget är aktivt just nu (ingen separat tredje vy). -->
+  <div id="delaFulltLage" hidden>
+    <div class="page-head"><h1>Delade</h1>
+      <button class="btn btn-primary btn-sm" id="delaSkapaBtn" type="button">Dela en hylla</button>
+    </div>
 
-  <h2 class="sub-h">Mina delningar</h2>
-  <div id="delaMinaList"><div class="empty">Du har inte delat något än.</div></div>
+    <h2 class="sub-h">Lånönskningar</h2>
+    <div id="delaWishList"><div class="empty">Inga lånönskningar än.</div></div>
 
-  <h2 class="sub-h">Delat med dig</h2>
-  <div id="delaMedDigList"><div class="empty">Ingen har delat ett bibliotek med dig än.</div></div>
+    <h2 class="sub-h">Mina delningar</h2>
+    <div id="delaMinaList"><div class="empty">Du har inte delat något än.</div></div>
+
+    <h2 class="sub-h">Delat med dig</h2>
+    <div id="delaMedDigList"><div class="empty">Ingen har delat ett bibliotek med dig än.</div></div>
+  </div>
 </section>
 
-<!-- Skapa delning: nivåväljare (bibliotek/hylla/bok) + länk. Bottensheet,
-     samma mönster som övriga sheets (editSheet m.fl.). -->
+<!-- Skapa delning: visuellt urval i stället för rullgardiner (Design
+     30/10, punkt 2). Tre steg i samma sheet (dpStepGrid/dpStepShelf/
+     dpStepBooks), en gemensam knapprad längst ned. Samma scrim/sheet-
+     mönster som övriga ark i appen. -->
 <div class="scrim" id="delaSkapaScrim"></div>
-<div class="sheet" id="delaSkapaSheet">
-  <h2>Dela en hylla</h2>
-  <div class="dela-lvl-grp" id="delaLvlGrp">
-    <button class="dela-lvl" data-lvl="library">Hela biblioteket</button>
-    <button class="dela-lvl" data-lvl="shelf">En hylla</button>
-    <button class="dela-lvl" data-lvl="book">En enskild bok</button>
+<div class="sheet dp-sheet" id="delaSkapaSheet">
+  <span class="grip"></span>
+
+  <!-- Steg 1: gaffel (hyllor/böcker) + hyllrutnät -->
+  <div class="dp-step" id="dpStepGrid">
+    <div class="dp-head"><h2>Vad vill du dela?</h2></div>
+    <div class="seg" id="dpSeg">
+      <button class="seg-btn" data-mode="shelf" type="button">Hyllor</button>
+      <button class="seg-btn" data-mode="book" type="button">Enskilda böcker</button>
+    </div>
+    <p class="fine dp-hint" id="dpGridHint">Tryck på en hylla för att dela hela den — eller gå in och välj enskilda hyllplan.</p>
+    <div class="dp-grid" id="dpGrid"></div>
+    <div class="dp-wholewrap" id="dpWholeWrap">
+      <button class="dp-wholebtn" id="dpAllBtn" type="button"><span>Hela bokhyllan</span><small id="dpAllN"></small></button>
+    </div>
   </div>
-  <select class="inp" id="delaSkapaBc" hidden></select>
-  <select class="inp" id="delaSkapaBook" hidden></select>
-  <p class="fine">Mottagaren ser aldrig priser. Var böckerna står syns, utom vid delning av en enskild bok.</p>
-  <span class="err" id="delaSkapaErr"></span>
-  <button class="btn btn-primary" id="delaSkapaGor">Skapa länk</button>
-  <button class="btn-outline" id="delaSkapaAvbryt" type="button">Avbryt</button>
+
+  <!-- Steg 2: inuti en hylla, hyllplanen -->
+  <div class="dp-step" id="dpStepShelf" hidden>
+    <div class="dp-head"><button class="iconbtn" id="dpBackBtn" type="button" aria-label="Tillbaka"><i data-ic="chevron-left"></i></button><h2 id="dpShelfTitel"></h2></div>
+    <p class="fine dp-hint">Tryck på de hyllplan du vill dela.</p>
+    <div class="dp-shelfbody">
+      <button class="dp-wholebtn" id="dpShelfWholeBtn" type="button"></button>
+      <div id="dpPlanList"></div>
+    </div>
+  </div>
+
+  <!-- Steg 3: enskilda böcker -->
+  <div class="dp-step" id="dpStepBooks" hidden>
+    <div class="dp-head"><h2>Vad vill du dela?</h2></div>
+    <div class="seg" id="dpSegB">
+      <button class="seg-btn" data-mode="shelf" type="button">Hyllor</button>
+      <button class="seg-btn" data-mode="book" type="button">Enskilda böcker</button>
+    </div>
+    <div class="dp-searchrow">
+      <div class="bp-search"><input id="dpBookQ" type="search" placeholder="Sök titel eller författare" autocomplete="off"></div>
+    </div>
+    <div class="hs-chips" id="dpCatChips" style="overflow-x:auto;flex-wrap:nowrap"></div>
+    <div class="hs-chips" id="dpBcChips" style="overflow-x:auto;flex-wrap:nowrap;padding-top:8px"></div>
+    <p class="fine dp-count" id="dpBookCount"></p>
+    <div id="dpBookList"></div>
+  </div>
+
+  <!-- Gemensam knapprad -->
+  <div class="pickbar">
+    <span class="err" id="delaSkapaErr"></span>
+    <button class="btn btn-primary btn-block" id="delaSkapaGor" type="button" disabled>Välj något att dela</button>
+    <small class="fine" id="dpSub">Inget valt än</small>
+    <p class="fine dp-locnote" id="dpLocNote" hidden>Var böckerna står visas inte vid delning av enstaka böcker</p>
+    <button class="btn-outline" id="delaSkapaAvbryt" type="button">Avbryt</button>
+  </div>
   <div id="delaSkapaResultat" hidden>
     <p class="fine">Länken är klar:</p>
     <div class="dela-linkbox"><input class="inp" id="delaSkapaLankInput" readonly><button class="btn btn-outline btn-sm" id="delaSkapaKopiera">Kopiera</button></div>
@@ -557,6 +622,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261030113623"></script>
+<script src="js/app.js?v=20261030115436"></script>
 </body>
 </html>
