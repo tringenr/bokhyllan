@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261030115436">
+<link rel="stylesheet" href="css/style.css?v=20261030115841">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261030115436";
+  var MY="20261030115841";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -401,7 +401,13 @@
 
 <!-- ================= SÄLJ ================= -->
 <section id="view-salj" class="view" style="display:none">
-  <div class="page-head"><h1>Värdera</h1>
+  <!-- Startsidan (design 30/10): visas varje gång fliken öppnas, inte bara
+       första gången - statusen ändras över tid och sidan är ingången, inte
+       en engångsskärm. Listan nås via länken och tillbaka via pilen i
+       listans huvud. Ritas av renderVardStart(). -->
+  <div id="vardStart"></div>
+  <div id="vardListWrap" hidden>
+  <div class="page-head"><h1><button class="round-btn" id="vardBackBtn" aria-label="Tillbaka"><i data-ic="chevron-left"></i></button>Värdera</h1>
     <button class="btn btn-primary btn-sm" id="vardOpenBtn" type="button">Välj böcker</button>
     <button class="round-btn" id="sellInfoBtn" aria-label="Om priserna"><i data-ic="info"></i></button>
   </div>
@@ -455,6 +461,7 @@
     </div>
   </details>
   <button class="link-btn danger" id="sellClearBtn">Rensa listan</button>
+  </div>
 </section>
 
 <!-- ================= LUCKOR ================= -->
@@ -622,6 +629,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261030115436"></script>
+<script src="js/app.js?v=20261030115841"></script>
 </body>
 </html>
