@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030004144";
+const DV="?v=20261030092859";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1908,7 +1908,7 @@ async function loadSell(){
    (beslut 29/10 om separata filter). Statusar och fält bekräftade med
    Thomas och Design 29/10, se migrering 20261029163152 och
    supabase/functions/prissok. */
-let vardSelStatus="",vardSelCats=new Set(),vardQ2="",vardAvbryt=false;
+let vardSelStatus="",vardSelCats=new Set(),vardQ2="",vardAvbryt=false,vardLimit=0;
 const vardSheet=document.getElementById("vardSheet"),vardScrim=document.getElementById("vardScrim");
 function vardMatches(){
   return data.filter(d=>{
@@ -1922,16 +1922,36 @@ function vardMatches(){
     return true;
   });
 }
+/* Design 30/10, punkt 2-3: begränsar vardMatches() till vardLimit böcker,
+   EFTER filtreringen, i en uttryckligen definierad och stabil ordning -
+   annars är "de första 25" vad databasen råkar returnera, och nästa
+   körning kan ge samma böcker igen. Allt i körvägen (räknare,
+   bekräftelsedialog, körslinga) ska gå via den här, inte vardMatches(). */
+function vardUrval(){
+  const m=vardMatches().slice().sort((a,b)=>
+    String(a.title||"").localeCompare(String(b.title||""),"sv")||(a.id-b.id));
+  return vardLimit>0?m.slice(0,vardLimit):m;
+}
 function vardSyncCount(){
-  const m=vardMatches();
-  const redan=m.filter(d=>{const it=sellForBook(d);return it&&(it.price_status==="bekraftat"||it.price_status==="automatiskt")}).length;
-  const utanForf=m.filter(d=>!String(d.author||"").trim()).length;
-  const rader=[`${m.length} böcker valda`];
+  const full=vardMatches(),u=vardUrval();
+  const redan=u.filter(d=>{const it=sellForBook(d);return it&&(it.price_status==="bekraftat"||it.price_status==="automatiskt")}).length;
+  const utanForf=u.filter(d=>!String(d.author||"").trim()).length;
+  const begransat=vardLimit>0&&vardLimit<full.length;
+  const rader=[begransat?`${u.length} av ${full.length} böcker`:`${u.length} böcker valda`];
   if(redan)rader.push(`${redan} redan värderade`);
   if(utanForf)rader.push(`${utanForf} saknar författare`);
-  rader.push(`ca ${m.length} sökkrediter`);
+  rader.push(`ca ${u.length} sökkrediter`);
   const el=document.getElementById("vardCount");if(el)el.textContent=rader.join(" · ");
-  const btn=document.getElementById("vardRunBtn");if(btn)btn.disabled=!m.length;
+  const btn=document.getElementById("vardRunBtn");
+  if(btn){btn.disabled=!u.length;btn.textContent=u.length?`Värdera ${u.length} böcker`:"Värdera"}
+  /* Förklaringsraden gäller bara "Aldrig sökt" - i andra lägen ger nästa
+     körning samma böcker igen, och påståendet blir falskt. */
+  const fine=document.getElementById("vardLimitFine");
+  if(fine){
+    const visa=vardLimit>0&&vardSelStatus==="aldrig";
+    fine.style.display=visa?"":"none";
+    if(visa)fine.textContent=`Nästa körning tar nästa ${vardLimit} av dem som inte sökts än.`;
+  }
 }
 /* Skrollbar rad, valda chips flyttade först (Design 29/10 b) - så arket
    aldrig blir högt oavsett hur många kategorier biblioteket har. */
@@ -1947,8 +1967,13 @@ function renderVardCats(){
 }
 function openVard(){
   vardSelStatus="";vardSelCats=new Set();vardQ2="";
+  /* vardLimit nollställs INTE här (beslut 30/10) - en kostnadsinställning
+     som ska gälla omgång efter omgång tills man själv ändrar den, inte ett
+     filter som börjar om varje gång arket öppnas. Chipen synkas istället
+     mot det värde som redan gäller. */
   document.getElementById("vardQ").value="";
   document.querySelectorAll("#vardStatusChips .chip").forEach(c=>c.classList.toggle("active",c.dataset.v===""));
+  document.querySelectorAll("#vardLimitChips .chip").forEach(c=>c.classList.toggle("active",+c.dataset.vl===vardLimit));
   document.getElementById("vardProgress").style.display="none";
   document.getElementById("vardResult").style.display="none";
   document.getElementById("vardActions").style.display="flex";
@@ -1966,12 +1991,23 @@ document.querySelectorAll("#vardStatusChips .chip").forEach(c=>c.addEventListene
   c.classList.add("active");vardSelStatus=c.dataset.v;vardSyncCount();
 }));
 document.getElementById("vardQ")?.addEventListener("input",e=>{vardQ2=e.target.value;vardSyncCount()});
+document.querySelectorAll("#vardLimitChips .chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll("#vardLimitChips .chip").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active");vardLimit=+c.dataset.vl;vardSyncCount();
+}));
 /* Körningen går i omgångar om 25 (edge-funktionens gräns per anrop) - osynligt
    för användaren, som bara ser en gemensam förloppsrad. En redan värderad bok
    (bekräftat ELLER okontrollerat) får bara sökas om efter en bekräftelsedialog
    - där sägs också att det gamla priset sparas i Historik (Bokdetalj). */
 document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
-  const m=vardMatches();if(!m.length)return;
+  const m=vardUrval();if(!m.length)return;
+  /* Ögonblicksbild av HELA (obegränsade) filterträffen, tagen INNAN
+     körningen - för "N kvar att söka" (punkt 6). Får inte räknas om efter
+     körningen: de just körda böckerna har då bytt status och kan ha
+     fallit ur filtret (t.ex. "Aldrig sökt"), vilket skulle göra uträkningen
+     oavsiktligt korrekt för just det filtret men fel för "Alla"/"Redan
+     värderad" - där inget faller ur. */
+  const totalFore=vardMatches().length;
   const redan=m.filter(d=>{const it=sellForBook(d);return it&&(it.price_status==="bekraftat"||it.price_status==="automatiskt")});
   let confirmOverwrite=false;
   if(redan.length){
@@ -1988,7 +2024,8 @@ document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
   document.getElementById("vardResult").style.display="none";
   const ids=m.map(d=>d.id);
   const antal={automatiskt:0,vantar:0,osakert:0,ingen_traff:0,skippad_skyddad:0,fel:0};
-  for(let i=0;i<ids.length;i+=25){
+  let i=0;
+  for(;i<ids.length;i+=25){
     if(vardAvbryt)break;
     const chunk=ids.slice(i,i+25);
     document.getElementById("vardProgressBar").style.width=Math.round(i/ids.length*100)+"%";
@@ -1999,6 +2036,10 @@ document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
       (res&&res.resultat||[]).forEach(r=>{if(r.error)antal.fel++;else if(antal[r.status]!=null)antal[r.status]++});
     }catch(e){antal.fel+=chunk.length;console.warn("prissok",e)}
   }
+  /* Antal faktiskt körda - loopvariabeln kan gå om ids.length på sista
+     varvet när körningen gick klart normalt (inte avbruten), så den
+     klipps mot ids.length. */
+  const kortCount=Math.min(i,ids.length);
   document.getElementById("vardProgressBar").style.width="100%";
   document.getElementById("vardProgress").style.display="none";
   document.getElementById("vardResult").style.display="block";
@@ -2009,8 +2050,12 @@ document.getElementById("vardRunBtn")?.addEventListener("click",async()=>{
   if(antal.ingen_traff)delar.push(`${antal.ingen_traff} inget hittat`);
   if(antal.skippad_skyddad)delar.push(`${antal.skippad_skyddad} hoppades över`);
   if(antal.fel)delar.push(`${antal.fel} fel`);
-  document.getElementById("vardResultText").textContent=
-    (vardAvbryt?"Avbruten. ":"")+(delar.join(", ")||"Inget hann sökas.");
+  /* Punkt 6: hur mycket som återstår i samma filterurval, bara när
+     körningen var begränsad och något faktiskt återstår. */
+  const kvar=totalFore-kortCount;
+  let text=(vardAvbryt?"Avbruten. ":"")+(delar.join(", ")||"Inget hann sökas.");
+  if(vardLimit>0&&kvar>0)text+=` ${kvar} kvar att söka.`;
+  document.getElementById("vardResultText").textContent=text;
   await loadSell();
 });
 
