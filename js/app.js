@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030092859";
+const DV="?v=20261030103210";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1468,7 +1468,7 @@ document.getElementById("delaSkapaGor")&&(document.getElementById("delaSkapaGor"
   const errEl=document.getElementById("delaSkapaErr");errEl.textContent="";
   if(!delaSkapaLvl){errEl.textContent="Välj vad som ska delas.";return}
   const libId=await myLibraryId();if(!libId){errEl.textContent="Hittar inte ditt bibliotek.";return}
-  const row={library_id:libId,scope:delaSkapaLvl,level:"read"};
+  const row={library_id:libId,scope:delaSkapaLvl,level:"read",created_by:sbUser.id};
   if(delaSkapaLvl==="shelf")row.bc=document.getElementById("delaSkapaBc").value;
   if(delaSkapaLvl==="book")row.book_id=+document.getElementById("delaSkapaBook").value;
   const {data:res,error}=await sb.from("share_links").insert(row).select("token").maybeSingle();
