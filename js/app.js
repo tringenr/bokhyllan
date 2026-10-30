@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030183036";
+const DV="?v=20261030225141";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2264,10 +2264,10 @@ function renderVardStart(){
   const el=document.getElementById("vardStart");if(!el)return;
   if(vardVisarListan){el.hidden=true;return}
   el.hidden=false;
-  const n=vardStatusSiffror();
-  const vardera=n.pris+n.kolla+n.inget;
   const totalt=data.length;
-  if(!vardera){
+  const items=(SELL&&SELL.items)||[];
+  const varderade=items.length;
+  if(!varderade){
     /* Förstagångssidan: fotot bär. Två siffror, inte fyra - tre nollor i
        rad säger ingenting. Bryter ur vyns sidmarginal och lämnar plats åt
        flikraden i nederkanten. */
@@ -2287,9 +2287,30 @@ function renderVardStart(){
     </div>`;
     return;
   }
+  /* Statusöversikt (Design 30/10, godkänd): de tre namn som redan är
+     beslutade för filterpanelen och listan (beslut 4,
+     claude/rapport-design-och-vardera-beslut-2026-10-29.md) - Kontrollerat/
+     Okontrollerat/Väntar på kontroll - återanvända rakt av, i stället för
+     den äldre indelningen efter vad man kan GÖRA (pris/kolla/inget) som
+     stod här innan. "Inte värderade än" är kravet att de fyra talen alltid
+     ska summera till hyllans storlek (kommentaren ovan, 30/10): den tar
+     därför inte bara böcker utan rad i sell_items, utan även de sällsynta
+     raderna som varken är bekräftade, automatiska eller väntar (osäkert/
+     ingen_traff/saknad status) - annars går talen inte ihop och man slutar
+     lita på dem. */
+  let kontrollerat=0,okontrollerat=0,vantar=0,osakert=0;
+  items.forEach(it=>{
+    if(it.price_status==="bekraftat")kontrollerat++;
+    else if(it.price_status==="automatiskt")okontrollerat++;
+    else if(it.price_status==="vantar")vantar++;
+    else if(it.price_status==="osakert")osakert++;
+  });
+  const inteVarderade=totalt-(kontrollerat+okontrollerat+vantar);
+  const medPris=kontrollerat+okontrollerat+osakert;
   const topp=vardTopp(5);
   /* Rutorna är vägar in i listan. "Inte värderade än" är undantaget: de
-     böckerna har ingen rad i sell_items och finns alltså inte i listan -
+     böckerna har ingen rad i sell_items (eller en rad utanför de tre
+     beslutade lägena) och finns alltså inte meningsfullt i listan -
      där öppnas urvalsrutan med "Aldrig sökt" förvalt i stället för att
      visa en tom lista. */
   const kort=(tal,etikett,kl,handling)=>`<button class="vs-stat${kl?" "+kl:""}" type="button"
@@ -2298,13 +2319,13 @@ function renderVardStart(){
     <div class="vs-head">
       <span class="vs-eyebrow">Värdera</span>
       <h1>Vad är dina böcker värda idag?</h1>
-      <p>${fmtN(n.pris)} av ${fmtN(vardera)} sökta ${vardera===1?"bok har":"böcker har"} ett pris. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
+      <p>${fmtN(medPris)} av ${fmtN(varderade)} sökta ${varderade===1?"bok har":"böcker har"} ett pris. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
     </div>
     <div class="vs-stats">
-      ${kort(n.pris,"Pris finns","ok",`vardVisaListan(true,'','pris')`)}
-      ${kort(n.kolla,"Kolla själv","wait",`vardVisaListan(true,'','kolla')`)}
-      ${kort(n.inget,"Inget hittat","",`vardVisaListan(true,'','inget')`)}
-      ${kort(n.osokt,"Inte sökta än","",`vardOppnaAldrig()`)}
+      ${kort(kontrollerat,"Kontrollerat","ok",`vardVisaListan(true,'bekraftat')`)}
+      ${kort(okontrollerat,"Okontrollerat","",`vardVisaListan(true,'automatiskt')`)}
+      ${kort(vantar,"Väntar på kontroll","wait",`vardVisaListan(true,'vantar')`)}
+      ${kort(inteVarderade,"Inte värderade än","",`vardOppnaAldrig()`)}
     </div>
     <div class="vs-cta">
       <button class="btn btn-primary" type="button" onclick="openVard()">Värdera fler böcker</button>
@@ -2313,7 +2334,7 @@ function renderVardStart(){
     <button class="link-btn vs-tilllistan" type="button" onclick="vardVisaListan(true,'')">Visa alla värderade böcker →</button>
     ${topp.length?`<p class="sub-h vs-subh">Mest värda just nu</p>
       <div class="vs-topp">${topp.map((x,i)=>{
-        const okontrollerat=x.it.price_status==="automatiskt"||x.it.price_status==="osakert";
+        const radOkontrollerad=x.it.price_status==="automatiskt"||x.it.price_status==="osakert";
         return `<div class="vs-tr">
           <span class="vs-n">${i+1}</span>
           <span class="vs-stripe" style="background:${catColor(x.bok?x.bok.cat:"")}"></span>
@@ -2321,7 +2342,7 @@ function renderVardStart(){
             <span class="vs-tr-t">${esc(x.it.title||(x.bok&&x.bok.title)||"")}</span>
             ${x.bok&&x.bok.author?`<span class="vs-tr-by">${esc(x.bok.author)}</span>`:""}
           </span>
-          <span class="vs-tr-p">${fmtN(x.pris)} kr${okontrollerat?`<small>okontrollerat</small>`:""}</span>
+          <span class="vs-tr-p">${fmtN(x.pris)} kr${radOkontrollerad?`<small>okontrollerat</small>`:""}</span>
         </div>`}).join("")}</div>`:""}`;
 }
 /* sell_meta.updated_date är ett datum, inte en tidpunkt - skriv ut det som
