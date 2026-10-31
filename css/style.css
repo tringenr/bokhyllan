@@ -1328,6 +1328,14 @@ body.ps-lock{overflow:hidden}
 .dela-banner img{width:100%;height:100%;object-fit:cover;object-position:50% 58%;display:block}
 .dela-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.5) 0%,rgba(22,15,9,0) 55%)}
 
+/* Samma bannermönster på Värdera-listan (Thomas 31/10) - samma foto som
+   startsidans fullskärmsintro (img/vardera-intro.jpg), samma beskärning
+   (50% 30%, redan vald för just det fotot i .vs-intro ovan), bara i det
+   låga 132px-formatet .dela-banner redan införde för Delade-fliken. */
+.vard-banner{position:relative;height:132px;margin:0 -16px 4px;overflow:hidden}
+.vard-banner img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block}
+.vard-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.5) 0%,rgba(22,15,9,0) 55%)}
+
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
 .pc{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:none;padding:0;display:block;width:100%;aspect-ratio:1/1;text-align:left;cursor:pointer}
 .pc .ryggar{position:absolute;inset:0;background:var(--surface-2) center/cover no-repeat}
