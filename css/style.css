@@ -1472,3 +1472,52 @@ body.har-remsa .toast{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px)
 .sell-sum-lankar{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:6px}
 .sell-sum-lankar .link-btn{font-size:14px}
 .sell-sortera{margin-left:10px;color:var(--ink-500)}
+
+
+/* ---------- Värderingslistan: kort per bok, filterark (Design 31/10) ------
+   Raderna var text åtskild av ett hårstreck, och ögat kunde inte se var en
+   bok slutade och nästa började - länken "Öppna på ..." låg närmare nästa
+   boks titel än sin egen rad. Nu är varje bok ett kort, samma mönster som
+   appens egna sökträffar (.sr), med kategoristripe till vänster. */
+.vb{border:1px solid var(--border-subtle);border-radius:14px;background:var(--surface);
+  box-shadow:var(--shadow-sm);padding:12px 14px;margin-bottom:10px}
+.vb-head{width:100%;border:none;background:none;padding:0;display:flex;align-items:flex-start;
+  gap:12px;text-align:left;color:inherit}
+.vb-stripe{width:5px;align-self:stretch;min-height:42px;border-radius:3px;flex:none}
+.vb-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vb-t{font:600 15px/1.3 var(--font-body);color:var(--fg)}
+.vb-by{font:400 13px var(--font-body);color:var(--text-secondary)}
+.vb-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px}
+.vb-h{font-size:11.5px;font-weight:600}
+.vb-u{display:inline-block;padding:1px 8px;border-radius:999px;
+  font:600 11px var(--font-body);background:var(--surface-2);color:var(--text-secondary)}
+.vb-u.lag{background:var(--success-50);color:var(--success-500)}
+.vb-u.hog{background:#FDEBEA;color:var(--danger-500)}
+.vb-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none;max-width:9em}
+.vb-p{font:600 16px var(--font-mono);color:var(--fg);text-align:right;line-height:1.25}
+.vb-p em{font:500 13px var(--font-body);font-style:normal;color:var(--text-secondary)}
+.vb-right small{font:500 11px var(--font-body);color:var(--text-secondary);text-align:right}
+/* Länken hör till kortet den ligger i, inte till nästa bok - kortets egen
+   yta och kantlinje gör den kopplingen, och den får luft uppåt. */
+.vb-open{display:block;margin-top:10px;font:600 14px var(--font-body);
+  color:var(--pink-600);text-decoration:none}
+.vb-open:active{opacity:.6}
+.vb.vb-inget .vb-t{color:var(--text-secondary)}
+.vb .sell-more{display:none;padding:10px 0 0;margin-top:10px;border-top:1px solid var(--border-subtle)}
+.vb.open .sell-more{display:block}
+/* Summakortet ska inte kunna läsas som en bokrad: egen ram och skugga. */
+.sell-sum{background:var(--surface);border:1px solid var(--border-subtle);border-radius:14px;
+  box-shadow:var(--shadow-sm);padding:16px;margin:12px 0 14px}
+.sell-visar{margin:2px 0 12px}
+.sell-visar b{color:var(--fg);font-weight:600}
+
+/* Filterarket */
+.sell-sheet .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sell-sheet .sheet-reset{border:none;background:none;padding:0;font:600 13px var(--font-body);color:var(--pink-600)}
+.flt-help{font-size:12px;color:var(--text-secondary);line-height:1.5;margin:0 0 2px}
+.more-filters{border:none;background:none;display:flex;align-items:center;gap:7px;padding:8px 0;
+  font:600 13px var(--font-body);color:var(--pink-600);text-align:left}
+.more-filters i,.more-filters svg{width:15px;height:15px;transition:transform var(--duration-base) var(--ease-out)}
+.more-filters.open svg{transform:rotate(180deg)}
+.more-box{display:flex;flex-direction:column;gap:12px;padding-top:10px;border-top:1px solid var(--border-subtle)}
+.more-box[hidden]{display:none}

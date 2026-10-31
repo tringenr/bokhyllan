@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261031104524">
+<link rel="stylesheet" href="css/style.css?v=20261031113421">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261031104524";
+  var MY="20261031113421";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -415,7 +415,13 @@
        listans huvud. Ritas av renderVardStart(). -->
   <div id="vardStart"></div>
   <div id="vardListWrap" hidden>
-  <div class="page-head"><h1><button class="round-btn" id="vardBackBtn" aria-label="Tillbaka"><i data-ic="chevron-left"></i></button>Värdera</h1>
+  <!-- Rubriken byter namn efter aktivt filter (Design 31/10, krav 2) -
+       texten sätts av renderSell(). Filterknappen sitter här i huvudet,
+       eftersom allt annat ovanför listan nu bor i filterarket. -->
+  <div class="page-head"><h1><button class="round-btn" id="vardBackBtn" aria-label="Tillbaka"><i data-ic="chevron-left"></i></button><span id="sellRubrik">Värdera</span></h1>
+    <button class="bp-filter" id="sellFilterBtn" aria-label="Filtrera listan" aria-expanded="false">
+      <i data-ic="sliders-horizontal"></i><span class="bp-filter-dot" id="sellFilterDot" hidden></span>
+    </button>
     <!-- "Välj böcker" borta 30/10: en sökning startas från startsidan
          ("Värdera fler böcker"), inte härifrån. -->
     <button class="round-btn" id="sellInfoBtn" aria-label="Om priserna"><i data-ic="info"></i></button>
@@ -424,59 +430,10 @@
        egna filter: säkerhet, hetta och kategori. Raderna i listan är
        oförändrade - det här är ett tillägg ovanför dem, inte en omskrivning
        (beslut 29/10: addera eller dra ifrån, gör inte om det som finns). -->
-  <div class="bp-searchrow sell-searchrow">
-    <div class="bp-search"><input id="sellQ" type="search" placeholder="Sök bland värderade" autocomplete="off" aria-label="Sök bland värderade böcker"></div>
-    <button class="bp-filter" id="sellFilterBtn" aria-label="Filter" aria-expanded="false">
-      <i data-ic="sliders-horizontal"></i><span class="bp-filter-dot" id="sellFilterDot" hidden></span>
-    </button>
-  </div>
-  <div class="bp-filters" id="sellFilters" hidden>
-    <p class="flt-rubrik">Vad du kan göra</p>
-    <div class="chips" data-grp="kat">
-      <button class="chip active" data-v="">Alla</button>
-      <button class="chip" data-v="pris">Pris finns</button>
-      <button class="chip" data-v="kolla">Kolla själv</button>
-      <button class="chip" data-v="inget">Inget hittat</button>
-    </div>
-    <p class="flt-rubrik">Status</p>
-    <div class="chips" data-grp="status">
-      <button class="chip active" data-v="">Alla</button>
-      <button class="chip" data-v="bekraftat">Kontrollerat</button>
-      <button class="chip" data-v="automatiskt">Okontrollerat</button>
-      <button class="chip" data-v="vantar">Väntar på kontroll</button>
-      <button class="chip" data-v="osakert">Varierande pris</button>
-      <button class="chip" data-v="ingen_traff">Inget hittat</button>
-    </div>
-    <p class="flt-rubrik">Säkerhet</p>
-    <div class="chips" data-grp="unc">
-      <button class="chip active" data-v="">Alla</button>
-      <button class="chip" data-v="lag">Säkert pris</button>
-      <button class="chip" data-v="medel">Ganska säkert</button>
-      <button class="chip" data-v="hog">Osäkert</button>
-    </div>
-    <p class="flt-rubrik">Hetta</p>
-    <div class="chips" data-grp="heat">
-      <button class="chip active" data-v="">Alla</button>
-      <button class="chip" data-v="het">Het</button>
-      <button class="chip" data-v="medel">Medel</button>
-      <button class="chip" data-v="lag">Låg</button>
-    </div>
-    <p class="flt-rubrik">Kategori</p>
-    <div class="hs-chips bp-cats" id="sellCatChips"></div>
-  </div>
-  <!-- Ersätter det gamla chipet "Topp 25": antalet rader väljs i stället
-       för att vara låst till 25 (beslut 29/10). -->
-  <p class="sell-visar">Visar
-    <select id="sellLimit" aria-label="Antal böcker som visas">
-      <option value="25">25</option><option value="50">50</option>
-      <option value="100">100</option><option value="0" selected>alla</option>
-    </select>
-    böcker<span class="sell-sortera">sorterat på
-      <select id="sellSort" aria-label="Sortera listan">
-        <option value="varde" selected>värde</option>
-        <option value="hetta">hetta</option>
-        <option value="titel">titel</option>
-      </select></span></p>
+  <!-- Sökfältet och filtergrupperna låg förut synliga här ovanför listan.
+       De bor sedan 31/10 i filterarket (#sellSheet, längst ner i filen) -
+       bara knappen i huvudet syns (Design 31/10, krav 1). -->
+  <p class="sell-visar" id="sellVisar"></p>
   <div id="sellList"></div>
   <p id="sellNote" class="fine"></p>
   <div class="sell-empty-msg" id="sellEmptyMsg" style="display:none">Listan är tom. Be Claude köra en ny värderingsrunda, så fylls den igen.</div>
@@ -613,6 +570,85 @@
      fortsätta med vad man höll på med (beslut 30/10). Ligger utanför
      vyerna så den följer med oavsett flik. -->
 <div class="kor-remsa" id="korRemsa" hidden aria-live="polite"></div>
+<div class="scrim scrim-top" id="sellScrim"></div>
+<!-- Filterarket (Design 31/10, krav 1 och 3). Appens eget .sheet-monster,
+     samma som "Valj bocker att vardera" - inte ett nytt UI. Stangs
+     medvetet med "Visa N bocker" eller "Avbryt", inte genom att klicka
+     utanfor: ett filterval ar en handling man avslutar. -->
+<div class="sheet sell-sheet" id="sellSheet" role="dialog" aria-label="Filtrera listan">
+  <span class="grip"></span>
+  <div class="sheet-head"><h2>Filtrera listan</h2>
+    <button class="sheet-reset" id="sellReset" type="button">Rensa filter</button></div>
+  <div class="field"><input id="sellQ" class="inp" type="search" placeholder="Sök bland värderade" autocomplete="off" aria-label="Sök bland värderade böcker"></div>
+  <!-- Enda gruppen som alltid syns. Den gar pa VAD DU KAN GORA, inte pa
+       sokmotorns statusetikett: etiketterna ljuger ibland (tva bocker
+       markta ingen_traff hade anda en sparad sida, kontrollen 30/10), och
+       startsidans sifferkort leder hit via just de har varden. Den rena
+       statusgruppen ligger darfor under "Fler filter" i stallet.
+       Designen 31/10 ville sla ihop de tva - det gar inte utan att bryta
+       startsidans kort, se rapporten. -->
+  <div class="field"><span class="lbl">Status</span>
+    <p class="flt-help">Vad du kan göra med boken: ett pris finns, en sida finns men inget pris, eller ingenting hittat alls.</p>
+    <div class="chips" data-grp="kat">
+      <button class="chip active" data-v="">Alla</button>
+      <button class="chip" data-v="pris">Pris finns</button>
+      <button class="chip" data-v="kolla">Kolla själv</button>
+      <button class="chip" data-v="inget">Inget hittat</button>
+    </div>
+  </div>
+  <button class="more-filters" id="sellMoreBtn" type="button" aria-expanded="false">Fler filter — sortering, status, säkerhet, hetta, kategori
+    <i data-ic="chevron-down"></i></button>
+  <div class="more-box" id="sellMoreBox" hidden>
+    <div class="field"><span class="lbl">Sortera på</span>
+      <div class="chips" data-grp="sort">
+        <button class="chip active" data-v="varde">Värde</button>
+        <button class="chip" data-v="hetta">Hetta</button>
+        <button class="chip" data-v="titel">Titel</button>
+      </div>
+    </div>
+    <div class="field"><span class="lbl">Antal rader</span>
+      <div class="chips" data-grp="limit">
+        <button class="chip active" data-v="0">Alla</button>
+        <button class="chip" data-v="25">25</button>
+        <button class="chip" data-v="50">50</button>
+        <button class="chip" data-v="100">100</button>
+      </div>
+    </div>
+    <div class="field"><span class="lbl">Sökmotorns status</span>
+      <div class="chips" data-grp="status">
+        <button class="chip active" data-v="">Alla</button>
+        <button class="chip" data-v="bekraftat">Kontrollerat</button>
+        <button class="chip" data-v="automatiskt">Okontrollerat</button>
+        <button class="chip" data-v="vantar">Väntar på kontroll</button>
+        <button class="chip" data-v="osakert">Varierande pris</button>
+        <button class="chip" data-v="ingen_traff">Inget hittat</button>
+      </div>
+    </div>
+    <div class="field"><span class="lbl">Säkerhet</span>
+      <div class="chips" data-grp="unc">
+        <button class="chip active" data-v="">Alla</button>
+        <button class="chip" data-v="lag">Säkert pris</button>
+        <button class="chip" data-v="medel">Ganska säkert</button>
+        <button class="chip" data-v="hog">Osäkert</button>
+      </div>
+    </div>
+    <div class="field"><span class="lbl">Hetta</span>
+      <div class="chips" data-grp="heat">
+        <button class="chip active" data-v="">Alla</button>
+        <button class="chip" data-v="het">Het</button>
+        <button class="chip" data-v="medel">Medel</button>
+        <button class="chip" data-v="lag">Låg</button>
+      </div>
+    </div>
+    <div class="field"><span class="lbl">Kategori</span>
+      <div class="hs-chips bp-cats" id="sellCatChips"></div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-outline" id="sellSheetCancel" type="button">Avbryt</button>
+    <button class="btn btn-primary" id="sellSheetDone" type="button">Visa böcker</button>
+  </div>
+</div>
 <div class="sheet" id="vardSheet" role="dialog" aria-label="Välj böcker att värdera">
   <span class="grip"></span>
   <h2>Välj böcker att värdera</h2>
@@ -672,6 +708,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261031104524"></script>
+<script src="js/app.js?v=20261031113421"></script>
 </body>
 </html>

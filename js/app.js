@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031104524";
+const DV="?v=20261031113421";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2149,11 +2149,12 @@ const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Trad
    - flyttad hit från ibHistorikHtml() 31/10 så att listans summeringskort
    och startsidan kan återanvända samma namn i stället för att hitta på
    sina egna. */
+const VARD_KAT_NAMN={pris:"Pris finns",kolla:"Kolla själv",inget:"Inget hittat",osokt:"Osökta"};
 const STATUS_NAMN={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris",ingen_traff:"Inget hittat"};
 /* Värderas egna filter. Skilda från sökvyns (fs/fCat/q): vyerna har olika
    syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
    = visa alla. */
-let sellQ="",sellUnc="",sellHeat="",sellCat="",sellStatus="",sellKat="",sellSort="varde",sellLimit=0,sellFiltersOppna=false;
+let sellQ="",sellUnc="",sellHeat="",sellCat="",sellStatus="",sellKat="",sellSort="varde",sellLimit=0;
 /* ---------- Värderas startsida (design 30/10) ----------
    Två tillstånd i samma vy: förstagångssidan med fotot i helskärm när
    ingenting är värderat, och statusöversikten med topp fem när något är
@@ -2255,11 +2256,8 @@ function vardVisaListan(v,status,kat){
   if(v&&(status!==undefined||kat!==undefined)){
     sellStatus=status||"";
     sellKat=kat||"";
-    sellFiltersOppna=!!(sellStatus||sellKat);
-    document.querySelectorAll('#sellFilters [data-grp="status"] .chip').forEach(c=>
-      c.classList.toggle("active",c.dataset.v===sellStatus));
-    document.querySelectorAll('#sellFilters [data-grp="kat"] .chip').forEach(c=>
-      c.classList.toggle("active",c.dataset.v===sellKat));
+    /* Chipsen i arket speglas av sellSyncUI(), som renderSell() kallar -
+       de behöver inte markeras om här. */
     if(typeof renderSell==="function")renderSell();
   }
   const start=document.getElementById("vardStart"),lista=document.getElementById("vardListWrap");
@@ -2394,7 +2392,6 @@ function renderSell(){
   const totalt=items.length;
   if(sellLimit>0)items=items.slice(0,sellLimit);
   sellSyncUI(totalt);
-  const maxVal=Math.max(1,...items.map(val));
   if(!items.length){
     el.innerHTML=`<div class="sell-empty-msg">${sellQ?`Inga träffar på ”${esc(sellQ)}”.`:"Inga böcker matchar filtret."}</div>`;
     document.getElementById("sellNote").textContent="";return;
@@ -2405,9 +2402,8 @@ function renderSell(){
      både price_low och price_high satta, så en intervallrad hade varit
      en tom ruta. Rubriken speglar aktivt filter (status/kategori) -
      "Hela hyllan" bara när inget filter är valt. */
-  const KAT_NAMN={pris:"Pris finns",kolla:"Kolla själv",inget:"Inget hittat",osokt:"Osökta"};
   const sumRubrik=sellStatus?(STATUS_NAMN[sellStatus]||sellStatus):
-    sellKat?(KAT_NAMN[sellKat]||sellKat):
+    sellKat?(VARD_KAT_NAMN[sellKat]||sellKat):
     aktivtFilter?"Filtrerat urval":"Hela hyllan";
   const tot=vardTotal(filtreratUrval);
   el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
@@ -2419,37 +2415,39 @@ function renderSell(){
       const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
       /* Status från den nya prissökningen (Design 29/10): "ca"-prefix och
          dämpad färg på okontrollerat, tomt streck på väntar, spann utan
-         medelvärde på varierande - tre samtidiga skillnader mot ett
-         kontrollerat pris, enligt Designs princip e). */
+         medelvärde på varierande. */
       const auto=it.price_status==="automatiskt",vantar=it.price_status==="vantar",osakert=it.price_status==="osakert";
       const priceLabel=
-        vantar?"–":
         osakert&&it.price_low!=null&&it.price_high!=null?`${fmtN(it.price_low)}–${fmtN(it.price_high)} kr`:
         auto?`ca ${fmtN(it.price_low!=null?it.price_low:it.estimated_value)} kr`:
         it.estimated_value!=null?`${fmtN(it.estimated_value)} kr`:shortPrice(it.price);
-      const statusBadge=
-        auto?`<span class="u" style="color:var(--ink-500)">Okontrollerat</span>`:
-        vantar?`<span class="u" style="color:var(--ink-500)">Väntar på kontroll</span>`:"";
-      /* Kategorin avgör vad raden erbjuder. "Kolla själv" får länken
-         SYNLIG på raden - förut låg den gömd inne i den fällda delen,
-         bakom ett streck som inte bjöd in till något (Thomas 30/10). */
       const kat=vardKategori(it),lank=vardLank(it),kalla=kat==="pris"?vardKalla(it):"";
-      /* book_id (satt en gång vid migreringen/när posten skapas) är den
-         pålitliga kopplingen - före flytten matchades titelsträngen om
-         vid varje visning, och "Står i:"-raden tappades tyst bort så fort
-         en titel rättades i katalogen (flödesrapporten 2026-10-26, punkt
-         4.3). match_title-fallbacken finns kvar för poster utan book_id. */
+      /* book_id är den pålitliga kopplingen till katalogen (flödesrapporten
+         2026-10-26, punkt 4.3); match_title finns kvar för äldre poster. */
       const d=bokFor(it);
       const loc=d&&d.shelf?locLabel(d.shelf):"";
       const sources=(SELL_PRICES[it.id]||[]);
-      const u=statusBadge||(it.uncertainty?`<span class="u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"");
-      return `<div class="sell-row sr-${kat}" id="sr-${i}"><button class="sell-head" onclick="toggleSell(${i})">
-          <span class="t">${esc(it.title)}</span><span class="p"${auto?' style="color:var(--ink-500)"':""}>${kat==="pris"?esc(priceLabel):kat==="kolla"?"<small>inget pris</small>":"<small>inget hittat</small>"}</span>
-          ${kat==="pris"&&kalla?`<span class="sr-kalla">${esc(kalla)}</span>`:""}
-          <span class="track"><span style="width:${Math.round(Math.max(0,val(it))/maxVal*100)}%"></span></span>
-          <span class="h" style="color:${h[1]}">${h[0]}</span></button>
-        ${kat==="kolla"&&lank?`<a class="sr-oppna" href="${esc(lank.url)}" target="_blank" rel="noopener">Öppna på ${esc(lank.site)} →</a>`:""}
-        <div class="sell-more">${u}
+      /* Statusmärket flyttade ner till en egen rad under titeln i stället
+         för att trängas med priset (Design 31/10). Prisstapeln är borta -
+         den var nollbred på varje bok utan pris, alltså bara brus. */
+      const marke=
+        auto?`<span class="vb-u">Okontrollerat</span>`:
+        vantar?`<span class="vb-u">Väntar på kontroll</span>`:
+        it.uncertainty?`<span class="vb-u ${esc(it.uncertainty)}">${it.uncertainty==="lag"?"Säkert pris":it.uncertainty==="hog"?"Osäkert pris":"Medel säkerhet"}</span>`:"";
+      return `<div class="vb vb-${kat}" id="sr-${i}">
+        <button class="vb-head" onclick="toggleSell(${i})">
+          <span class="vb-stripe" style="background:${catColor(d?d.cat:"")}"></span>
+          <span class="vb-main">
+            <span class="vb-t">${esc(it.title)}</span>
+            ${d&&d.author?`<span class="vb-by">${esc(d.author)}</span>`:""}
+            <span class="vb-sub"><span class="vb-h" style="color:${h[1]}">${h[0]}</span>${marke}</span>
+          </span>
+          <span class="vb-right">
+            <span class="vb-p"${auto?' style="color:var(--ink-500)"':""}>${kat==="pris"?esc(priceLabel):kat==="kolla"?"<em>inget pris</em>":"<em>inget hittat</em>"}</span>
+            ${kat==="pris"&&kalla?`<small>${esc(kalla)}</small>`:""}
+          </span></button>
+        ${kat==="kolla"&&lank?`<a class="vb-open" href="${esc(lank.url)}" target="_blank" rel="noopener">Öppna på ${esc(lank.site)} →</a>`:""}
+        <div class="sell-more">
           ${auto?`<p class="fine">Priset kan höra till en annan upplaga än din. Samma titel kan skilja flera hundra kronor mellan upplagor.</p>`:""}
           ${kat==="kolla"?`<p class="fine">Sidan hittades, men priset gick inte att läsa av automatiskt.</p>`:""}
           ${kat==="inget"?`<p class="fine">Ingen av sajterna hade en sida för den här boken. Prova att söka om senare — utbudet ändras.</p>`:""}
@@ -2459,7 +2457,7 @@ function renderSell(){
           ${loc?`<p>Står i: ${esc(loc)}</p>`:""}
           ${sources.length?`<ul class="sell-sources">${sources.map(src=>`<li><span>${esc(SELL_SITES[src.site]||src.site)}</span><span>${src.price!=null?fmtN(src.price)+" kr":"?"}${src.url?` · <a href="${esc(src.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
           ${it.wanted_ad_url?`<p><a href="${esc(it.wanted_ad_url)}" target="_blank" rel="noopener">Någon söker efter den här boken</a></p>`:""}
-          ${!sources.length&&it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
+          ${!sources.length&&it.url&&kat!=="kolla"?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
   /* #sellNote visade tidigare sell_meta.summary.kommentar/note/updated_date -
      en handskriven kommentar från den allra första manuella sökrundan
      (26/8), statisk och orelaterad till vilket filter man faktiskt tittar
@@ -2477,20 +2475,35 @@ window.toggleSell=toggleSell;
    antalsbegränsningen, så texten kan säga hur många som finns. */
 function sellSyncUI(totalt){
   const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus||sellKat);
-  /* sellFiltersOppna sätts INTE om här längre (Thomas 31/10): det gjorde att
-     panelen tvingades upp igen på nästa renderSell() så fort ett filter var
-     aktivt, vilket i praktiken gjorde filterknappen obrukbar - den gick inte
-     att stänga med. Om panelen ska vara uppfälld när man landar här med ett
-     filter redan satt, sätts sellFiltersOppna=true vid NAVIGERINGEN dit
-     (vardVisaListan), inte vid varje omritning. */
-  const box=document.getElementById("sellFilters");
-  if(box)box.hidden=!sellFiltersOppna;
+  /* Filterpanelen är sedan 31/10 ett ark (#sellSheet) som bara öppnas av
+     knappen - ingenting ovanför listan visas annars (Design 31/10, krav 1).
+     Det löser samtidigt buggen att panelen tvingades upp vid varje
+     omritning: det finns inget inline-läge kvar att tvinga. */
   const btn=document.getElementById("sellFilterBtn");
-  if(btn){btn.setAttribute("aria-expanded",sellFiltersOppna?"true":"false");btn.classList.toggle("on",aktiv)}
+  if(btn)btn.classList.toggle("on",aktiv);
   const dot=document.getElementById("sellFilterDot");
   if(dot)dot.hidden=!aktiv;
-  const visar=document.querySelector(".sell-visar");
-  if(visar)visar.lastChild.textContent=sellLimit>0&&totalt>sellLimit?` av ${totalt} böcker`:" böcker";
+  /* Rubriken i huvudet är det aktiva filtrets namn (krav 2) - "Värdera"
+     bara när man kommit in utan filter. */
+  const rub=document.getElementById("sellRubrik");
+  if(rub)rub.textContent=sellKat?(VARD_KAT_NAMN[sellKat]||"Värdera"):
+    sellStatus?(STATUS_NAMN[sellStatus]||"Värdera"):
+    sellCat?sellCat:"Värdera";
+  /* Raden under rubriken: ren text. Antal och sortering flyttade in i
+     arket, så select-elementen som låg mitt i meningen (och gav den
+     trasiga radbrytningen med "böcker" på två rader) är borta. */
+  const visar=document.getElementById("sellVisar");
+  if(visar)visar.innerHTML=`Visar <b>${fmtN(sellLimit>0&&totalt>sellLimit?sellLimit:totalt)}</b>${sellLimit>0&&totalt>sellLimit?` av ${fmtN(totalt)}`:""} ${totalt===1?"bok":"böcker"}, sorterat på ${sellSort==="titel"?"titel":sellSort==="hetta"?"hetta":"värde"}`;
+  const klar=document.getElementById("sellSheetDone");
+  if(klar)klar.textContent=`Visa ${fmtN(totalt)} ${totalt===1?"bok":"böcker"}`;
+  /* Chipsen speglar variablerna, så arket stämmer även när man kommit hit
+     via ett sifferkort på startsidan. */
+  const spegla=(grp,v)=>document.querySelectorAll(`#sellSheet [data-grp="${grp}"] .chip`).forEach(c=>
+    c.classList.toggle("active",c.dataset.v===v));
+  spegla("kat",sellKat);spegla("status",sellStatus);spegla("unc",sellUnc);
+  spegla("heat",sellHeat);spegla("sort",sellSort);spegla("limit",String(sellLimit));
+  const sq=document.getElementById("sellQ");
+  if(sq&&sq.value!==sellQ)sq.value=sellQ;
   /* Kategorierna kommer ur katalogen, men bara de som faktiskt finns bland
      de värderade böckerna - annars står där kategorier som aldrig ger träff. */
   const cc=document.getElementById("sellCatChips");
@@ -2504,24 +2517,47 @@ function sellSyncUI(totalt){
       cc.dataset.sig=nytt;cc.innerHTML=nytt;
       cc.querySelectorAll("[data-sc]").forEach(b=>b.addEventListener("click",()=>{
         sellCat=sellCat===b.dataset.sc?"":b.dataset.sc;renderSell()}));
+    }else{
+      cc.querySelectorAll("[data-sc]").forEach(b=>b.classList.toggle("on",b.dataset.sc===sellCat));
     }
   }
 }
-document.querySelectorAll("#sellFilters .chips").forEach(grp=>{
+/* ---------- Filterarket ---------- */
+const sellSheet=document.getElementById("sellSheet"),sellScrim=document.getElementById("sellScrim");
+function openSellSheet(){
+  sellSheet?.classList.add("open");sellScrim?.classList.add("open");
+  document.getElementById("sellFilterBtn")?.setAttribute("aria-expanded","true");
+  renderSell();
+}
+function closeSellSheet(){
+  sellSheet?.classList.remove("open");sellScrim?.classList.remove("open");
+  document.getElementById("sellFilterBtn")?.setAttribute("aria-expanded","false");
+}
+window.openSellSheet=openSellSheet;window.closeSellSheet=closeSellSheet;
+document.getElementById("sellSheetDone")?.addEventListener("click",closeSellSheet);
+document.getElementById("sellSheetCancel")?.addEventListener("click",closeSellSheet);
+document.getElementById("sellMoreBtn")?.addEventListener("click",e=>{
+  const b=e.currentTarget,box=document.getElementById("sellMoreBox"),open=box.hidden;
+  box.hidden=!open;b.setAttribute("aria-expanded",open?"true":"false");
+  b.classList.toggle("open",open);
+});
+document.getElementById("sellReset")?.addEventListener("click",()=>{
+  sellQ="";sellKat="";sellStatus="";sellUnc="";sellHeat="";sellCat="";
+  const sq=document.getElementById("sellQ");if(sq)sq.value="";
+  renderSell();
+});
+document.querySelectorAll("#sellSheet .chips").forEach(grp=>{
   grp.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
-    grp.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
-    c.classList.add("active");
-    const g=grp.dataset.grp;
-    if(g==="unc")sellUnc=c.dataset.v;else if(g==="status")sellStatus=c.dataset.v;
-    else if(g==="kat")sellKat=c.dataset.v;else sellHeat=c.dataset.v;
-    renderSell();
+    const g=grp.dataset.grp,v=c.dataset.v;
+    if(g==="unc")sellUnc=v;else if(g==="status")sellStatus=v;
+    else if(g==="kat")sellKat=v;else if(g==="heat")sellHeat=v;
+    else if(g==="sort")sellSort=v;else if(g==="limit")sellLimit=Number(v)||0;
+    renderSell();   /* sellSyncUI markerar om chipsen */
   }));
 });
 document.getElementById("sellFilterBtn")?.addEventListener("click",()=>{
-  sellFiltersOppna=!sellFiltersOppna;sellSyncUI(0);renderSell()});
+  if(sellSheet?.classList.contains("open"))closeSellSheet();else openSellSheet()});
 document.getElementById("sellQ")?.addEventListener("input",e=>{sellQ=e.target.value;renderSell()});
-document.getElementById("sellLimit")?.addEventListener("change",e=>{sellLimit=Number(e.target.value)||0;renderSell()});
-document.getElementById("sellSort")?.addEventListener("change",e=>{sellSort=e.target.value||"varde";renderSell()});
 document.getElementById("sellInfoBtn")?.addEventListener("click",()=>{
   const p=document.getElementById("sellInfoPanel");if(p)p.open=!p.open});
 document.getElementById("sellClearBtn")?.addEventListener("click",async()=>{
