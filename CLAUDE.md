@@ -89,6 +89,36 @@ Aldrig commit direkt till `main`. En gren per spår, skapad från färsk
 `origin/main`. Pusha efter första commit och öppna PR. Merga aldrig utan
 Thomas uttryckliga klartecken.
 
+### Ta spåret innan du kodar det
+
+Flera trådar arbetar parallellt i samma filer. 2026-10-31 byggde två
+Teknik-trådar samma designunderlag samtidigt: PR #109 mergades, PR #108
+fick stängas som dubbelarbete, och sammanslagningen av de två parallella
+ändringarna i `vardTotal()` orsakade ett följdfel där startsidans summa
+läste fält som bytt namn. Ingen tråd slarvade — reglerna räckte inte.
+
+Före första kodraden i ett nytt spår:
+
+1. **Kolla både öppna och nyligen mergade PR:er.** Det räcker inte med
+   öppna; den andra tråden var redan mergad när dubbletten upptäcktes.
+
+       gh api repos/tringenr/bokhyllan/pulls --jq '.[].head.ref'
+       git log --oneline -15 origin/main
+
+   Läs efter samma **skärm eller funktion**, inte samma filnamn. Två
+   trådar i `js/app.js` är normalt; två trådar i samma skärm är inte.
+2. **Ta spåret** i `claude/bokhyllan-pagaende-spar.md` — en rad med spår,
+   tråd, gren och datum. Står spåret redan där äger någon annan det:
+   koda inte, säg till Thomas.
+3. **Ett uppdrag utan namngiven mottagare är inte taget.** "Klar för
+   Teknik att koda" är ingen mottagare när det finns flera Teknik-trådar
+   — ta reda på vilket spår som äger jobbet innan du börjar.
+
+Upptäcks en dubblett: stanna och visa Thomas innan något mergas. Den som
+redan är mergad vinner, den andra stängs med en kommentar om varför.
+Rebasa aldrig ihop två parallella byggen av samma skärm bara för att få
+bort konflikterna — det var i just den sammanslagningen felet uppstod.
+
 ## Databasen
 
 Projekt `zuesxdqifsnvhleiukum`. RLS är på för alla tabeller.
