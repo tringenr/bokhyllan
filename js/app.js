@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031153354";
+const DV="?v=20261031163054";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1730,6 +1730,12 @@ function delaPpOpen(rid){
     </div>`;
   }).join("")||'<div class="empty">Inget delat just nu.</div>';
   duDelar.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>delaPpStoppaEn(b.dataset.stop));
+  /* Kontroll 31/10: briefen skrev uttryckligen "Dela något mer med <namn>"
+     och "Sluta dela allt med <namn>" - knapparna hade bara den statiska
+     texten utan namnet. Rättat. */
+  const namn=p.name||"henne";
+  document.getElementById("delaPpDelaMer").textContent=`Dela något mer med ${namn}`;
+  document.getElementById("delaPpStoppaAllt").textContent=`Sluta dela allt med ${namn}`;
   renderDelaPpOnskar(rid);
   document.getElementById("delaPpScrim").classList.add("open");
   document.getElementById("delaPpSheet").classList.add("open");
