@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031152055";
+const DV="?v=20261031153354";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2545,6 +2545,10 @@ const KAT_NAMN={pris:"Pris finns",okontr:"Okontrollerat pris",kolla:"Kolla själ
    = visa alla. sellFiltersOppna styr nu filterARKET (Design 31/10), inte
    en inline-panel. */
 let sellQ="",sellUnc="",sellHeat="",sellCat="",sellStatus="",sellKat="",sellSort="varde",sellLimit=0,sellFiltersOppna=false;
+/* Titlar som precis fått ett manuellt pris den här listvisningen (Thomas
+   31/10) - se banner-kommentaren i renderSell(). Rensas i vardVisaListan
+   när man lämnar listan, inte vid varje filterbyte. */
+let sellNyssVarderade=[];
 /* Ögonblicksbild av filtren när arket öppnas, så "Avbryt" kan återställa
    dem exakt - filtren appliceras annars live medan arket är öppet (Design:
    "Visa N böcker (räknas live)"). */
@@ -2632,15 +2636,23 @@ function vardTotal(items){
       t.utanPris++;if(vardKategori(it)==="kolla")t.kolla++;else t.ingen++;return;
     }
     const p=vardPris(it);
-    if(it.price_status==="bekraftat"){t.summa+=p;t.antal++}
+    /* Bugg hittad 31/10: ett manuellt pris (price_status "manuellt" - ett
+       tal Thomas själv skrivit in) räknades in i okontrSumma, inte summa -
+       samma hink som sökmotorns egna ogranskade gissningar. Fel: ett pris
+       en människa skrivit in FÖR HAND är om något mer säkert än ett
+       sökträff-pris ingen tittat på, inte mindre. "bekraftat" (en
+       sökträff någon bockat av) och "manuellt" (ett pris någon skrivit in
+       själv) hör båda till den kontrollerade summan. */
+    if(it.price_status==="bekraftat"||it.price_status==="manuellt"){t.summa+=p;t.antal++}
     else{t.okontrSumma+=p;t.okontrAntal++}
   });
   return t;
 }
-/* Sant för en bok i pris-kategorin som ingen bekräftat - samma regel som
-   vardTotal, så talet i kortet och raderna i listan kan aldrig glida isär. */
+/* Sant för en bok i pris-kategorin som ingen bekräftat eller skrivit in
+   för hand - samma regel som vardTotal, så talet i kortet och raderna i
+   listan kan aldrig glida isär. */
 function vardOkontrollerat(it){
-  return vardKategori(it)==="pris"&&it.price_status!=="bekraftat";
+  return vardKategori(it)==="pris"&&it.price_status!=="bekraftat"&&it.price_status!=="manuellt";
 }
 function vardTopp(antal){
   if(!SELL||!SELL.items)return[];
@@ -2661,6 +2673,10 @@ function sellForBook2(it){
    något pekade dit (Thomas 30/10). */
 function vardVisaListan(v,status,kat){
   vardVisarListan=!!v;
+  /* Banner-minnet (sellNyssVarderade) hör till EN visning av listan - inte
+     till filtret inom den, så det rensas bara här, när man faktiskt lämnar
+     listan (v===false), aldrig vid ett filterbyte medan man är kvar. */
+  if(!v)sellNyssVarderade=[];
   if(v&&(status!==undefined||kat!==undefined)){
     sellStatus=status||"";
     sellKat=kat||"";
@@ -2730,6 +2746,7 @@ function renderVardStart(){
      de okontrollerade står för sig (beslut 30/10, Thomas "bryt ut dem"). */
   const tot=vardTotal();
   el.innerHTML=`
+    <div class="vard-banner"><img src="img/vardera-intro.jpg" alt=""><div class="vard-banner-scrim"></div></div>
     <div class="vs-head">
       <span class="vs-eyebrow">Värdera</span>
       <h1>Vad är dina böcker värda idag?</h1>
@@ -2829,7 +2846,17 @@ function renderSell(){
     sellKat?(KAT_NAMN[sellKat]||sellKat):
     aktivtFilter?"Filtrerat urval":"Hela hyllan";
   const tot=vardTotal(filtreratUrval);
-  el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
+  /* Kvardröjande banner (Thomas 31/10): en bok som precis fått ett
+     manuellt pris byter kategori till "pris" och FÖRSVINNER direkt ur
+     Kolla/Inget-listan - rätt beteende, men osynligt om man inte redan
+     tittade exakt då. sellNyssVarderade minns titlarna tills man lämnar
+     listan (vardVisaListan(false), nedan), oavsett hur filtret ändras
+     under tiden - en toast (2,6s) räcker inte för att hinna läsas om man
+     var mitt i att fylla i nästa bok. */
+  el.innerHTML=(sellNyssVarderade.length?`<div class="dela-toastrow">
+      <span>${sellNyssVarderade.length===1?`”${esc(sellNyssVarderade[0])}” är nu värderad`:`${sellNyssVarderade.length} böcker är nu värderade`} — flyttade till Värderade böcker.</span>
+    </div>`:"")+
+    `<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
       <span class="kr">${fmtN(tot.summa)} kr</span>
       <span class="fine">kontrollerat pris på ${fmtN(tot.antal)} av ${fmtN(tot.sokta)} sökta böcker</span>
       <span class="sell-sum-lankar">${tot.okontrAntal?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','okontr')">+ ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} böcker →</button>`:""}${!aktivtFilter&&tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${!aktivtFilter&&tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>
@@ -2945,7 +2972,10 @@ async function smpSave(i,id){
   const {error}=await sb.from("sell_items").update({estimated_value:varde,price_status:"manuellt"}).eq("id",id);
   if(error){alert("Kunde inte spara priset: "+error.message);return}
   const it=(SELL&&SELL.items||[]).find(x=>x.id===id);
-  if(it){it.estimated_value=varde;it.price_status="manuellt"}
+  if(it){
+    it.estimated_value=varde;it.price_status="manuellt";
+    if(it.title&&!sellNyssVarderade.includes(it.title))sellNyssVarderade.push(it.title);
+  }
   renderSell();
   toast("Pris sparat");
 }
