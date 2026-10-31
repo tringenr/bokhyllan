@@ -1383,7 +1383,12 @@ body.ps-lock{overflow:hidden}
 .tk-link .tx{flex:1;min-width:0}
 .tk-link b{display:block;font:600 13.5px var(--font-body);color:var(--text-secondary)}
 .tk-link small{display:block;font-size:11.5px;color:var(--text-secondary)}
-.tk-link svg{width:16px;height:16px;color:var(--ink-300);flex:none}
+/* Fix 31/10: regeln siktade på <svg>, men ikonen är <i data-ic> som bara
+   innehåller svg:en - i[data-ic] svg{width:100%;height:100%} (rad ~127)
+   vinner då på specificitet och <i> saknar egen storlek, så pilen renderas
+   i webbläsarens standardstorlek för en SVG utan angiven storlek (jättestor).
+   Samma mönster som .dv-item i[data-ic] nedan: sätt storleken på <i>, inte på svg:en. */
+.tk-link i[data-ic]{width:16px;height:16px;color:var(--ink-300);flex:none}
 
 /* 5. Tidigare kontakter-sidan: avatarraden utan hyllfoto, bara person +
    datum + "Dela igen". */
