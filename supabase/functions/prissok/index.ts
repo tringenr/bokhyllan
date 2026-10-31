@@ -43,9 +43,17 @@
 // borttagen (ta bort raden i PAUSED_SITES för att återaktivera). Campusbok-
 // handeln var den enda källa som faktiskt gett bekräftade priser hittills
 // (den manuella 27/10-rundan) - TILLAGD i den automatiska sökningen. Den
-// behandlas som Bokbörsen/Tradera (andrahandsmarknad per definition, inget
-// separat "begagnad"-krav som för Studentapan) - det var så dess priser
-// accepterades i 27/10-rundan, utan undantag noterat där.
+// behandlades som Bokbörsen/Tradera (andrahandsmarknad per definition, inget
+// separat "begagnad"-krav som för Studentapan).
+//
+// RÄTTELSE 31/10: det antagandet var FEL, och det hade satt nypriser som
+// värden i tio av elva rader. Campusbokhandeln säljer både nytt och
+// begagnat, precis som Studentapan, och skriver ut vilket som är vilket:
+// "Begagnat · Ej i lager · Helt ny 392 kr". Kontroll av alla elva sparade
+// rader visade att tio var NYPRISER där begagnat inte fanns i lager; de
+// rättades i databasen 31/10 (gamla värden sparade i sell_price_history).
+// Sedan dess läser funktionen priset på SIDAN för båda sajterna i stället
+// för att gissa utifrån sökträffens text - se lasBegagnatpris() nedan.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -125,6 +133,146 @@ function siteOf(url: string): string {
   return "";
 }
 
+
+/* ---- Prisavläsning på sidan (31/10) -------------------------------------
+   Före detta lästes priset BARA ur sökträffens titel. Campusbokhandeln
+   skriver priset i titeln, Studentapan gör inte det - resultatet var att
+   8 av 8 Studentapan-rader hade en länk men inget pris, vilket var hela
+   "Kolla själv"-kategorin i appen, och att Campusbokhandelns titelpris var
+   NYPRISET.
+
+   Mätning 31/10 mot 26 riktiga sidor: båda sajterna är serverrenderade och
+   skriver ut vilket pris som är vilket, med etikett:
+     Studentapan:      "Köp boken Begagnad 219 kr Ny 371 kr"
+     Campusbokhandeln: "Begagnat Säljs av privatperson 335 kr ... Helt ny 468 kr"
+     Campusbokhandeln: "Begagnat ... Ej i lager Helt ny 392 kr"  (inget begagnat)
+   Rak fetch räcker alltså; ingen webbläsare och inga Tavily-krediter.
+   (Tavilys /extract provades och tappade prisblocket på alla sex testade
+   Studentapan-sidor - sämre OCH dyrare, så den vägen är förkastad.) */
+
+const SID_TIMEOUT_MS = 6000;      // per sida
+const MAX_SIDOR_PER_BOK = 2;      // tak så en körning inte drar iväg i tid
+const SID_BUDGET_MS = 60000;      // samlad budget per anrop, se nedan
+
+function htmlTillText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+/* Sajtens standardtext i sidtiteln, som inte säger något om vilken bok det
+   är: ISBN-nummer, sajtnamnet, upplagemarkeringar. */
+function skalaBortStandardtext(sidtitel: string): string {
+  return sidtitel
+    .replace(/ISBN\s*\d[\dxX-]*/gi, " ")
+    .replace(/\b97[89][\d-]{9,}\b/g, " ")
+    .replace(/\|?\s*(Studentapan|Campusbokhandeln)\b/gi, " ")
+    .replace(/\bUpplaga\s*\d+/gi, " ")
+    .replace(/\bk(öp|op) (boken|billigt)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/* GRANSKNINGSFYND 31/10, det viktigaste i hela spåret: "stark" titelmatchning
+   räcker INTE för att läsa av ett pris. Den kräver bara att katalogtiteln
+   finns INUTI sidtiteln, och katalogens titlar är ofta avkortade - de kommer
+   ur AI-analysen av hyllfoton, alltså av vad som gick att läsa på bokryggen.
+   Därför matchade katalogtiteln "Coaching" sidan för "Coaching : vad, varför,
+   hur" som en stark träff, och "Executive Coaching" matchade "Executive
+   Coaching with Backbone and Heart".
+
+   Ett längdkrav löser det inte: "Handledande samtal" är två ord och RÄTT bok
+   med ett riktigt pris, medan "Executive Coaching" är två ord och tveksam.
+
+   Det som skiljer dem är vad som blir KVAR av sidtiteln när katalogtiteln och
+   sajtens standardtext räknats bort. Blir det meningsbärande ord kvar som
+   katalogen inte känner, är sidan troligen en annan eller mer specifik bok -
+   och då läses inget pris. Boken behåller i stället dagens beteende: länk att
+   kolla själv, plus det manuella prisfältet. Ett pris man tror på men som är
+   fel är sämre än ett tomt fält man kan fylla. */
+function sidanAvserSammaBok(sidtitel: string, bookTitle: string): boolean {
+  if (!sidtitel) return false;
+  const rest = normalize(skalaBortStandardtext(sidtitel))
+    .replace(normalize(coreTitle(bookTitle)), " ")
+    .split(" ")
+    .filter((w) => w.length > 2);
+  return rest.length === 0;
+}
+
+type Avlast = { pris: number | null; baraNypris: boolean; skal: string };
+
+/* Läser en boksida och svarar på två frågor: finns ett begagnatpris, och om
+   inte - stod det uttryckligen att bara nytt finns? Skillnaden avgör om
+   boken blir "Kolla själv" eller "Inget begagnat". */
+async function lasBegagnatpris(url: string, site: string, bookTitle: string): Promise<Avlast> {
+  const svar: Avlast = { pris: null, baraNypris: false, skal: "" };
+  try {
+    const r = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+        "Accept-Language": "sv-SE,sv;q=0.9",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(SID_TIMEOUT_MS),
+    });
+    if (!r.ok) { svar.skal = `sidan svarade ${r.status}`; return svar; }
+    const html = await r.text();
+
+    /* Länken kan vara gammal. Har sidan tagits bort och sajten svarar med en
+       sökträfflista i stället, skulle avläsningen annars ge NÅGON ANNAN BOKS
+       pris med full säkerhet. Kontrollen görs mot sidans EGEN titel som den
+       ser ut nu, inte mot Tavilys sparade. */
+    const sidtitel = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "")
+      .replace(/\s+/g, " ").trim();
+    if (!sidanAvserSammaBok(sidtitel, bookTitle)) {
+      svar.skal = "sidtiteln avser inte samma bok: " + sidtitel.slice(0, 80);
+      return svar;
+    }
+
+    /* Allt från "Liknande kurslitteratur"/"Liknande böcker" och ner tillhör
+       ANDRA böcker - 10-15 tal per sida. Klipps bort före avläsningen så en
+       granne aldrig kan bidra med sitt pris. */
+    const helText = htmlTillText(html);
+    const kap = helText.search(/Liknande (kurslitteratur|b[öo]cker)/i);
+    const text = kap > 0 ? helText.slice(0, kap) : helText;
+
+    const tal = (m: RegExpMatchArray | null) => {
+      if (!m) return null;
+      const n = parseInt(m[1].replace(/[\s\u00a0]/g, ""), 10);
+      // Samma rimlighetsgräns som extractPriceFromTitle: ett ISBN, ett
+      // sidantal eller ett årtal följt av "kr" är inget pris.
+      return Number.isFinite(n) && n > 0 && n < 5000 ? n : null;
+    };
+
+    if (site === "studentapan") {
+      svar.pris = tal(text.match(/Begagnad\D{0,25}(\d[\d\s\u00a0]{0,6})\s*kr/i));
+      if (svar.pris == null && /\bNy\D{0,25}\d[\d\s]{0,6}\s*kr/i.test(text)) {
+        svar.baraNypris = true; svar.skal = "bara nypris på sidan";
+      }
+    } else if (site === "campusbokhandeln") {
+      // "Begagnat ... Ej i lager" betyder att talet efter "Helt ny" är ett
+      // NYPRIS. Det var felet som satte tio nypriser som värden.
+      const ejILager = /Begagnat[^|]{0,80}Ej i lager/i.test(text);
+      if (!ejILager) svar.pris = tal(text.match(/Begagnat\D{0,60}(\d[\d\s\u00a0]{0,6})\s*kr/i));
+      if (svar.pris == null && (ejILager || /Helt ny\D{0,25}\d[\d\s]{0,6}\s*kr/i.test(text))) {
+        svar.baraNypris = true; svar.skal = "begagnat ej i lager";
+      }
+    } else {
+      svar.skal = "ingen avläsningsregel för " + site;
+    }
+    if (svar.pris != null) svar.skal = "läst på sidan";
+  } catch (e) {
+    // En timeout eller ett nätfel får ALDRIG fälla boken: utan den här
+    // fångsten hade det yttre try/catch bokat hela boken som fel, och
+    // appen räknar en trasig chunk som 25 misslyckade böcker.
+    svar.skal = "kunde inte läsa sidan: " + String(e).slice(0, 80);
+  }
+  return svar;
+}
+
 type TavilyHit = { title?: string; url?: string; content?: string };
 async function tavilySearch(title: string, author: string | null): Promise<TavilyHit[]> {
   const query = `${title}${author ? ` ${author}` : ""} begagnad bok köp`;
@@ -168,6 +316,13 @@ Deno.serve(async (req) => {
   if (booksErr) return json({ error: "Kunde inte läsa böckerna: " + booksErr.message }, 500);
 
   const resultat: Record<string, unknown>[] = [];
+  /* Samlad tidsbudget. Appen skickar 25 böcker per anrop, och varje bok
+     kostade förut ett nätanrop (Tavily). Med sidavläsning tillkommer upp
+     till två per bok. Går tiden mot slutet slutar funktionen läsa sidor
+     och låter resten av böckerna få dagens beteende - i stället för att
+     dö mitt i, vilket hade fått appen att boka hela chunken som 25 fel
+     (klientens catch gör antal.fel += chunk.length). */
+  const start = Date.now();
 
   for (const book of books ?? []) {
     try {
@@ -196,24 +351,57 @@ Deno.serve(async (req) => {
         .map((h) => ({ ...h, strong: strongTitleMatch(h.title, book.title), plausible: plausibleTitleMatch(h.title, book.title) }));
 
       const starka = kandidater.filter((h) => h.strong);
+
+      /* VÄG 1: priset står i sökträffens titel. Bokbörsen och Tradera är
+         andrahandsmarknader; för Studentapan krävs att texten säger
+         "begagnad", annars kan titelpriset vara ett nypris. Campusbokhandeln
+         är INTE längre med här - dess titelpris visade sig vara nypriset
+         (rättelsen 31/10 högst upp), så den går via sidavläsningen. */
       const meddPris = starka
-        .filter((h) => h.site === "bokborsen" || h.site === "tradera" || h.site === "campusbokhandeln" || studentapanAnvandaSomBegagnat(h.title, h.snippet))
+        .filter((h) => h.site === "bokborsen" || h.site === "tradera" || studentapanAnvandaSomBegagnat(h.title, h.snippet))
         .map((h) => ({ ...h, price: extractPriceFromTitle(h.title) }))
         .filter((h) => h.price !== null) as (typeof starka[number] & { price: number })[];
 
+      /* VÄG 2: läs priset på sidan. Bara för STARKA träffar - felmatchningen
+         som gav ett felaktigt pris i testet 29/10 var en "trolig" match - och
+         bara för de två sajter som har en avläsningsregel. */
+      const lasta: { site: string; url: string; page_title: string; price: number }[] = [];
+      let baraNypris = false, avlastSkal = "";
+      const redanPrissatt = new Set(meddPris.map((h) => h.site));
+      const attLasa = starka
+        .filter((h) => (h.site === "studentapan" || h.site === "campusbokhandeln") && !redanPrissatt.has(h.site))
+        .slice(0, MAX_SIDOR_PER_BOK);
+      for (const h of attLasa) {
+        if (Date.now() - start > SID_BUDGET_MS) { avlastSkal = "tidsbudgeten slut, sidan lästes inte"; break; }
+        const a = await lasBegagnatpris(h.url, h.site, book.title);
+        if (a.pris != null) lasta.push({ site: h.site, url: h.url, page_title: h.title, price: a.pris });
+        else if (a.baraNypris) baraNypris = true;
+        if (a.skal) avlastSkal = a.skal;
+      }
+
       let nyStatus: string;
       let nyLow: number | null = null, nyHigh: number | null = null;
-      const kallRader: { site: string; price: number | null; url: string; page_title: string; status: string }[] = [];
+      const kallRader: { site: string; price: number | null; url: string; page_title: string; status: string; title_match: string }[] = [];
 
-      if (meddPris.length > 0) {
+      if (meddPris.length > 0 || lasta.length > 0) {
         nyStatus = "automatiskt";
-        const priser = meddPris.map((h) => h.price);
+        const priser = [...meddPris.map((h) => h.price), ...lasta.map((h) => h.price)];
         nyLow = Math.min(...priser); nyHigh = Math.max(...priser);
-        for (const h of meddPris) kallRader.push({ site: h.site, price: h.price, url: h.url, page_title: h.title, status: "automatiskt" });
+        for (const h of meddPris) kallRader.push({ site: h.site, price: h.price, url: h.url, page_title: h.title, status: "automatiskt", title_match: "stark" });
+        for (const h of lasta) kallRader.push({ site: h.site, price: h.price, url: h.url, page_title: h.page_title, status: "automatiskt", title_match: "stark" });
+      } else if (baraNypris) {
+        /* Sidan säger uttryckligen att bara nytt finns. Det är INTE samma sak
+           som "väntar på kontroll": att öppna länken ger ingenting. Statusen
+           får bara sättas när ingen sajt gav ett begagnatpris - annars kunde
+           en bok med pris hos en sajt märkas "Inget begagnat" för att en
+           annan saknade exemplar. Villkoret ligger därför efter grenen ovan. */
+        nyStatus = "ingen_begagnad";
+        const trolig = starka[0];
+        if (trolig) kallRader.push({ site: trolig.site, price: null, url: trolig.url, page_title: trolig.title, status: "ingen_begagnad", title_match: "stark" });
       } else if (starka.length > 0 || kandidater.some((h) => h.plausible)) {
         nyStatus = "vantar";
         const trolig = starka[0] || kandidater.find((h) => h.plausible);
-        if (trolig) kallRader.push({ site: trolig.site, price: null, url: trolig.url, page_title: trolig.title, status: "vantar" });
+        if (trolig) kallRader.push({ site: trolig.site, price: null, url: trolig.url, page_title: trolig.title, status: "vantar", title_match: trolig.strong ? "stark" : "svag" });
       } else {
         nyStatus = "ingen_traff";
       }
@@ -248,7 +436,11 @@ Deno.serve(async (req) => {
 
       for (const k of kallRader) {
         await sb.from("sell_price_sources").upsert(
-          { sell_item_id: item.id, site: k.site, price: k.price, url: k.url, page_title: k.page_title, status: k.status },
+          /* title_match har funnits i tabellen sedan bygget men aldrig
+             fyllts. Nu vilar prisavläsningen på skillnaden stark/svag, så
+             fältet säger i efterhand HUR säker matchningen var när priset
+             sparades - första frågan man ställer om ett pris visar sig fel. */
+          { sell_item_id: item.id, site: k.site, price: k.price, url: k.url, page_title: k.page_title, status: k.status, title_match: k.title_match },
           { onConflict: "sell_item_id,site" },
         );
       }
@@ -256,7 +448,7 @@ Deno.serve(async (req) => {
         price_status: nyStatus, price_low: nyLow, price_high: nyHigh, searched_at: new Date().toISOString(),
       }).eq("id", item.id);
 
-      resultat.push({ book_id: book.id, status: nyStatus, low: nyLow, high: nyHigh });
+      resultat.push({ book_id: book.id, status: nyStatus, low: nyLow, high: nyHigh, avlast: avlastSkal || undefined });
     } catch (e) {
       resultat.push({ book_id: book.id, error: String(e) });
     }

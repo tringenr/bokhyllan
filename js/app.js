@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031174105";
+const DV="?v=20261031174550";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2999,7 +2999,7 @@ function renderSell(){
   el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
       <span class="kr">${fmtN(tot.summa)} kr</span>
       <span class="fine">kontrollerat pris på ${fmtN(tot.antal)} av ${fmtN(tot.sokta)} sökta böcker</span>
-      <span class="sell-sum-lankar">${tot.okontrAntal?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','okontr')">+ ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} böcker →</button>`:""}${!aktivtFilter&&tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${!aktivtFilter&&tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>
+      <span class="sell-sum-lankar">${tot.okontrAntal?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','okontr')">+ ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} böcker →</button>`:""}${!aktivtFilter&&tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${!aktivtFilter&&tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} utan pris att hämta →</button>`:""}</span>
       </div>`+
     `<div>`+items.map((it,i)=>{
       /* Flyttad-kort (Thomas 31/10): boken har precis fått ett manuellt
