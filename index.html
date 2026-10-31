@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261031152055">
+<link rel="stylesheet" href="css/style.css?v=20261031162827">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261031152055";
+  var MY="20261031162827";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -326,34 +326,57 @@
        döljas helt. Visas även när bara "Tidigare delningar" öppnats
        trots att inget är aktivt just nu (ingen separat tredje vy). -->
   <div id="delaFulltLage" hidden>
-    <div class="dela-banner"><img src="img/dela-hero.jpg" alt=""><div class="dela-banner-scrim"></div></div>
-    <div class="page-head" style="margin-top:2px"><h1>Delade</h1></div>
-
-    <h2 class="sub-h" id="delaWishH" hidden>Väntar på dig</h2>
-    <div id="delaWishList"></div>
-
-    <h2 class="sub-h" id="delaAcceptH" hidden>Accepterade förfrågningar om lån</h2>
-    <p class="fine" id="delaAcceptSub" hidden>Bocka av när boken är överlämnad - den visas då som utlånad i din egen hylla.</p>
-    <div id="delaAcceptList"></div>
-
-    <h2 class="sub-h">Dina delningar</h2>
-    <div class="pgrid" id="delaPersonkort"></div>
-    <div class="empty" id="delaPersonkortTom" hidden>Du har inte delat något än.</div>
-
-    <h2 class="sub-h" id="delaLankarH" hidden>Skickade länkar</h2>
-    <div id="delaLankarList"></div>
-
-    <div class="band" id="delaMedDigBand" hidden>
-      <h2 class="sub-h">Delas med dig</h2>
-      <div id="delaMedDigList"></div>
+    <!-- Sektionsrytm (designspec 31/10): rubriken "Delade" in i bannern,
+         .sec ersätter sub-h härinne, ingen tom sektion renderas (JS). -->
+    <div class="dela-banner">
+      <img src="img/dela-hero.jpg" alt="">
+      <div class="dela-banner-scrim"></div>
+      <h1 class="dela-banner-h1">Delade</h1>
     </div>
 
-    <div id="delaToastRow"></div>
+    <div class="sec" id="delaAcceptH" hidden><b>Att lämna över</b><span class="n" id="delaAcceptN"></span></div>
+    <div class="card" id="delaAcceptList"></div>
+
+    <div class="sec" id="delaWishH" hidden><b>Väntar på svar</b><span class="n" id="delaWishN"></span></div>
+    <div class="card" id="delaWishList"></div>
+
+    <div class="sec"><b>Dina delningar</b><span class="n" id="delaPersonkortN"></span></div>
+    <div class="pgrid" id="delaPersonkort"></div>
+    <p class="dela-ingen" id="delaPersonkortTom" hidden>Du har inte delat något än.</p>
+    <button class="tk-link" id="delaTkLank" type="button" hidden>
+      <span class="tx"><b>Tidigare kontakter</b><small id="delaTkSub"></small></span>
+      <i data-ic="chevron-right"></i>
+    </button>
+
+    <div class="sec" id="delaLankarH" hidden><b>Skickade länkar</b><span>väntar på att lösas in</span><span class="n" id="delaLankarN"></span></div>
+    <div class="card" id="delaLankarList"></div>
+
+    <div class="band" id="delaMedDigBand" hidden>
+      <div class="sec"><b>Delas med dig</b><span class="n" id="delaMedDigN"></span></div>
+      <div id="delaMedDigList"></div>
+    </div>
 
     <div class="acts">
       <button class="btn btn-primary" id="delaSkapaBtn" type="button">Dela</button>
       <button class="btn-outline" id="delaSlutaBtn" type="button" hidden>Sluta dela</button>
     </div>
+  </div>
+
+  <!-- Tidigare kontakter (skärm 5, designspec 31/10): egen undersida i
+       samma mönster som Värderas start/lista (hidden-växling, inte go()
+       - det här är ingen flik). Nådd från "Dina delningar"-raden ovan.
+       Inga hyllfoton - personen identifierar raden, hyllan är inte delad
+       längre. "Dela igen" återanvänder dpDirectRecipient+delaSkapaOpen,
+       precis som personpanelens "dela utan länk". -->
+  <div id="delaTkLage" hidden>
+    <div class="dela-banner">
+      <img src="img/dela-hero.jpg" alt="">
+      <div class="dela-banner-scrim"></div>
+      <button class="pill-back" id="delaTkTillbaka" type="button">← Delade</button>
+      <h1 class="dela-banner-h1">Tidigare kontakter</h1>
+    </div>
+    <div class="sec"><b>Inget delat just nu</b><span class="n" id="delaTkN"></span></div>
+    <div class="card" id="delaTkList"></div>
   </div>
 </section>
 
@@ -769,6 +792,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261031152055"></script>
+<script src="js/app.js?v=20261031162827"></script>
 </body>
 </html>
