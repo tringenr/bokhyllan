@@ -380,6 +380,12 @@ Deno.serve(async (req) => {
 
       let nyStatus: string;
       let nyLow: number | null = null, nyHigh: number | null = null;
+      /* Bugg 2, samma körning: två starka träffar från SAMMA sajt (två
+         upplagor av boken) gav två kallRader, och upserten mot
+         (sell_item_id, site) lät den andra skriva över den första. Spannet
+         i sell_items blev rätt (95-109 kr) men källraden visade bara 109.
+         Dedupas nedan: en rad per sajt, det LÄGSTA priset - det är vad boken
+         faktiskt går att få tag på för. */
       const kallRader: { site: string; price: number | null; url: string; page_title: string; status: string; title_match: string }[] = [];
 
       if (meddPris.length > 0 || lasta.length > 0) {
@@ -433,7 +439,30 @@ Deno.serve(async (req) => {
         }
       }
 
+      /* BUGG hittad 31/10 i Thomas körning, och den har funnits sedan
+         funktionen byggdes: gamla källrader flyttades till historiken men
+         RADERADES ALDRIG. Gav en ny sökning inget alls (ingen_traff) låg den
+         förra länken kvar, och eftersom appen avgör kategorin på OM DET FINNS
+         EN LÄNK visades boken som "Kolla själv" trots statusen "Inget
+         hittat". Det förklarar också motsägelsen från 29/10: två böcker
+         märkta ingen_traff som ändå hade sparade sidor.
+
+         Städningen sker bara när vi faktiskt gjort en sökning - kastar
+         Tavily ett fel hoppar vi ur långt före den här raden, och en skyddad
+         rad (skippad_skyddad) returnerar ännu tidigare. */
+      const behall = kallRader.map((k) => k.site);
+      const { data: finnsNu } = await sb.from("sell_price_sources").select("site").eq("sell_item_id", item.id);
+      const taBort = (finnsNu || []).map((r: { site: string }) => r.site).filter((site: string) => !behall.includes(site));
+      if (taBort.length) {
+        await sb.from("sell_price_sources").delete().eq("sell_item_id", item.id).in("site", taBort);
+      }
+
+      const envarPerSajt = new Map<string, typeof kallRader[number]>();
       for (const k of kallRader) {
+        const f = envarPerSajt.get(k.site);
+        if (!f || (k.price != null && (f.price == null || k.price < f.price))) envarPerSajt.set(k.site, k);
+      }
+      for (const k of envarPerSajt.values()) {
         await sb.from("sell_price_sources").upsert(
           /* title_match har funnits i tabellen sedan bygget men aldrig
              fyllts. Nu vilar prisavläsningen på skillnaden stark/svag, så
