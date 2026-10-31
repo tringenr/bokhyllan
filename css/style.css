@@ -230,21 +230,41 @@ i[data-ic] svg{width:100%;height:100%}
 /* ---------- Sälj ---------- */
 .sell-sum{display:flex;flex-direction:column;gap:6px;padding:18px;margin-bottom:4px}
 .sell-sum .kr{font:600 32px var(--font-mono);color:var(--pink-600);line-height:1.1}
-.sell-row{border-bottom:1px solid var(--border-subtle)}
-.sell-head{width:100%;border:none;background:none;padding:10px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px;text-align:left}
+/* Kortrader (Design 31/10, krav 4): varje rad är ett eget avgränsat kort -
+   ram, rundade hörn, skugga, marginal mot nästa rad - i stället för text
+   skild bara av en tunn linje (den gamla border-bottom-varianten). Samma
+   princip som .sr i sökvyn, men egna klassnamn eftersom radens inre
+   (sell-head/sell-more/sr-oppna/sell-manual) skiljer sig åt. */
+.sell-row{display:flex;gap:0;margin:0 0 10px;border:1px solid var(--border-default);
+  border-radius:14px;background:var(--surface);overflow:hidden;
+  box-shadow:0 1px 2px rgba(35,26,30,.04)}
+.sell-row .sr-stripe{min-height:0}
+.sr-body{flex:1;min-width:0;padding:11px 14px 12px}
+.sell-head{width:100%;border:none;background:none;padding:0;display:grid;grid-template-columns:1fr auto;gap:4px 12px;text-align:left}
 .sell-head .t{font:600 13px/1.3 var(--font-body)}
 .sell-head .p{font:600 14px var(--font-mono);white-space:nowrap;text-align:right}
 .sell-head .track{height:4px;border-radius:999px;background:var(--surface-2);overflow:hidden;align-self:center}
 .sell-head .track span{display:block;height:100%;background:var(--gradient-heat)}
-.sell-head .h{font-size:11px;font-weight:600;text-align:right}
-.sell-more{display:none;padding:0 0 12px;font-size:12px;color:var(--fg-2);line-height:1.5}
+/* Hetta och statusmärke (u) delar inte längre rad med priset (Design
+   31/10) - egen rad under titeln, alltid synlig, inte bara vid utfällning. */
+.sell-sub{display:flex;align-items:center;gap:8px;margin:4px 0 0}
+.sell-sub .h{font-size:11px;font-weight:600;margin-left:auto}
+.sell-more{display:none;padding:8px 0 2px;font-size:12px;color:var(--fg-2);line-height:1.5}
 .sell-row.open .sell-more{display:block}
 .sell-more p{margin:0 0 6px}
 .sell-more a{font-weight:600}
-.sell-more .u{display:inline-block;padding:1px 8px;border-radius:999px;font:600 11px var(--font-body);margin:0 0 6px}
-.sell-more .u.lag{background:var(--success-50);color:var(--success-500)}
-.sell-more .u.medel{background:var(--surface-2);color:var(--fg-2)}
-.sell-more .u.hog{background:#FDEBEA;color:var(--danger-500)}
+.sell-sub .u{display:inline-block;padding:1px 8px;border-radius:999px;font:600 11px var(--font-body)}
+.sell-sub .u.lag{background:var(--success-50);color:var(--success-500)}
+.sell-sub .u.medel{background:var(--surface-2);color:var(--fg-2)}
+.sell-sub .u.hog{background:#FDEBEA;color:var(--danger-500)}
+/* Manuell prisinmatning (Design 31/10, skärm 3). Diskret streckad knapp
+   i stängt läge; fält + "Klistra in" + "Spara" i öppet läge. */
+.sell-manual{margin:4px 0 2px}
+.sell-manual-open{border:1px dashed var(--border-default);border-radius:9px;
+  padding:5px 10px;font:600 12px var(--font-body);color:var(--text-secondary)}
+.sell-manual-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sell-manual-form input{width:90px;border:1px solid var(--border-default);border-radius:9px;
+  background:var(--surface);color:var(--fg);padding:6px 9px;font:600 13px var(--font-mono)}
 .sell-sources{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:4px}
 .sell-sources li{display:flex;justify-content:space-between;gap:8px}
 .sell-empty-msg{padding:24px 0;text-align:center;color:var(--fg-2);font-size:13px}
@@ -1194,9 +1214,15 @@ body.ps-lock{overflow:hidden}
 .sr-loc .var-link{text-decoration:underline;text-underline-offset:2px}
 .sr .badge{flex:none}
 
-/* Värdera: sökfält, filterknapp och antalsväljare (beslut 29/10).
-   Raderna i listan är oförändrade - det här sitter ovanför dem. */
-.sell-searchrow{margin:4px 0 14px}
+/* Värdera: filterknappen ovanför listan (Design 31/10, krav 1) - bara
+   knappen, sökfält och filtergrupper flyttade till #sellFilterSheet. */
+.sell-filterrow{display:flex;justify-content:flex-end;margin:4px 0 14px}
+.sell-filterrow .bp-filter{margin-bottom:0}
+/* Filterarket (Design 31/10, skärm 2). */
+.sff-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sff-more{background:var(--surface-2);border-radius:14px;padding:4px 14px;margin-top:2px}
+.sff-more summary{font:600 13px var(--font-body);padding:10px 0;cursor:pointer}
+.sff-more .field{margin:2px 0 12px}
 .flt-rubrik{font:600 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;
   color:var(--text-secondary);margin:2px 0 -4px}
 .sell-visar{display:flex;align-items:center;gap:7px;margin:14px 0 10px;
