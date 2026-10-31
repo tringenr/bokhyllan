@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031163153";
+const DV="?v=20261031170852";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2645,7 +2645,7 @@ const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Trad
    - flyttad hit från ibHistorikHtml() 31/10 så att listans summeringskort
    och startsidan kan återanvända samma namn i stället för att hitta på
    sina egna. */
-const STATUS_NAMN={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris",ingen_traff:"Inget hittat"};
+const STATUS_NAMN={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris",ingen_traff:"Inget hittat",ingen_begagnad:"Inget begagnat"};
 /* Namnen för de gamla "Vad du kan göra"-kategorierna (pris/kolla/inget/
    osokt). Gruppen är borta ur filterarket (Design 31/10: slagen ihop med
    Status), men sellKat lever kvar som intern variabel - startsidans rutor
@@ -2720,6 +2720,12 @@ function vardKategori(it){
   if(!it)return "osokt";
   const p=vardPris(it);
   if(p!=null&&p>0)return "pris";
+  /* Sidan är hittad, men det finns inget begagnat exemplar just nu. Att
+     öppna länken ger ingenting, så boken hör inte i "Kolla själv" - den
+     räknas med "Inget hittat" så att startsidans fyra tal fortsätter
+     summera till hela hyllan. Raden säger skillnaden i klartext, och
+     länken ligger kvar i utfällningen: lagret ändras över tid. */
+  if(it.price_status==="ingen_begagnad")return "inget";
   return vardLank(it)?"kolla":"inget";
 }
 function vardStatusSiffror(){
@@ -3022,7 +3028,7 @@ function renderSell(){
       return `<div class="sell-row sr-${kat}" id="sr-${i}">
         <span class="sr-stripe" style="background:${catColor(d?d.cat:"")}"></span>
         <div class="sr-body"><button class="sell-head" onclick="toggleSell(${i})">
-          <span class="t">${esc(it.title)}</span><span class="p"${auto?' style="color:var(--ink-500)"':""}>${kat==="pris"?esc(priceLabel):kat==="kolla"?"<small>inget pris</small>":"<small>inget hittat</small>"}</span>
+          <span class="t">${esc(it.title)}</span><span class="p"${auto?' style="color:var(--ink-500)"':""}>${kat==="pris"?esc(priceLabel):kat==="kolla"?"<small>inget pris</small>":it.price_status==="ingen_begagnad"?"<small>inget begagnat</small>":"<small>inget hittat</small>"}</span>
           ${kat==="pris"&&kalla?`<span class="sr-kalla">${esc(kalla)}</span>`:""}
           <span class="track"><span style="width:${Math.round(Math.max(0,val(it))/maxVal*100)}%"></span></span></button>
         ${u||!manuellt?`<div class="sell-sub">${u}${manuellt?"":`<span class="h" style="color:${h[1]}">${h[0]}</span>`}</div>`:""}
@@ -3037,7 +3043,8 @@ function renderSell(){
         <div class="sell-more">
           ${auto?`<p class="fine">Priset kan höra till en annan upplaga än din. Samma titel kan skilja flera hundra kronor mellan upplagor.</p>`:""}
           ${kat==="kolla"?`<p class="fine">Sidan hittades, men priset gick inte att läsa av automatiskt.</p>`:""}
-          ${kat==="inget"?`<p class="fine">Ingen av sajterna hade en sida för den här boken. Prova att söka om senare — utbudet ändras.</p>`:""}
+          ${kat==="inget"&&it.price_status==="ingen_begagnad"?`<p class="fine">Boken finns på sajten, men inget begagnat exemplar är till salu just nu. Bara nypris fanns, och nypris räknas aldrig som värde här. Lagret ändras — sök om senare.</p>${vardLank(it)?`<p><a href="${esc(vardLank(it).url)}" target="_blank" rel="noopener">Öppna på ${esc(vardLank(it).site)}</a></p>`:""}`:
+            kat==="inget"?`<p class="fine">Ingen av sajterna hade en sida för den här boken. Prova att söka om senare — utbudet ändras.</p>`:""}
           ${it.condition_note?`<p><b>Villkor:</b> ${esc(it.condition_note)}</p>`:""}
           ${!it.estimated_value&&!auto&&!vantar&&!osakert&&shortPrice(it.price)!==it.price?`<p><b>Pris:</b> ${esc(it.price)}</p>`:""}
           ${it.heat_reason?`<p>${esc(it.heat_reason)}</p>`:(it.why?`<p>${esc(it.why)}</p>`:"")}
