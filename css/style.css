@@ -39,6 +39,7 @@
   --line-rest:rgba(255,255,255,.25);--fbtn:rgba(255,255,255,.1);--chip-bd:rgba(255,255,255,.22);--num:#F6B878;--add-fg:#F68FAB;
   --stat-bg:rgba(255,255,255,.06);--stat-bd:rgba(255,255,255,.08);
   --text-secondary:#B3A5A9;--border-subtle:rgba(255,255,255,.08);--border-default:rgba(255,255,255,.22);
+  --ink-300:rgba(255,255,255,.4);
   --bg:#2E2529;--card:#2E2529;--ink:#FFFFFF;--muted:#B3A5A9;--line:rgba(255,255,255,.1);--tag:#382E32;
   --success-50:rgba(47,158,107,.18);--orange-50:rgba(242,148,65,.16);--pink-50:rgba(242,75,120,.16);
   --lent-bg:rgba(242,148,65,.16);--float-bg:rgba(242,75,120,.16);--home-bg:rgba(47,158,107,.18);--accent-soft:rgba(242,75,120,.16);
@@ -1326,9 +1327,71 @@ body.ps-lock{overflow:hidden}
    mindre format i stället för ett nytt foto - samma motiv, bara lägre
    och med en annan beskärning (object-position) så hyllan syns tydligt
    även i de 132px som den här bannern är hög. */
-.dela-banner{position:relative;height:132px;margin:0 -16px 4px;overflow:hidden}
+.dela-banner{position:relative;height:132px;margin:0;overflow:hidden}
 .dela-banner img{width:100%;height:100%;object-fit:cover;object-position:50% 58%;display:block}
-.dela-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.5) 0%,rgba(22,15,9,0) 55%)}
+.dela-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.62) 0%,rgba(22,15,9,.3) 46%,rgba(22,15,9,.58) 100%)}
+/* Sektionsrytm (designspec 31/10, avsnitt 3): rubriken flyttar in i bilden -
+   egen <h1> ovanpå bannern i stället för en separat .page-head under den. */
+.dela-banner-h1{position:absolute;left:20px;bottom:14px;margin:0;font:400 28px var(--font-display);color:#F7EDE2;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+
+/* Sektionsrytm (designspec 31/10, avsnitt 1-2): ersätter sub-h inuti
+   #delaFulltLage/#delaTkLage. 32px ovan etiketten, 10px till innehållet,
+   0px extra mellan sektioner - .sec:s egen padding är hela mellanrummet,
+   så inget element i den ombyggda delen av Delade-sidan får egen
+   margin-top utöver det här. */
+.sec{padding:32px 20px 10px;display:flex;align-items:baseline;gap:8px}
+.sec b{font:700 11px/1 var(--font-body);letter-spacing:.13em;text-transform:uppercase;color:var(--text-secondary)}
+.sec span{font-size:11.5px;color:var(--ink-300);font-weight:500}
+.sec .n{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--ink-300)}
+/* #delaFulltLage/#delaTkLage lämnar .view:s egna 20px-padding (för
+   bannerns skull, som ska gå ända ut i kanten) och tar i stället ut
+   exakt samma 20px själv, lokalt, på varje element - precis de värden
+   designspecen (31/10) ger. Nettot blir samma marginal som resten av
+   appen, bara förklarad explicit i stället för ärvd. */
+#delaFulltLage,#delaTkLage{margin:0 -20px}
+.dela-ingen{margin:0 20px;font-size:13px;color:var(--text-secondary)}
+#delaFulltLage>.card,#delaFulltLage>.pgrid,#delaTkLage>.card{margin-left:20px;margin-right:20px}
+#delaFulltLage>.pgrid{margin-top:0}
+/* Bandet (Delas med dig) är redan en egen -20px-full-bredds-zon (se
+   .band nedan) - dess inre .sec behöver bara 22px top eftersom bandets
+   egen kant redan ger resten av de 32px:en (designspec 31/10, 4.5). */
+#delaFulltLage .band .sec{padding:22px 0 10px}
+#delaFulltLage .band{margin-top:34px}
+#delaFulltLage .acts{margin:34px 20px 34px}
+#delaFulltLage .acts .btn{height:50px;border-radius:8px}
+#delaFulltLage .acts #delaSkapaBtn{flex:1}
+#delaFulltLage .acts #delaSlutaBtn{flex:0 0 auto;padding:0 18px}
+
+/* Generiska sektionsradsprimitiv, delade mellan 4.1/4.2/4.4 i specen. */
+#delaFulltLage .row,#delaTkLage .row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-subtle)}
+#delaFulltLage .row:last-child,#delaTkLage .row:last-child{border-bottom:none}
+#delaFulltLage .row .main,#delaTkLage .row .main{flex:1;min-width:0}
+#delaFulltLage .row .main b,#delaTkLage .row .main b{display:block;font:600 13.5px var(--font-body)}
+#delaFulltLage .row .main small,#delaTkLage .row .main small{display:block;font-size:11.5px;color:var(--text-secondary);margin-top:1px}
+#delaFulltLage .row .main small.namnlos,#delaTkLage .row .main small.namnlos{font-style:italic}
+.row-cta{border:none;background:none;padding:0;font:600 12px var(--font-body);color:var(--pink-500);cursor:pointer;flex:none}
+.row-cta.muted{color:var(--text-secondary)}
+.chk22{width:22px;height:22px;margin:0;border-radius:6px;border:1.6px solid var(--border-subtle);flex:none;appearance:none;-webkit-appearance:none;background:var(--surface);cursor:pointer;position:relative}
+.chk22:checked{background:var(--pink-500);border-color:var(--pink-500)}
+.chk22:checked::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.ava32{width:32px;height:32px;font-size:12px;flex:none}
+.ico-copy{width:34px;height:34px;border-radius:8px;border:1px solid var(--border-subtle);background:transparent;display:flex;align-items:center;justify-content:center;flex:none;color:var(--text-secondary);cursor:pointer}
+.ico-copy svg{width:16px;height:16px}
+
+/* 4.3 Dina delningar: raden som leder till undersidan "Tidigare kontakter". */
+.tk-link{display:flex;align-items:center;gap:10px;width:calc(100% - 40px);margin:10px 20px 0;padding:13px;border:1px solid var(--border-subtle);border-radius:12px;background:none;text-align:left;cursor:pointer}
+.tk-link .tx{flex:1;min-width:0}
+.tk-link b{display:block;font:600 13.5px var(--font-body);color:var(--text-secondary)}
+.tk-link small{display:block;font-size:11.5px;color:var(--text-secondary)}
+.tk-link svg{width:16px;height:16px;color:var(--ink-300);flex:none}
+
+/* 5. Tidigare kontakter-sidan: avatarraden utan hyllfoto, bara person +
+   datum + "Dela igen". */
+#delaTkLage .row .avatar{width:36px;height:36px;font-size:13px;flex:none}
+/* Namnlös tidigare kontakt (designspec 31/10, avsnitt 5): grå avatar med
+   "?", inte appens vanliga magenta-initialer. */
+#delaTkLage .row .avatar.noname{background-color:var(--ink-100)!important;color:var(--text-secondary)}
+:root[data-theme="dark"] #delaTkLage .row .avatar.noname{background-color:rgba(255,255,255,.12)!important}
 
 /* Samma bannermönster på Värdera-listan (Thomas 31/10) - samma foto som
    startsidans fullskärmsintro (img/vardera-intro.jpg), samma beskärning
@@ -1339,10 +1402,10 @@ body.ps-lock{overflow:hidden}
 .vard-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.5) 0%,rgba(22,15,9,0) 55%)}
 
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
-.pc{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:none;padding:0;display:block;width:100%;aspect-ratio:1/1;text-align:left;cursor:pointer}
+.pc{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:none;padding:0;display:block;width:100%;height:138px;text-align:left;cursor:pointer}
 .pc .ryggar{position:absolute;inset:0;background:var(--surface-2) center/cover no-repeat}
-.pc .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(22,15,9,.72) 0%,rgba(22,15,9,.08) 46%,transparent 68%)}
-.pc .ctr{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.42);color:#fff;font:600 10.5px var(--font-mono);padding:3px 7px;border-radius:999px}
+.pc .scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.05) 34%,rgba(22,15,9,.78) 76%,rgba(22,15,9,.95) 100%)}
+.pc .ctr{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.42);color:#fff;font:600 10.5px var(--font-body);padding:3px 7px;border-radius:999px}
 .pc .cnt{position:absolute;left:10px;right:10px;bottom:9px;display:flex;align-items:center;gap:8px;color:#fff}
 .pc .cnt .avatar{width:30px;height:30px;font-size:12px;flex:none;border:1.5px solid rgba(255,255,255,.65)}
 .pc .cnt .nm{font:700 13.5px var(--font-body);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.5)}
@@ -1357,7 +1420,7 @@ body.ps-lock{overflow:hidden}
 .lrow .main b{display:block;font-size:13.5px}
 .lrow .main small{color:var(--fg-2);font-size:11.5px}
 
-.band{margin:18px -16px 0;padding:14px 16px 18px;background:var(--surface-2)}
+.band{margin:18px 0 0;padding:14px 20px 18px;background:var(--surface-2)}
 .band .sub-h{margin-top:0}
 .srow{display:flex;align-items:center;gap:11px;width:100%;border:none;background:none;padding:9px 0;text-align:left;cursor:default}
 .srow .thumb{width:52px;height:52px;border-radius:9px;flex:none;background:var(--surface) center/cover no-repeat;position:relative}
