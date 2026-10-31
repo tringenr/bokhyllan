@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031145437";
+const DV="?v=20261031151718";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1446,33 +1446,84 @@ document.getElementById("delaWSubmit")&&(document.getElementById("delaWSubmit").
 /* ---------- Delade (ägarens vy): Lånönskningar, Mina delningar,
    Delat med dig. Bara den minimala vyn skissen visar - inte de två
    fulla sidorna (medveten, godkänd avvikelse i v1). ---------- */
+/* Lånönskningar: tre lägen (väntar/accepterad/nekad) låg tidigare blandade
+   i en enda lista utan rubrik - en accepterad förfrågan syntes bara som
+   " · accepterad" på samma rad som väntande, utan förklaring (Thomas
+   31/10). Delas nu upp: väntande under "Väntar på dig" (oförändrat
+   Acceptera/Neka), accepterade i en egen sektion (renderDelaAccepted,
+   nedan) med bock för överlämning. Nekade visas inte alls längre -
+   färdigbehandlade utan något mer att göra, samma princip som att en
+   återkallad delning inte får en egen rad kvar här. */
+async function delaBokEvents(){
+  const libId=await myLibraryId();if(!libId)return[];
+  const {data:rows,error}=await sb.from("book_events")
+    .select("id,book_id,actor_id,response,created_at,manual_books(title,author,library_id)")
+    .eq("event_type","onskar_lana").order("created_at",{ascending:false});
+  if(error){console.warn("dela: book_events",error);return[]}
+  return (rows||[]).filter(r=>r.manual_books&&r.manual_books.library_id===libId);
+}
+async function delaActorNamn(r){
+  try{const {data:e}=await sb.rpc("book_event_actor_email",{p_book_id:r.book_id,p_actor_id:r.actor_id});return e||""}
+  catch(e){return ""}
+}
 async function renderDelaWishList(){
   const el=document.getElementById("delaWishList");if(!el)return false;
-  const libId=await myLibraryId();if(!libId)return false;
-  const {data:rows,error}=await sb.from("book_events")
-    .select("id,book_id,actor_id,response,created_at,manual_books(title,library_id)")
-    .eq("event_type","onskar_lana").order("created_at",{ascending:false});
-  if(error){console.warn("dela: book_events",error);return false}
-  const mine=(rows||[]).filter(r=>r.manual_books&&r.manual_books.library_id===libId);
-  if(!mine.length){el.innerHTML='<div class="empty">Inga lånönskningar än.</div>';return false}
-  const withMail=await Promise.all(mine.map(async r=>{
-    let mail="";
-    try{const {data:e}=await sb.rpc("book_event_actor_email",{p_book_id:r.book_id,p_actor_id:r.actor_id});mail=e||""}catch(e){}
-    return {...r,mail};
-  }));
+  const alla=await delaBokEvents();
+  const pending=alla.filter(r=>!r.response);
+  delaBokEventsCache=alla;
+  if(!pending.length){el.innerHTML="";return false}
+  const withMail=await Promise.all(pending.map(async r=>({...r,mail:await delaActorNamn(r)})));
   el.innerHTML=withMail.map(r=>`<div class="dela-row">
-    <div class="dela-row-main"><b>${esc(r.manual_books.title)}</b><small>${esc(r.mail||"Okänd låntagare")}${r.response?" · "+esc(r.response):""}</small></div>
-    ${!r.response?`<button class="btn btn-outline btn-sm" onclick="delaWishRespond('${r.id}','accepterad')">Acceptera</button>
-     <button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','nekad')">Neka</button>`:""}
+    <div class="dela-row-main"><b>${esc(r.manual_books.title)}</b><small>${esc(r.mail||"Okänd låntagare")}</small></div>
+    <button class="btn btn-outline btn-sm" onclick="delaWishRespond('${r.id}','accepterad')">Acceptera</button>
+    <button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','nekad')">Neka</button>
   </div>`).join("");
   return true;
 }
 async function delaWishRespond(eventId,resp){
   const {error}=await sb.from("book_events").update({response:resp}).eq("id",eventId);
   if(error){console.warn("dela: svara lånönskan",error);toast("Kunde inte spara svaret.");return}
-  await renderDelaWishList();
+  await renderDelade();
 }
 window.delaWishRespond=delaWishRespond;
+
+/* Accepterade förfrågningar som väntar på att boken faktiskt byter
+   hand (Thomas 31/10, egen sektion). En rad räknas som klar - och
+   försvinner ur listan - så fort BÅDE statusen är "utlanad" OCH
+   lent_to matchar just den här personen, inte bara att boken råkar
+   vara utlånad till någon annan sedan tidigare. */
+let delaBokEventsCache=[];
+async function renderDelaAccepted(){
+  const h=document.getElementById("delaAcceptH"),sub=document.getElementById("delaAcceptSub"),el=document.getElementById("delaAcceptList");
+  if(!el)return;
+  const accepterade=(delaBokEventsCache.length?delaBokEventsCache:await delaBokEvents()).filter(r=>r.response==="accepterad");
+  if(!accepterade.length){h.hidden=sub.hidden=true;el.innerHTML="";return}
+  const rows=await Promise.all(accepterade.map(async r=>{
+    const namn=await delaActorNamn(r);
+    const bok=data.find(x=>x.id===r.book_id);
+    const klar=!!(bok&&bok.status==="utlanad"&&bok.lentTo&&namn&&bok.lentTo===namn);
+    return {...r,namn,klar};
+  }));
+  const kvar=rows.filter(r=>!r.klar);
+  h.hidden=sub.hidden=!kvar.length;
+  if(!kvar.length){el.innerHTML="";return}
+  el.innerHTML=kvar.map(r=>`<label class="pm-check">
+    <input type="checkbox" data-acc-book="${r.book_id}" data-acc-namn="${esc(r.namn||"")}">
+    <span><b style="display:block">${esc(r.manual_books.title)}</b><small>${esc(r.namn||"Okänd låntagare")}</small></span>
+  </label>`).join("");
+}
+document.getElementById("delaAcceptList")&&document.getElementById("delaAcceptList").addEventListener("change",async e=>{
+  const inp=e.target.closest("[data-acc-book]");if(!inp||!inp.checked)return;
+  const id=+inp.dataset.accBook,namn=inp.dataset.accNamn;
+  const d=data.find(x=>x.id===id);
+  if(!d){toast("Hittar inte boken.");inp.checked=false;return}
+  const prev={status:d.status,lentTo:d.lentTo,ts:d.ts};
+  d.status="utlanad";d.lentTo=namn||"";d.ts=new Date().toISOString().slice(0,10);
+  await saveBook(d,prev);
+  render();
+  await renderDelaAccepted();
+  toast(namn?`Utlånad till ${namn}.`:"Markerad som utlånad.");
+});
 
 /* Ett hyllplan har ingen egen rad i bc_names - bara delen efter ":" i en
    boks eget shelf-fält (t.ex. "6:S1"). Samma namnmönster som locLabel
@@ -1632,14 +1683,19 @@ async function renderDelaMedDigBand(){
    något delat med dig, är lika mycket ett skäl att se fullt läge som en
    egen aktiv delning. */
 async function renderDelade(){
+  /* renderDelaAccepted läser delaBokEventsCache, satt av renderDelaWishList
+     - körs därför EFTER den, inte parallellt, annars hinner den läsa
+     gårdagens (tomma) cache. */
   const [hasWish,grp,hasMedDig]=await Promise.all([renderDelaWishList(),delaGrupper(),renderDelaMedDigBand()]);
+  await renderDelaAccepted();
   document.getElementById("delaWishH").hidden=!hasWish;
   renderPersonkort(grp.people);
   renderLankar(grp.links);
   const tomt=document.getElementById("delaTomtLage"),fullt=document.getElementById("delaFulltLage");
   if(!tomt||!fullt)return;
+  const hasAccepted=!document.getElementById("delaAcceptH").hidden;
   const hasAnyShare=grp.people.some(p=>!p.fullyRevoked)||grp.links.some(l=>!l.revoked_at);
-  const visaTomt=!hasWish&&!hasAnyShare&&!hasMedDig;
+  const visaTomt=!hasWish&&!hasAccepted&&!hasAnyShare&&!hasMedDig;
   tomt.hidden=!visaTomt;fullt.hidden=visaTomt;
   const slutaBtn=document.getElementById("delaSlutaBtn");
   if(slutaBtn)slutaBtn.hidden=!grp.people.some(p=>!p.fullyRevoked);
