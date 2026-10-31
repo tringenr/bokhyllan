@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031141918";
+const DV="?v=20261031145437";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -1495,63 +1495,356 @@ function delaScopeLabel(r){
   }
   return "En bok";
 }
-/* Returnerar {active,revoked} - tomt läge (Design 30/10) avgörs av om
-   NÅGON av de tre listorna har innehåll, inte bara den här, men
-   "Tidigare delningar (N)"-länken i tomma läget räknar bara återkallade
-   länkar här, så antalet behöver räknas upp ändå. */
-async function renderDelaMinaList(){
-  const el=document.getElementById("delaMinaList");if(!el)return{active:false,revoked:0};
-  const libId=await myLibraryId();if(!libId)return{active:false,revoked:0};
-  const [{data:links,error:e1},{data:grants,error:e2}]=await Promise.all([
-    sb.from("share_links").select("id,scope,bc,book_id,token,revoked_at,created_at").eq("library_id",libId).order("created_at",{ascending:false}),
-    sb.from("shelf_shares").select("id,scope,bc,book_id,level,revoked_at,redeemed_from").eq("library_id",libId)
-  ]);
-  if(e1||e2){console.warn("dela: mina delningar",e1||e2);return{active:false,revoked:0}}
-  const redeemedFrom=new Set((grants||[]).filter(g=>!g.revoked_at).map(g=>g.redeemed_from));
-  const rows=(links||[]);
-  if(!rows.length){el.innerHTML='<div class="empty">Du har inte delat något än.</div>';return{active:false,revoked:0}}
-  el.innerHTML=rows.map(r=>{
-    const status=r.revoked_at?"Återkallad":redeemedFrom.has(r.id)?"Inlöst":"Väntar på att lösas in";
-    return `<div class="dela-row">
-      <div class="dela-row-main"><b>${esc(delaScopeLabel(r))}</b><small>${esc(status)}</small></div>
-      ${!r.revoked_at?`<button class="btn-outline btn-sm" onclick="delaRevoke('${r.id}')">Återkalla</button>`:""}
-    </div>`;
-  }).join("");
-  return {active:rows.some(r=>!r.revoked_at),revoked:rows.filter(r=>r.revoked_at).length};
+function delaFmtDatum(iso){
+  try{return new Date(iso).toLocaleDateString("sv-SE",{day:"numeric",month:"long"})}catch(e){return ""}
 }
-async function delaRevoke(linkId){
-  if(!await ask({title:"Återkalla delningen?",text:"Mottagaren förlorar tillgången direkt.",buttons:[{label:"Avbryt",value:false},{label:"Återkalla",value:true,kind:"danger"}]}))return;
-  const {error}=await sb.rpc("revoke_share_link",{p_link_id:linkId});
-  if(error){console.warn("dela: revoke_share_link",error);toast("Kunde inte återkalla länken.");return}
-  await renderDelaMinaList();
-}
-window.delaRevoke=delaRevoke;
 
-async function renderDelaMedDigList(){
-  const el=document.getElementById("delaMedDigList");if(!el)return false;
+/* "Nytt"-markering på "Delas med dig" (Design 31/10, punkt 5): ingen
+   notisinfrastruktur byggs i den här omgången - en tidsstämpel i
+   localStorage räcker för att markera rader som tillkommit sedan
+   förra besöket. Uppdateras bara när #view-delade faktiskt öppnas (inte
+   vid varje render), annars hinner markeringen aldrig synas. */
+const DELA_SETT_KEY="minbokhylla-dela-sett";
+function delaSettVid(){try{return localStorage.getItem(DELA_SETT_KEY)||""}catch(e){return ""}}
+function delaMarkeraSett(){try{localStorage.setItem(DELA_SETT_KEY,new Date().toISOString())}catch(e){}}
+
+/* Gemensam grupperingsfunktion (plan 31/10, steg 2): hämtar ALLA
+   shelf_shares-rader för biblioteket - INTE bara de aktiva, annars
+   försvinner en person vars delningar alla är återkallade, och
+   "inget delat"-kortet med henne - och grupperar per mottagare. Namn:
+   e-post när mottagaren har ett konto (shelf_share_recipient_email),
+   annars det manuella share_contact_labels-namnet, annars null (visas
+   som "Lägg till namn" i UI-lagret, inte här). */
+let delaGruppData=null;
+async function delaGrupper(){
   const libId=await myLibraryId();
-  const {data:rows,error}=await sb.from("shelf_shares").select("id,scope,bc,book_id,library_id,revoked_at").eq("recipient_id",sbUser?sbUser.id:"").is("revoked_at",null);
+  if(!libId)return{people:[],links:[]};
+  const [{data:shares,error:e1},{data:links,error:e2}]=await Promise.all([
+    sb.from("shelf_shares").select("id,scope,bc,book_id,level,revoked_at,created_at,recipient_id").eq("library_id",libId).order("created_at",{ascending:false}),
+    sb.from("share_links").select("id,scope,bc,book_id,token,revoked_at,created_at").eq("library_id",libId).order("created_at",{ascending:false})
+  ]);
+  if(e1||e2){console.warn("dela: grupper",e1||e2);return{people:[],links:[]}}
+  const byRecip=new Map();
+  (shares||[]).forEach(s=>{
+    if(!byRecip.has(s.recipient_id))byRecip.set(s.recipient_id,[]);
+    byRecip.get(s.recipient_id).push(s);
+  });
+  const recipIds=[...byRecip.keys()];
+  const [{data:labelRows,error:e3},emailPairs]=await Promise.all([
+    sb.from("share_contact_labels").select("recipient_id,label").eq("library_id",libId),
+    Promise.all(recipIds.map(id=>sb.rpc("shelf_share_recipient_email",{p_recipient_id:id}).then(r=>[id,r.data||null]).catch(()=>[id,null])))
+  ]);
+  if(e3)console.warn("dela: share_contact_labels",e3);
+  const labelMap=new Map((labelRows||[]).map(l=>[l.recipient_id,l.label]));
+  const emailMap=new Map(emailPairs);
+  const people=recipIds.map(id=>{
+    const rows=byRecip.get(id).slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const active=rows.filter(r=>!r.revoked_at);
+    const email=emailMap.get(id)||null,label=labelMap.get(id)||null;
+    const withBc=active.find(r=>r.bc)||rows.find(r=>r.bc);
+    let thumb=null;
+    if(withBc&&withBc.bc){const topbc=topBc(String(withBc.bc).split(":")[0]);const p=PH.find(p=>p.bc===topbc);thumb=p?p.thumb:null}
+    const shelfN=new Set(active.filter(r=>r.scope==="shelf").map(r=>r.bc)).size+active.filter(r=>r.scope==="library").length;
+    const bookN=active.filter(r=>r.scope==="book").length;
+    return {recipient_id:id,rows,active,lastDate:rows[0].created_at,email,label,
+      name:email||label||null,thumb,shelfN,bookN,fullyRevoked:active.length===0,
+      revokedDate:active.length===0?rows[0].created_at:null};
+  }).sort((a,b)=>new Date(b.lastDate)-new Date(a.lastDate));
+  delaGruppData={people,links:links||[]};
+  return delaGruppData;
+}
+window.delaMottagarNamn=id=>{
+  const p=delaGruppData&&delaGruppData.people.find(p=>p.recipient_id===id);
+  return p?p.name:null;
+};
+
+function pcCounterText(p){
+  if(p.fullyRevoked)return "inget delat";
+  const parts=[];
+  if(p.shelfN)parts.push(p.shelfN+(p.shelfN===1?" hylla":" hyllor"));
+  if(p.bookN)parts.push(p.bookN+(p.bookN===1?" bok":" böcker"));
+  return parts.join(" · ")||"inget delat";
+}
+function renderPersonkort(people){
+  const grid=document.getElementById("delaPersonkort"),tom=document.getElementById("delaPersonkortTom");
+  if(!grid)return;
+  tom.hidden=!!people.length;
+  grid.innerHTML=people.map(p=>{
+    const bg=p.thumb?` style="background-image:url('${p.thumb}')"`:"";
+    const inner=p.fullyRevoked
+      ? `<div class="revoked-tx">inget delat<br>delade t.o.m. ${esc(delaFmtDatum(p.revokedDate))}</div>`
+      : `<div class="ctr">${esc(pcCounterText(p))}</div>
+         <div class="cnt"><div class="avatar" data-ava></div><b class="nm">${p.name?esc(p.name):"<i>Lägg till namn</i>"}</b></div>`;
+    return `<button class="pc${!p.name?" namnlos":""}${p.fullyRevoked?" revoked":""}" data-rid="${esc(p.recipient_id)}" type="button">
+      <div class="ryggar"${bg}></div><div class="scrim"></div>${inner}
+    </button>`;
+  }).join("");
+  grid.querySelectorAll(".pc .avatar[data-ava]").forEach(av=>{
+    const rid=av.closest(".pc").dataset.rid,p=people.find(x=>x.recipient_id===rid);
+    paintAvatar(av,null,p&&p.name?p.name:"?");
+  });
+}
+function renderLankar(links){
+  const h=document.getElementById("delaLankarH"),el=document.getElementById("delaLankarList");
+  if(!el)return;
+  const unredeemed=(links||[]).filter(r=>!r.revoked_at);
+  h.hidden=el.hidden=!unredeemed.length;
+  if(!unredeemed.length)return;
+  el.innerHTML=unredeemed.map(r=>`<div class="lrow">
+    <div class="main"><b>${esc(delaScopeLabel(r))}</b><small>Väntar på att lösas in</small></div>
+    <button class="btn-outline btn-sm" data-kopiera="${esc(r.token)}" type="button">Kopiera</button>
+  </div>`).join("");
+  el.querySelectorAll("[data-kopiera]").forEach(b=>b.onclick=()=>{
+    const url=location.origin+location.pathname+"?dela="+b.dataset.kopiera;
+    (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+      .then(()=>toast("Länken är kopierad"),()=>prompt("Kopiera länken:",url));
+  });
+}
+async function renderDelaMedDigBand(){
+  const band=document.getElementById("delaMedDigBand"),el=document.getElementById("delaMedDigList");
+  if(!el)return false;
+  const libId=await myLibraryId();
+  const {data:rows,error}=await sb.from("shelf_shares").select("id,scope,bc,book_id,library_id,revoked_at,created_at").eq("recipient_id",sbUser?sbUser.id:"").is("revoked_at",null);
   if(error){console.warn("dela: delat med dig",error);return false}
   const other=(rows||[]).filter(r=>r.library_id!==libId);
-  if(!other.length){el.innerHTML='<div class="empty">Ingen har delat ett bibliotek med dig än.</div>';return false}
-  el.innerHTML=other.map(r=>`<div class="dela-row"><div class="dela-row-main"><b>${esc(delaScopeLabel(r))}</b></div></div>`).join("");
+  band.hidden=!other.length;
+  if(!other.length)return false;
+  const sett=delaSettVid();
+  // Ägarens namn (åt andra hållet) - det finns ingen färdig RPC för "ägaren
+  // till det här biblioteket", så vi nöjer oss med hyllans/bibliotekets
+  // egen etikett tills en sådan finns. Se backloggen.
+  el.innerHTML=other.map(r=>{
+    const topbc=r.bc?topBc(String(r.bc).split(":")[0]):null;
+    const photo=topbc?PH.find(p=>p.bc===topbc):null;
+    const bg=photo?` style="background-image:url('${photo.thumb}')"`:"";
+    const isNy=r.created_at>sett;
+    return `<div class="srow">
+      <div class="thumb"${bg}>${photo?"":`<div class="noimg">${dpSpineBars(r.bc||r.library_id)}</div>`}</div>
+      <div class="main"><b>${esc(delaScopeLabel(r))}</b><small>Delat med dig</small></div>
+      ${isNy?'<span class="ny"></span>':""}
+    </div>`;
+  }).join("");
   return true;
 }
 
 /* Tomt läge (Design 30/10, punkt 1): visas bara om INGEN av de tre
    listorna har något innehåll alls - en lånönskan att svara på, eller
    något delat med dig, är lika mycket ett skäl att se fullt läge som en
-   egen aktiv delning. "Tidigare delningar (N)" räknar bara återkallade
-   länkar i Mina delningar (de andra två har ingen "återkallad"-status). */
+   egen aktiv delning. */
 async function renderDelade(){
-  const [hasWish,mina,hasMedDig]=await Promise.all([renderDelaWishList(),renderDelaMinaList(),renderDelaMedDigList()]);
+  const [hasWish,grp,hasMedDig]=await Promise.all([renderDelaWishList(),delaGrupper(),renderDelaMedDigBand()]);
+  document.getElementById("delaWishH").hidden=!hasWish;
+  renderPersonkort(grp.people);
+  renderLankar(grp.links);
   const tomt=document.getElementById("delaTomtLage"),fullt=document.getElementById("delaFulltLage");
   if(!tomt||!fullt)return;
-  const visaTomt=!hasWish&&!mina.active&&!hasMedDig;
+  const hasAnyShare=grp.people.some(p=>!p.fullyRevoked)||grp.links.some(l=>!l.revoked_at);
+  const visaTomt=!hasWish&&!hasAnyShare&&!hasMedDig;
   tomt.hidden=!visaTomt;fullt.hidden=visaTomt;
+  const slutaBtn=document.getElementById("delaSlutaBtn");
+  if(slutaBtn)slutaBtn.hidden=!grp.people.some(p=>!p.fullyRevoked);
   const tb=document.getElementById("delaTidigareBtn");
-  if(tb){tb.hidden=!mina.revoked;document.getElementById("delaTidigareN").textContent=mina.revoked}
+  if(tb){const revokedN=grp.people.filter(p=>p.fullyRevoked).length+grp.links.filter(l=>l.revoked_at).length;
+    tb.hidden=!revokedN;document.getElementById("delaTidigareN").textContent=revokedN}
+  if(!visaTomt)delaMarkeraSett();
 }
+
+/* Personpanelen (skärm 2, Design 31/10). */
+let delaPpRid=null;
+function delaPpOpen(rid){
+  const p=delaGruppData&&delaGruppData.people.find(x=>x.recipient_id===rid);
+  if(!p)return;
+  delaPpRid=rid;
+  paintAvatar(document.getElementById("delaPpAvatar"),null,p.name||"?");
+  document.getElementById("delaPpNamn").textContent=p.name||"Namnlös kontakt";
+  const sedan=delaFmtDatum(p.rows[p.rows.length-1].created_at);
+  document.getElementById("delaPpSub").textContent=`Kontakt sedan ${sedan}`;
+  const addWrap=document.getElementById("delaPpAddnameWrap");
+  addWrap.hidden=!!p.name;
+  if(!p.name)document.getElementById("delaPpAddnameInput").value="";
+  const duDelar=document.getElementById("delaPpDuDelar");
+  duDelar.innerHTML=p.active.map(r=>{
+    const topbc=r.bc?topBc(String(r.bc).split(":")[0]):null;
+    const photo=topbc?PH.find(ph=>ph.bc===topbc):null;
+    const bg=photo?` style="background-image:url('${photo.thumb}')"`:"";
+    return `<div class="pp-item">
+      <div class="thumb"${bg}></div>
+      <div class="main"><b>${esc(delaScopeLabel(r))}</b><small>Delat ${esc(delaFmtDatum(r.created_at))}</small></div>
+      <button class="link-btn danger" data-stop="${esc(r.id)}" type="button">Sluta dela</button>
+    </div>`;
+  }).join("")||'<div class="empty">Inget delat just nu.</div>';
+  duDelar.querySelectorAll("[data-stop]").forEach(b=>b.onclick=()=>delaPpStoppaEn(b.dataset.stop));
+  renderDelaPpOnskar(rid);
+  document.getElementById("delaPpScrim").classList.add("open");
+  document.getElementById("delaPpSheet").classList.add("open");
+}
+function delaPpClose(){
+  document.getElementById("delaPpScrim").classList.remove("open");
+  document.getElementById("delaPpSheet").classList.remove("open");
+  delaPpRid=null;
+}
+async function renderDelaPpOnskar(rid){
+  const wrap=document.getElementById("delaPpOnskarWrap"),el=document.getElementById("delaPpOnskar");
+  const libId=await myLibraryId();if(!libId){wrap.hidden=true;return}
+  const {data:rows,error}=await sb.from("book_events")
+    .select("id,book_id,actor_id,response,created_at,manual_books(title,author,library_id)")
+    .eq("event_type","onskar_lana").eq("actor_id",rid).order("created_at",{ascending:false});
+  if(error){console.warn("dela: önskar låna",error);wrap.hidden=true;return}
+  const mine=(rows||[]).filter(r=>r.manual_books&&r.manual_books.library_id===libId);
+  wrap.hidden=!mine.length;
+  if(!mine.length)return;
+  el.innerHTML=mine.map(r=>`<div class="pp-wrow">
+    <div class="main"><b>${esc(r.manual_books.title)}</b><small>${esc(r.manual_books.author||"")} · ${esc(delaFmtDatum(r.created_at))}${r.response?" · "+esc(r.response):""}</small></div>
+    ${!r.response?`<button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','accepterad')">Acceptera</button>
+     <button class="btn-outline btn-sm" onclick="delaWishRespond('${r.id}','nekad')">Neka</button>`:""}
+  </div>`).join("");
+}
+async function delaPpStoppaEn(shareId){
+  if(!await ask({title:"Sluta dela det här?",text:"Hon förlorar tillgången direkt. Hon står kvar som kontakt.",buttons:[{label:"Avbryt",value:false},{label:"Sluta dela",value:true,kind:"danger"}]}))return;
+  const {error}=await sb.rpc("revoke_shelf_share",{p_share_id:shareId});
+  if(error){console.warn("dela: revoke_shelf_share",error);toast("Kunde inte sluta dela.");return}
+  await renderDelade();
+  if(delaPpRid)delaPpOpen(delaPpRid);
+  toast("Sluta dela.");
+}
+document.getElementById("delaPpScrim")&&document.getElementById("delaPpScrim").addEventListener("click",delaPpClose);
+document.getElementById("delaPpAddnameSpara")&&(document.getElementById("delaPpAddnameSpara").onclick=async()=>{
+  const v=(document.getElementById("delaPpAddnameInput").value||"").trim();
+  if(!v||!delaPpRid)return;
+  const libId=await myLibraryId();if(!libId)return;
+  const {error}=await sb.from("share_contact_labels").upsert({library_id:libId,recipient_id:delaPpRid,label:v,updated_at:new Date().toISOString()});
+  if(error){console.warn("dela: share_contact_labels",error);toast("Kunde inte spara namnet.");return}
+  await renderDelade();
+  delaPpOpen(delaPpRid);
+});
+document.getElementById("delaPpStoppaAllt")&&(document.getElementById("delaPpStoppaAllt").onclick=async()=>{
+  if(!delaPpRid)return;
+  const p=delaGruppData.people.find(x=>x.recipient_id===delaPpRid);
+  if(!p)return;
+  const namn=p.name||"den här kontakten";
+  if(!await ask({title:`Sluta dela allt med ${namn}?`,text:`${namn} förlorar tillgången till allt du delat direkt. Hon står kvar som kontakt - du kan dela igen utan ny länk.`,buttons:[{label:"Avbryt",value:false},{label:"Sluta dela allt",value:true,kind:"danger"}]}))return;
+  for(const r of p.active){
+    const {error}=await sb.rpc("revoke_shelf_share",{p_share_id:r.id});
+    if(error)console.warn("dela: revoke_shelf_share (allt)",error);
+  }
+  delaPpClose();
+  await renderDelade();
+  toast(`Slutade dela med ${namn}.`);
+});
+document.getElementById("delaPpDelaMer")&&(document.getElementById("delaPpDelaMer").onclick=()=>{
+  if(!delaPpRid)return;
+  const rid=delaPpRid;
+  delaPpClose();
+  dpDirectRecipient=rid;
+  delaSkapaOpen();
+});
+
+/* "Dela" - vem först (skärm 3, Fråga B). Samma lista återanvänds av
+   åtgärdsradens "Sluta dela" när fler än en person har aktiva delningar
+   (delaVemSluta=true) - klick går då till delaSdOpen i stället för
+   urvalsarket. */
+let delaVemSluta=false;
+function delaVemOpen(){
+  const people=(delaGruppData&&delaGruppData.people||[]).filter(p=>delaVemSluta?!p.fullyRevoked:true);
+  document.getElementById("delaVemTitel").textContent=delaVemSluta?"Sluta dela med vem?":"Dela med vem?";
+  document.getElementById("delaVemSub").hidden=!!delaVemSluta;
+  document.getElementById("delaVemNy").hidden=!!delaVemSluta;
+  document.getElementById("delaVemList").innerHTML=people.map(p=>`<button class="dv-item" data-rid="${esc(p.recipient_id)}" type="button">
+    <div class="main"><b>${p.name?esc(p.name):"<i>Namnlös kontakt</i>"}</b><small>${p.shelfN} ${p.shelfN===1?"hylla":"hyllor"} delade</small></div>
+    <i data-ic="chevron-right"></i>
+  </button>`).join("")||'<div class="empty">Inga kontakter än.</div>';
+  fillIcons(document.getElementById("delaVemList"));
+  document.querySelectorAll("#delaVemList [data-rid]").forEach(b=>b.onclick=()=>{
+    const rid=b.dataset.rid,sluta=delaVemSluta;
+    delaVemClose();
+    if(sluta)delaSdOpen(rid);
+    else{dpDirectRecipient=rid;delaSkapaOpen()}
+  });
+  document.getElementById("delaVemScrim").classList.add("open");
+  document.getElementById("delaVemSheet").classList.add("open");
+}
+function delaVemClose(){
+  document.getElementById("delaVemScrim").classList.remove("open");
+  document.getElementById("delaVemSheet").classList.remove("open");
+  delaVemSluta=false;
+}
+document.getElementById("delaVemScrim")&&document.getElementById("delaVemScrim").addEventListener("click",delaVemClose);
+document.getElementById("delaVemNy")&&(document.getElementById("delaVemNy").onclick=()=>{
+  dpDirectRecipient=null;
+  delaVemClose();
+  delaSkapaOpen();
+});
+
+/* "Sluta dela" (skärm 4): tre nivåer i ett val. Startas antingen från
+   åtgärdsraden (ingen förvald person) eller - vanligare - från
+   personpanelens "Sluta dela allt" (redan hanterat ovan, utan det här
+   arket). Åtgärdsradens knapp låter dig välja VILKEN person, därefter
+   samma tre nivåer för just henne. */
+let delaSdRid=null,delaSdLevel="allt",delaSdParts=new Set();
+function delaSdOpen(rid){
+  const p=delaGruppData.people.find(x=>x.recipient_id===rid);if(!p)return;
+  delaSdRid=rid;delaSdLevel="allt";delaSdParts=new Set(p.active.map(r=>r.id));
+  delaSdRender();
+  document.getElementById("delaSdScrim").classList.add("open");
+  document.getElementById("delaSdSheet").classList.add("open");
+}
+function delaSdRender(){
+  const p=delaGruppData.people.find(x=>x.recipient_id===delaSdRid);if(!p)return;
+  const namn=p.name||"den här kontakten";
+  const body=document.getElementById("delaSdBody");
+  body.innerHTML=`
+    <button class="sd-opt" data-lvl="allt" ${delaSdLevel==="allt"?"data-on":""} type="button">
+      <span class="box">${delaSdLevel==="allt"?'<i data-ic="check"></i>':""}</span>Allt med ${esc(namn)}
+    </button>
+    <button class="sd-opt" data-lvl="del" ${delaSdLevel==="del"?"data-on":""} type="button">
+      <span class="box">${delaSdLevel==="del"?'<i data-ic="check"></i>':""}</span>Bara en del
+    </button>
+    <div class="sd-parts" ${delaSdLevel==="del"?"":"hidden"}>
+      ${p.active.map(r=>`<label class="sd-part" data-id="${esc(r.id)}" ${delaSdParts.has(r.id)?"data-on":""}>
+        <span class="box">${delaSdParts.has(r.id)?'<i data-ic="check"></i>':""}</span><small>${esc(delaScopeLabel(r))}</small>
+      </label>`).join("")}
+    </div>`;
+  fillIcons(body);
+  body.querySelectorAll("[data-lvl]").forEach(b=>b.onclick=()=>{delaSdLevel=b.dataset.lvl;if(delaSdLevel==="allt")delaSdParts=new Set(p.active.map(r=>r.id));delaSdRender()});
+  body.querySelectorAll(".sd-part").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.id;
+    if(delaSdParts.has(id))delaSdParts.delete(id);else delaSdParts.add(id);
+    delaSdRender();
+  });
+  const n=delaSdParts.size;
+  document.getElementById("delaSdGor").textContent=delaSdLevel==="allt"?`Sluta dela allt med ${namn}`:n===1?`Sluta dela ${n} sak med ${namn}`:`Sluta dela ${n} saker med ${namn}`;
+  document.getElementById("delaSdGor").disabled=n===0;
+  document.getElementById("delaSdSub").textContent=`${esc(namn)} står kvar som kontakt. Du kan dela igen utan ny länk.`;
+}
+function delaSdClose(){
+  document.getElementById("delaSdScrim").classList.remove("open");
+  document.getElementById("delaSdSheet").classList.remove("open");
+  delaSdRid=null;
+}
+document.getElementById("delaSdScrim")&&document.getElementById("delaSdScrim").addEventListener("click",delaSdClose);
+document.getElementById("delaSdAvbryt")&&(document.getElementById("delaSdAvbryt").onclick=delaSdClose);
+document.getElementById("delaSdGor")&&(document.getElementById("delaSdGor").onclick=async()=>{
+  const p=delaGruppData.people.find(x=>x.recipient_id===delaSdRid);if(!p)return;
+  const namn=p.name||"den här kontakten";
+  for(const id of delaSdParts){
+    const {error}=await sb.rpc("revoke_shelf_share",{p_share_id:id});
+    if(error)console.warn("dela: revoke_shelf_share (sd)",error);
+  }
+  delaSdClose();
+  await renderDelade();
+  toast(`Slutade dela med ${namn}.`);
+});
+document.getElementById("delaSlutaBtn")&&(document.getElementById("delaSlutaBtn").onclick=()=>{
+  const people=(delaGruppData&&delaGruppData.people||[]).filter(p=>!p.fullyRevoked);
+  if(!people.length)return;
+  if(people.length===1){delaSdOpen(people[0].recipient_id);return}
+  delaVemSluta=true;
+  delaVemOpen();
+});
+document.getElementById("delaPersonkort")&&document.getElementById("delaPersonkort").addEventListener("click",e=>{
+  const card=e.target.closest(".pc");if(!card)return;
+  delaPpOpen(card.dataset.rid);
+});
 
 /* Skapa delning: visuellt urval (Design 30/10, punkt 2) i stället för
    rullgardiner. Tre steg i samma ark (dpStepGrid/dpStepShelf/dpStepBooks).
@@ -1569,7 +1862,14 @@ async function renderDelade(){
    En bunt är alltid enhetlig - antingen bara hyllor (scope "shelf") eller
    bara böcker (scope "book"), aldrig blandat. Gaffeln i gränssnittet gör
    det omöjligt att välja båda samtidigt, men vi litar inte tyst på det -
-   se den explicita kontrollen i #delaSkapaGor nedan (Varv 4). */
+   se den explicita kontrollen i #delaSkapaGor nedan (Varv 4).
+
+   dpDirectRecipient (Fråga B, plan 31/10): satt till ett recipient_id när
+   urvalet startades från "vem"-arket eller personpanelens "Dela något
+   mer" - då skriver #delaSkapaGor direkt via share_direct i stället för
+   att skapa en share_links-rad, och det finns ingen länk att visa. null
+   betyder "ny" - dagens länkflöde, oförändrat. */
+let dpDirectRecipient=null;
 let dpMode="shelf";
 let dpWholeLib=false;
 let dpSelShelves=new Set();     // hela hyllor (topBc-koder)
@@ -1825,9 +2125,14 @@ function delaSkapaOpen(){
 function delaSkapaClose(){
   document.getElementById("delaSkapaScrim").classList.remove("open");
   document.getElementById("delaSkapaSheet").classList.remove("open");
+  dpDirectRecipient=null;
 }
-document.getElementById("delaSkapaBtn")&&(document.getElementById("delaSkapaBtn").onclick=delaSkapaOpen);
-document.getElementById("delaTomtKomIgang")&&(document.getElementById("delaTomtKomIgang").onclick=delaSkapaOpen);
+document.getElementById("delaSkapaBtn")&&(document.getElementById("delaSkapaBtn").onclick=()=>{
+  const harKontakter=delaGruppData&&delaGruppData.people.some(p=>!p.fullyRevoked||p.name);
+  if(harKontakter)delaVemOpen();
+  else{dpDirectRecipient=null;delaSkapaOpen()}
+});
+document.getElementById("delaTomtKomIgang")&&(document.getElementById("delaTomtKomIgang").onclick=()=>{dpDirectRecipient=null;delaSkapaOpen()});
 document.getElementById("delaTidigareBtn")&&(document.getElementById("delaTidigareBtn").onclick=()=>{
   document.getElementById("delaTomtLage").hidden=true;
   document.getElementById("delaFulltLage").hidden=false;
@@ -1856,13 +2161,34 @@ document.getElementById("delaSkapaGor")&&(document.getElementById("delaSkapaGor"
   if(new Set(rows.map(r=>r.scope)).size>1){errEl.textContent="Internt fel: blandat urval. Försök igen.";return}
   const btn=document.getElementById("delaSkapaGor"),prevText=btn.textContent;
   btn.disabled=true;btn.textContent="Skapar…";
+
+  /* Fråga B (plan 31/10): känd kontakt - skriv direkt via share_direct,
+     ingen länk, ingen inlösen. share_direct upprepar redeem_share_links
+     egna uppslag-utan-revoked_at-filter så en tidigare återkallad rad
+     återaktiveras i stället för att dubbleras. */
+  if(dpDirectRecipient){
+    const rid=dpDirectRecipient;
+    let fail=null;
+    for(const r of rows){
+      const {error}=await sb.rpc("share_direct",{p_library_id:libId,p_scope:r.scope,p_bc:r.bc||null,p_book_id:r.book_id||null,p_recipient_id:rid,p_level:r.level});
+      if(error){fail=error;break}
+    }
+    btn.disabled=false;btn.textContent=prevText;
+    if(fail){console.warn("dela: share_direct",fail);errEl.textContent="Kunde inte dela direkt just nu.";return}
+    delaSkapaClose();
+    await renderDelade();
+    const namn=window.delaMottagarNamn(rid)||"henne";
+    toast(`Delat med ${namn}.`);
+    return;
+  }
+
   const {data:res,error}=await sb.from("share_links").insert(rows).select("token");
   btn.disabled=false;btn.textContent=prevText;
   if(error||!res||!res.length){console.warn("dela: skapa share_links",error);errEl.textContent="Kunde inte skapa länken just nu.";return}
   const url=location.origin+location.pathname+"?dela="+res.map(r=>r.token).join(",");
   document.getElementById("delaSkapaLankInput").value=url;
   dpShowResultat();
-  renderDelaMinaList();
+  renderDelade();
 });
 document.getElementById("delaSkapaKopiera")&&(document.getElementById("delaSkapaKopiera").onclick=()=>{
   const url=document.getElementById("delaSkapaLankInput").value;
