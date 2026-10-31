@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030183036";
+const DV="?v=20261031103514";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2335,7 +2335,7 @@ function vardDatum(d){
 }
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
-  const s=SELL,sum=s.summary;
+  const s=SELL;
   const emptyMsg=document.getElementById("sellEmptyMsg");
   if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";if(emptyMsg)emptyMsg.style.display="block";return}
   if(emptyMsg)emptyMsg.style.display="none";
@@ -2426,7 +2426,11 @@ function renderSell(){
           ${sources.length?`<ul class="sell-sources">${sources.map(src=>`<li><span>${esc(SELL_SITES[src.site]||src.site)}</span><span>${src.price!=null?fmtN(src.price)+" kr":"?"}${src.url?` · <a href="${esc(src.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
           ${it.wanted_ad_url?`<p><a href="${esc(it.wanted_ad_url)}" target="_blank" rel="noopener">Någon söker efter den här boken</a></p>`:""}
           ${!sources.length&&it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
-  document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+(s.updated?"Uppdaterad "+s.updated+".":"");
+  /* #sellNote visade tidigare sell_meta.summary.kommentar/note/updated_date -
+     en handskriven kommentar från den allra första manuella sökrundan
+     (26/8), statisk och orelaterad till vilket filter man faktiskt tittar
+     på. Borttagen på Thomas begäran 31/10 - ett första steg innan den
+     eventuellt görs om till något som faktiskt speglar listan som visas. */
   renderVardStart();
 }
 /* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
@@ -2439,7 +2443,12 @@ window.toggleSell=toggleSell;
    antalsbegränsningen, så texten kan säga hur många som finns. */
 function sellSyncUI(totalt){
   const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus||sellKat);
-  if(aktiv)sellFiltersOppna=true;
+  /* sellFiltersOppna sätts INTE om här längre (Thomas 31/10): det gjorde att
+     panelen tvingades upp igen på nästa renderSell() så fort ett filter var
+     aktivt, vilket i praktiken gjorde filterknappen obrukbar - den gick inte
+     att stänga med. Om panelen ska vara uppfälld när man landar här med ett
+     filter redan satt, sätts sellFiltersOppna=true vid NAVIGERINGEN dit
+     (vardVisaListan), inte vid varje omritning. */
   const box=document.getElementById("sellFilters");
   if(box)box.hidden=!sellFiltersOppna;
   const btn=document.getElementById("sellFilterBtn");
