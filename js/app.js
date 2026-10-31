@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031151718";
+const DV="?v=20261031152055";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2887,8 +2887,7 @@ function renderSell(){
         ${u||!manuellt?`<div class="sell-sub">${u}${manuellt?"":`<span class="h" style="color:${h[1]}">${h[0]}</span>`}</div>`:""}
         ${kat==="kolla"&&lank?`<a class="sr-oppna" href="${esc(lank.url)}" target="_blank" rel="noopener">Öppna på ${esc(lank.site)} →</a>`:""}
         ${(kat==="kolla"||kat==="inget")?`<div class="sell-manual">
-            <button class="link-btn sell-manual-open" type="button" onclick="smpOpen(${i})">+ Lägg till pris</button>
-            <div class="sell-manual-form" hidden>
+            <div class="sell-manual-form">
               <input type="number" inputmode="decimal" min="0" step="1" placeholder="Pris i kr" id="smpInput-${i}" aria-label="Manuellt pris i kronor">
               <button type="button" class="btn btn-outline btn-sm" onclick="smpPaste(${i})">Klistra in</button>
               <button type="button" class="btn btn-primary btn-sm" onclick="smpSave(${i},${it.id})">Spara</button>
@@ -2917,19 +2916,14 @@ function renderSell(){
 function shortPrice(p){return String(p||"").split(/\s\/\s|\s—\s/)[0].replace(/\s*\([^)]*\)/g,"").trim()||p}
 function toggleSell(i){const r=document.getElementById("sr-"+i);if(r)r.classList.toggle("open")}
 window.toggleSell=toggleSell;
-/* Manuell prisinmatning (Design 31/10, skärm 3). Öppnas direkt på raden,
-   bredvid länken ut till säljsidan - ingen egen modal. Urklippsknappen
-   fyller bara FÄLTET, aldrig direkt i listan: ett felaktigt urklipp ska
-   synas och kunna rättas innan Spara ("ett klick kvar, inte noll",
-   Designs egen formulering). */
-function smpOpen(i){
-  const row=document.getElementById("sr-"+i);if(!row)return;
-  const form=row.querySelector(".sell-manual-form"),btn=row.querySelector(".sell-manual-open");
-  if(form)form.hidden=false;
-  if(btn)btn.hidden=true;
-  const inp=document.getElementById("smpInput-"+i);if(inp)inp.focus();
-}
-window.smpOpen=smpOpen;
+/* Manuell prisinmatning (Design 31/10, skärm 3). Ligger direkt synlig på
+   raden, bredvid länken ut till säljsidan - ingen egen modal. Fältet låg
+   tidigare bakom en egen "+ Lägg till pris"-knapp (smpOpen), men formuläret
+   visades ändå alltid (sell-manual-form saknade en [hidden]-regel i CSS:en,
+   så display:flex vann över attributet) - knappen öppnade alltså inget och
+   togs bort som redundant (Thomas 31/10). Urklippsknappen fyller bara
+   FÄLTET, aldrig direkt i listan: ett felaktigt urklipp ska synas och kunna
+   rättas innan Spara ("ett klick kvar, inte noll", Designs egen formulering). */
 async function smpPaste(i){
   const inp=document.getElementById("smpInput-"+i);if(!inp)return;
   /* navigator.clipboard kan sakna behörighet eller inte finnas (öppen
