@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261030183036";
+const DV="?v=20261031104524";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -794,9 +794,8 @@ function ibHistorikHtml(d){
   if(rader===undefined){loadSellHistory(it.id);return `<div class="ib-tom"><p class="fine">Laddar…</p></div>`}
   if(!rader.length)return `<div class="ib-tom"><b>Ingen historik än</b>
     <p class="fine">Tidigare priser visas här när boken värderas om.</p></div>`;
-  const statusNamn={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris"};
   return rader.map(r=>`<div class="ib-rad"><span>${esc(new Date(r.replaced_at).toLocaleDateString("sv-SE"))} · ${esc(SELL_SITES[r.site]||r.site)}</span>
-    <span>${r.price!=null?fmtN(r.price)+" kr":"–"} · ${esc(statusNamn[r.status]||r.status)}</span></div>`).join("");
+    <span>${r.price!=null?fmtN(r.price)+" kr":"–"} · ${esc(STATUS_NAMN[r.status]||r.status)}</span></div>`).join("");
 }
 function showInfo(id,behallFlik){
   const d=data.find(x=>x.id===id);if(!d)return;
@@ -2146,6 +2145,11 @@ renderHomeViewSeg();
    knapp i appen ännu, körs manuellt i en Claude-session på Thomas begäran
    (se claude/bokhyllan-projektplan.md). */
 const SELL_SITES={studentapan:"Studentapan",bokborsen:"Bokbörsen",tradera:"Tradera",campusbokhandeln:"Campusbokhandeln"};
+/* Namnen från Beslut 4 (claude/rapport-design-och-vardera-beslut-2026-10-29.md)
+   - flyttad hit från ibHistorikHtml() 31/10 så att listans summeringskort
+   och startsidan kan återanvända samma namn i stället för att hitta på
+   sina egna. */
+const STATUS_NAMN={bekraftat:"Kontrollerat",automatiskt:"Okontrollerat",vantar:"Väntar på kontroll",osakert:"Varierande pris",ingen_traff:"Inget hittat"};
 /* Värderas egna filter. Skilda från sökvyns (fs/fCat/q): vyerna har olika
    syften, så de ska inte dela filtervariabler (beslut 29/10). sellLimit 0
    = visa alla. */
@@ -2212,10 +2216,14 @@ function vardStatusSiffror(){
 }
 /* Summan och talen under den, räknade ur sell_items här och nu.
    sell_meta.summary är en handskriven JSON-klump från 26 augusti som
-   ingenting räknar om - den får aldrig bära totalkortet. */
-function vardTotal(){
+   ingenting räknar om - den får aldrig bära totalkortet.
+   items: valfri lista att räkna på i stället för hela SELL.items - så att
+   både startsidans totalsumma (alla böcker) och listans summeringskort
+   (bara det som matchar aktivt filter, Thomas 31/10) kan använda samma
+   räkning i stället för att hitta på en egen. */
+function vardTotal(items){
   const t={summa:0,medPris:0,sokta:0,utanPris:0,okontrollerade:0,kolla:0,ingen:0};
-  (SELL&&SELL.items||[]).forEach(it=>{
+  (items||(SELL&&SELL.items)||[]).forEach(it=>{
     t.sokta++;
     const k=vardKategori(it);
     if(k==="pris"){
@@ -2294,11 +2302,25 @@ function renderVardStart(){
      visa en tom lista. */
   const kort=(tal,etikett,kl,handling)=>`<button class="vs-stat${kl?" "+kl:""}" type="button"
       ${tal?`onclick="${handling}"`:"disabled"}><b>${fmtN(tal)}</b><span>${etikett}</span></button>`;
+  /* Övergripande summan på startsidan (Thomas 31/10, ersätter det tidigare
+     beslutet "ingen summa i kronor på sidan" i claude/rapport-design-
+     vardera-startsida-2026-10-30.md) - räknas på SAMTLIGA värderade böcker
+     (vardTotal() utan filter, samma räkning som listans summeringskort
+     använder på hela hyllan), och ritas om varje gång sidan renderas, så
+     den ligger alltid i takt med sell_items - oavsett om en värdering
+     tillkommer, ändras eller en bok försvinner från hyllan. Samma
+     "okontrollerade"-brasklapp som listans kort, eftersom summan kan
+     innehålla opålitliga automatpriser (Beslut 2). */
+  const tot=vardTotal();
   el.innerHTML=`
     <div class="vs-head">
       <span class="vs-eyebrow">Värdera</span>
       <h1>Vad är dina böcker värda idag?</h1>
       <p>${fmtN(n.pris)} av ${fmtN(vardera)} sökta ${vardera===1?"bok har":"böcker har"} ett pris. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
+      <div class="vs-summa">
+        <span class="kr">${fmtN(tot.summa)} kr</span>
+        <span class="fine">Uppskattat värde, ${fmtN(tot.medPris)} av ${fmtN(tot.sokta)} värderade böcker${tot.okontrollerade?` · ${fmtN(tot.okontrollerade)} av dem okontrollerade`:""}</span>
+      </div>
     </div>
     <div class="vs-stats">
       ${kort(n.pris,"Pris finns","ok",`vardVisaListan(true,'','pris')`)}
@@ -2335,7 +2357,7 @@ function vardDatum(d){
 }
 function renderSell(){
   const el=document.getElementById("sellList");if(!el||!SELL)return;
-  const s=SELL,sum=s.summary;
+  const s=SELL;
   const emptyMsg=document.getElementById("sellEmptyMsg");
   if(!s.items.length){el.innerHTML="";document.getElementById("sellNote").textContent="";if(emptyMsg)emptyMsg.style.display="block";return}
   if(emptyMsg)emptyMsg.style.display="none";
@@ -2362,6 +2384,13 @@ function renderSell(){
   if(sellUnc)items=items.filter(it=>(it.uncertainty||(isSure(it)?"lag":""))===sellUnc);
   if(sellHeat)items=items.filter(it=>(it.heat_score||it.heat)===sellHeat);
   if(sellCat)items=items.filter(it=>{const b=bokFor(it);return b&&b.cat===sellCat});
+  /* Filtreringarna ovan (sellQ/sellKat/sellStatus/sellUnc/sellHeat/sellCat)
+     har redan körts här - filtreratUrval är exakt den mängd böcker som
+     visas i listan nedanför, före sellLimit-avklippningen. Totalkortet
+     ska räkna PÅ den mängden, inte alltid på hela hyllan (Thomas 31/10:
+     "Den ska visa värdena på det filter som visas"). */
+  const filtreratUrval=items.slice();
+  const aktivtFilter=!!(sellQ||sellKat||sellStatus||sellUnc||sellHeat||sellCat);
   const totalt=items.length;
   if(sellLimit>0)items=items.slice(0,sellLimit);
   sellSyncUI(totalt);
@@ -2374,12 +2403,17 @@ function renderSell(){
   /* Totalkortet räknas ur sell_items (vardTotal), inte ur den gamla
      sell_meta.summary. Inget prisintervall: ingen bok i databasen har
      både price_low och price_high satta, så en intervallrad hade varit
-     en tom ruta. */
-  const tot=vardTotal();
-  el.innerHTML=`<div class="card sell-sum"><span class="fine">Hela hyllan</span>
+     en tom ruta. Rubriken speglar aktivt filter (status/kategori) -
+     "Hela hyllan" bara när inget filter är valt. */
+  const KAT_NAMN={pris:"Pris finns",kolla:"Kolla själv",inget:"Inget hittat",osokt:"Osökta"};
+  const sumRubrik=sellStatus?(STATUS_NAMN[sellStatus]||sellStatus):
+    sellKat?(KAT_NAMN[sellKat]||sellKat):
+    aktivtFilter?"Filtrerat urval":"Hela hyllan";
+  const tot=vardTotal(filtreratUrval);
+  el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
       <span class="kr">${fmtN(tot.summa)} kr</span>
       <span class="fine">${fmtN(tot.medPris)} av ${fmtN(tot.sokta)} sökta böcker har ett pris${tot.okontrollerade?` · ${fmtN(tot.okontrollerade)} av dem okontrollerade`:""}</span>
-      ${tot.utanPris?`<span class="sell-sum-lankar">${tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>`:""}
+      ${!aktivtFilter&&tot.utanPris?`<span class="sell-sum-lankar">${tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>`:""}
       </div>`+
     `<div>`+items.map((it,i)=>{
       const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
@@ -2426,7 +2460,11 @@ function renderSell(){
           ${sources.length?`<ul class="sell-sources">${sources.map(src=>`<li><span>${esc(SELL_SITES[src.site]||src.site)}</span><span>${src.price!=null?fmtN(src.price)+" kr":"?"}${src.url?` · <a href="${esc(src.url)}" target="_blank" rel="noopener">Öppna</a>`:""}</span></li>`).join("")}</ul>`:""}
           ${it.wanted_ad_url?`<p><a href="${esc(it.wanted_ad_url)}" target="_blank" rel="noopener">Någon söker efter den här boken</a></p>`:""}
           ${!sources.length&&it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">Öppna på Studentapan</a>`:""}</div></div>`}).join("")+`</div>`;
-  document.getElementById("sellNote").textContent=(sum&&sum.kommentar?sum.kommentar+" ":"")+(s.note?s.note+" ":"")+(s.updated?"Uppdaterad "+s.updated+".":"");
+  /* #sellNote visade tidigare sell_meta.summary.kommentar/note/updated_date -
+     en handskriven kommentar från den allra första manuella sökrundan
+     (26/8), statisk och orelaterad till vilket filter man faktiskt tittar
+     på. Borttagen på Thomas begäran 31/10 - ett första steg innan den
+     eventuellt görs om till något som faktiskt speglar listan som visas. */
   renderVardStart();
 }
 /* Kortpris till listan: första ledet, utan parentes. Hela priset visas när
@@ -2439,7 +2477,12 @@ window.toggleSell=toggleSell;
    antalsbegränsningen, så texten kan säga hur många som finns. */
 function sellSyncUI(totalt){
   const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus||sellKat);
-  if(aktiv)sellFiltersOppna=true;
+  /* sellFiltersOppna sätts INTE om här längre (Thomas 31/10): det gjorde att
+     panelen tvingades upp igen på nästa renderSell() så fort ett filter var
+     aktivt, vilket i praktiken gjorde filterknappen obrukbar - den gick inte
+     att stänga med. Om panelen ska vara uppfälld när man landar här med ett
+     filter redan satt, sätts sellFiltersOppna=true vid NAVIGERINGEN dit
+     (vardVisaListan), inte vid varje omritning. */
   const box=document.getElementById("sellFilters");
   if(box)box.hidden=!sellFiltersOppna;
   const btn=document.getElementById("sellFilterBtn");
