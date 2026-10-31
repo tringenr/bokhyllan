@@ -13,14 +13,15 @@
 //
 // Statusar som sparas (price_status/sell_price_sources.status) - visningsnamn
 // i appen (satt av Design) inom parentes:
-//   automatiskt  (Okontrollerat) - stark titelmatchning OCH pris i sidtiteln
-//   vantar       (Väntar på kontroll) - trolig sida men osäker titel eller
-//                pris inte läsbart i träffen
-//   osakert      (Varierande pris) - en ny sökning gav ett annat pris för
-//                samma sajt än den förra sökningen gav - se LÄRDOM 3 nedan
-//   ingen_traff  (Inget hittat) - ingen trolig träff alls
-//   bekraftat    (Kontrollerat) - sätts ALDRIG av den här funktionen, bara av
-//                en människa (Chrome-steget) eller den gamla Campus-rundan.
+//   automatiskt     (Okontrollerat) - pris läst i sidtiteln ELLER på sidan
+//   ingen_begagnad  (Inget begagnat) - sidan hittad, men bara nypris finns
+//   vantar          (Väntar på kontroll) - trolig sida men osäker titel eller
+//                   pris inte läsbart
+//   osakert         (Varierande pris) - en ny sökning gav ett annat pris för
+//                   samma sajt än den förra sökningen gav - se LÄRDOM 3 nedan
+//   ingen_traff     (Inget hittat) - ingen trolig träff alls
+//   bekraftat       (Kontrollerat) - sätts ALDRIG av den här funktionen, bara
+//                   av en människa
 //
 // "automatiskt" skrivs ALDRIG över "bekraftat" utan att confirm_overwrite är
 // satt - se bekräftelsedialogen i appen. Det som skrivs över flyttas först
@@ -114,14 +115,12 @@ function extractPriceFromTitle(title: string): number | null {
   const n = parseInt(m[1].replace(/\s/g, ""), 10);
   return Number.isFinite(n) && n > 0 && n < 5000 ? n : null;
 }
-// Beslutat 29/10: bara begagnatpris räknas. Bokbörsen, Tradera och
-// Campusbokhandeln är andrahandsmarknader per definition (Campusbokhandeln
-// tillagd 30/10 - se kommentaren högst upp). Studentapan säljer både nytt
-// och begagnat - utan att öppna sidan (det är Chrome-steget, görs separat
-// manuellt) kan vi bara läsa av det sidtiteln/utdraget själva säger. Säger
-// ingetdera "begagnad"/"begagnat" filtreras Studentapan-träffen INTE bort,
-// men priset sparas som väntar på kontroll i stället för automatiskt -
-// hellre en människa som kollar än ett nypris som smugglas in som begagnat.
+// Beslutat 29/10: bara begagnatpris räknas. Bokbörsen och Tradera är
+// andrahandsmarknader per definition. Studentapan OCH Campusbokhandeln säljer
+// både nytt och begagnat - för dem läses priset på sidan (lasBegagnatpris),
+// inte ur sökträffens titel. Den här heuristiken ligger kvar för titelvägen:
+// säger varken titel eller utdrag "begagnad" får ett titelpris från
+// Studentapan inte användas, eftersom det då kan vara ett nypris.
 function studentapanAnvandaSomBegagnat(hitTitle: string, snippet: string): boolean {
   return /begagnad|begagnat/i.test(hitTitle + " " + snippet);
 }
