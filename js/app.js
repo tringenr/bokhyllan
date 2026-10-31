@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031163153";
+const DV="?v=20261031170839";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2878,7 +2878,7 @@ function renderVardStart(){
     </div>
     <div class="vs-cta">
       <button class="btn btn-primary" type="button" onclick="openVard()">Värdera fler böcker</button>
-      ${SELL&&SELL.updated?`<p class="fine vs-senast">Senast körd ${esc(vardDatum(SELL.updated))}.</p>`:""}
+      ${vardSenastKord()?`<p class="fine vs-senast">Senast körd ${esc(vardDatum(vardSenastKord()))}.</p>`:""}
     </div>
     <button class="link-btn vs-tilllistan" type="button" onclick="vardVisaListan(true,'')">Visa alla värderade böcker →</button>
     ${topp.length?`<p class="sub-h vs-subh">Mest värda just nu</p>
@@ -2894,8 +2894,21 @@ function renderVardStart(){
           <span class="vs-tr-p">${fmtN(x.pris)} kr${okontrollerat?`<small>okontrollerat</small>`:""}</span>
         </div>`}).join("")}</div>`:""}`;
 }
-/* sell_meta.updated_date är ett datum, inte en tidpunkt - skriv ut det som
-   datum i stället för att hitta på "i går kväll" som skissen föreslog. */
+/* Fix 31/10: "Senast körd" visade sell_meta.updated_date, en rad skriven för
+   hand en enda gång (26 augusti) - prissok-funktionen skriver bara till
+   sell_items, aldrig till sell_meta, så datumet ändrades aldrig sedan dess
+   oavsett hur många sökrundor som faktiskt kördes. Räknar nu i stället ut
+   det senaste av sell_items.searched_at/last_checked_at/created_at - den
+   riktiga tidpunkten för senast körda sökning. SELL.updated/sell_meta kvar
+   orört i databasen, bara inte använt för den här raden längre. */
+function vardSenastKord(){
+  let max=0;
+  (SELL&&SELL.items||[]).forEach(it=>{
+    const t=Date.parse(it.searched_at||it.last_checked_at||it.created_at||"");
+    if(!isNaN(t)&&t>max)max=t;
+  });
+  return max?new Date(max).toISOString():"";
+}
 function vardDatum(d){
   try{
     const dt=new Date(d);
