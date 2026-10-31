@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261031171243";
+const DV="?v=20261031174105";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2951,22 +2951,37 @@ function renderSell(){
   /* "okontr" är inte en egen kategori utan pris-kategorin minus de
      bekräftade - talet i totalkortet ska leda till exakt de raderna. */
   if(sellKat==="okontr")items=items.filter(vardOkontrollerat);
-  else if(sellKat)items=items.filter(it=>vardKategori(it)===sellKat);
+  /* En bok som precis fått ett manuellt pris byter kategori till "pris" och
+     skulle annars försvinna direkt ur Kolla/Inget-listan (Thomas 31/10:
+     "blir förvirrande"). Den får vara kvar i urvalet här - på sin vanliga
+     sorterade plats, prissortering och allt - men ritas som ett kort med
+     bara titel och flyttad-text i stället för en vanlig prisrad, se
+     items.map nedan. */
+  else if(sellKat)items=items.filter(it=>vardKategori(it)===sellKat||
+    ((sellKat==="kolla"||sellKat==="inget")&&it.title&&sellNyssVarderade.includes(it.title)));
   if(sellStatus)items=items.filter(it=>it.price_status===sellStatus);
   if(sellUnc)items=items.filter(it=>(it.uncertainty||(isSure(it)?"lag":""))===sellUnc);
   if(sellHeat)items=items.filter(it=>(it.heat_score||it.heat)===sellHeat);
   if(sellCat)items=items.filter(it=>{const b=bokFor(it);return b&&b.cat===sellCat});
+  /* Flyttade kort (Thomas 31/10): en bok som precis fått ett manuellt pris
+     hålls kvar i urvalet av filtret ovan så den syns på sin vanliga plats
+     (se items.map nedan), men den hör fortfarande till den gamla kategorin
+     i allt annat - räknas aldrig med i totalkortets summa/antal eller i
+     bredden på andra raders track-stapel, bara för att den råkar ligga i
+     den här listan just nu. */
+  const arFlyttad=it=>(sellKat==="kolla"||sellKat==="inget")&&it.title&&
+    sellNyssVarderade.includes(it.title)&&vardKategori(it)==="pris";
   /* Filtreringarna ovan (sellQ/sellKat/sellStatus/sellUnc/sellHeat/sellCat)
      har redan körts här - filtreratUrval är exakt den mängd böcker som
      visas i listan nedanför, före sellLimit-avklippningen. Totalkortet
      ska räkna PÅ den mängden, inte alltid på hela hyllan (Thomas 31/10:
      "Den ska visa värdena på det filter som visas"). */
-  const filtreratUrval=items.slice();
+  const filtreratUrval=items.filter(it=>!arFlyttad(it));
   const aktivtFilter=!!(sellQ||sellKat||sellStatus||sellUnc||sellHeat||sellCat);
   const totalt=items.length;
   if(sellLimit>0)items=items.slice(0,sellLimit);
   sellSyncUI(totalt);
-  const maxVal=Math.max(1,...items.map(val));
+  const maxVal=Math.max(1,...items.filter(it=>!arFlyttad(it)).map(val));
   if(!items.length){
     el.innerHTML=`<div class="sell-empty-msg">${sellQ?`Inga träffar på ”${esc(sellQ)}”.`:"Inga böcker matchar filtret."}</div>`;
     document.getElementById("sellNote").textContent="";return;
@@ -2981,22 +2996,26 @@ function renderSell(){
     sellKat?(KAT_NAMN[sellKat]||sellKat):
     aktivtFilter?"Filtrerat urval":"Hela hyllan";
   const tot=vardTotal(filtreratUrval);
-  /* Kvardröjande banner (Thomas 31/10): en bok som precis fått ett
-     manuellt pris byter kategori till "pris" och FÖRSVINNER direkt ur
-     Kolla/Inget-listan - rätt beteende, men osynligt om man inte redan
-     tittade exakt då. sellNyssVarderade minns titlarna tills man lämnar
-     listan (vardVisaListan(false), nedan), oavsett hur filtret ändras
-     under tiden - en toast (2,6s) räcker inte för att hinna läsas om man
-     var mitt i att fylla i nästa bok. */
-  el.innerHTML=(sellNyssVarderade.length?`<div class="dela-toastrow">
-      <span>${sellNyssVarderade.length===1?`”${esc(sellNyssVarderade[0])}” är nu värderad`:`${sellNyssVarderade.length} böcker är nu värderade`} — flyttade till Värderade böcker.</span>
-    </div>`:"")+
-    `<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
+  el.innerHTML=`<div class="card sell-sum"><span class="fine">${esc(sumRubrik)}</span>
       <span class="kr">${fmtN(tot.summa)} kr</span>
       <span class="fine">kontrollerat pris på ${fmtN(tot.antal)} av ${fmtN(tot.sokta)} sökta böcker</span>
       <span class="sell-sum-lankar">${tot.okontrAntal?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','okontr')">+ ${fmtN(tot.okontrSumma)} kr okontrollerat på ${fmtN(tot.okontrAntal)} böcker →</button>`:""}${!aktivtFilter&&tot.kolla?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','kolla')">${fmtN(tot.kolla)} utan pris — kolla själv →</button>`:""}${!aktivtFilter&&tot.ingen?`<button class="link-btn" type="button" onclick="vardVisaListan(true,'','inget')">${fmtN(tot.ingen)} hittades inte alls →</button>`:""}</span>
       </div>`+
     `<div>`+items.map((it,i)=>{
+      /* Flyttad-kort (Thomas 31/10): boken har precis fått ett manuellt
+         pris och bytt kategori till "pris" (se filtret ovan som håller
+         den kvar här i stället för att låta den försvinna tyst). Kortet
+         ligger kvar på bokens vanliga sorterade plats, inte högst upp -
+         det får gärna flytta sig om listan sorteras om, bara det följer
+         med samma bok ("kör. den kan flytta så länge det andra kortet med
+         infon läggs på samma ställe", Thomas 31/10). Rensas när man lämnar
+         listan (vardVisaListan(false)) eller öppnar urvalsarket på nytt. */
+      if(arFlyttad(it)){
+        return `<div class="sell-row sr-flyttad" id="sr-${i}"><div class="sr-body">
+          <div class="sell-flyttad"><span class="t">${esc(it.title)}</span>
+          <span class="sell-flyttad-msg">Har flyttats till värderade böcker</span></div>
+        </div></div>`;
+      }
       const h=HEAT[it.heat_score||it.heat]||HEAT.kolla;
       /* Status från den nya prissökningen (Design 29/10): "ca"-prefix och
          dämpad färg på okontrollerat, tomt streck på väntar, spann utan
