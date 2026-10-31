@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261031141918">
+<link rel="stylesheet" href="css/style.css?v=20261031145437">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261031141918";
+  var MY="20261031145437";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -326,20 +326,91 @@
        döljas helt. Visas även när bara "Tidigare delningar" öppnats
        trots att inget är aktivt just nu (ingen separat tredje vy). -->
   <div id="delaFulltLage" hidden>
-    <div class="page-head"><h1>Delade</h1>
-      <button class="btn btn-primary btn-sm" id="delaSkapaBtn" type="button">Dela en hylla</button>
+    <div class="dela-banner"><img src="img/dela-hero.jpg" alt=""><div class="dela-banner-scrim"></div></div>
+    <div class="page-head" style="margin-top:2px"><h1>Delade</h1></div>
+
+    <h2 class="sub-h" id="delaWishH" hidden>Väntar på dig</h2>
+    <div id="delaWishList"></div>
+
+    <h2 class="sub-h">Dina delningar</h2>
+    <div class="pgrid" id="delaPersonkort"></div>
+    <div class="empty" id="delaPersonkortTom" hidden>Du har inte delat något än.</div>
+
+    <h2 class="sub-h" id="delaLankarH" hidden>Skickade länkar</h2>
+    <div id="delaLankarList"></div>
+
+    <div class="band" id="delaMedDigBand" hidden>
+      <h2 class="sub-h">Delas med dig</h2>
+      <div id="delaMedDigList"></div>
     </div>
 
-    <h2 class="sub-h">Lånönskningar</h2>
-    <div id="delaWishList"><div class="empty">Inga lånönskningar än.</div></div>
+    <div id="delaToastRow"></div>
 
-    <h2 class="sub-h">Mina delningar</h2>
-    <div id="delaMinaList"><div class="empty">Du har inte delat något än.</div></div>
-
-    <h2 class="sub-h">Delat med dig</h2>
-    <div id="delaMedDigList"><div class="empty">Ingen har delat ett bibliotek med dig än.</div></div>
+    <div class="acts">
+      <button class="btn btn-primary" id="delaSkapaBtn" type="button">Dela</button>
+      <button class="btn-outline" id="delaSlutaBtn" type="button" hidden>Sluta dela</button>
+    </div>
   </div>
 </section>
+
+<!-- Personpanelen (skärm 2, Design 31/10): bottom sheet för EN mottagare -
+     vad hon fått, vad hon önskar låna, och vägar vidare (dela mer / sluta
+     dela allt). Inga platshållare för pågående/återlämnade lån - de hör
+     inte hit (uttryckligt i uppdraget). -->
+<div class="scrim" id="delaPpScrim"></div>
+<div class="sheet" id="delaPpSheet">
+  <span class="grip"></span>
+  <div class="pp-head">
+    <div class="avatar" id="delaPpAvatar"></div>
+    <div class="tx">
+      <b id="delaPpNamn"></b>
+      <small id="delaPpSub"></small>
+    </div>
+  </div>
+  <div class="pp-addname" id="delaPpAddnameWrap" hidden>
+    <input type="text" id="delaPpAddnameInput" placeholder="Lägg till namn">
+    <button class="btn btn-primary btn-sm" id="delaPpAddnameSpara" type="button">Spara</button>
+  </div>
+
+  <h2 class="sub-h">Du delar</h2>
+  <div id="delaPpDuDelar"></div>
+
+  <div id="delaPpOnskarWrap" hidden>
+    <h2 class="sub-h">Önskar låna</h2>
+    <div id="delaPpOnskar"></div>
+  </div>
+
+  <button class="btn-outline btn-block" id="delaPpDelaMer" type="button" style="margin-top:16px">Dela något mer</button>
+  <p class="pp-note">Ingen ny länk behövs — det dyker upp hos henne direkt.</p>
+
+  <button class="pp-stop-all" id="delaPpStoppaAllt" type="button">Sluta dela allt</button>
+</div>
+
+<!-- "Dela" - vem först (skärm 3, Fråga B): känd kontakt får delningen
+     direkt utan länk; "Någon ny" går vidare till det befintliga
+     urvalsarket (delaSkapaSheet), som sedan skriver via länk som idag. -->
+<div class="scrim" id="delaVemScrim"></div>
+<div class="sheet" id="delaVemSheet">
+  <span class="grip"></span>
+  <div class="dp-head"><h2 id="delaVemTitel">Dela med vem?</h2></div>
+  <p class="fine" id="delaVemSub">Ingen länk behövs</p>
+  <div id="delaVemList"></div>
+  <button class="link-btn" id="delaVemNy" type="button">Någon ny — skapa en länk</button>
+</div>
+
+<!-- "Sluta dela" (skärm 4): tre nivåer i ETT val - allt, en person, eller
+     bara en del av en persons delningar. -->
+<div class="scrim" id="delaSdScrim"></div>
+<div class="sheet" id="delaSdSheet">
+  <span class="grip"></span>
+  <div class="dp-head"><h2>Sluta dela</h2></div>
+  <div id="delaSdBody"></div>
+  <div class="pickbar" style="border-top:none;padding-top:10px">
+    <button class="btn btn-danger btn-block" id="delaSdGor" type="button">Sluta dela</button>
+    <small class="fine" id="delaSdSub"></small>
+    <button class="btn-outline" id="delaSdAvbryt" type="button">Avbryt</button>
+  </div>
+</div>
 
 <!-- Skapa delning: visuellt urval i stället för rullgardiner (Design
      30/10, punkt 2). Tre steg i samma sheet (dpStepGrid/dpStepShelf/
@@ -693,6 +764,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261031141918"></script>
+<script src="js/app.js?v=20261031145437"></script>
 </body>
 </html>

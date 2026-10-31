@@ -1320,6 +1320,89 @@ body.ps-lock{overflow:hidden}
 .dela-tomt-body p{max-width:32ch}
 .quiet-link{border:none;background:none;color:var(--fg-2);font:600 12.5px var(--font-body);padding:16px 0 0;text-decoration:underline;text-underline-offset:3px;align-self:center}
 
+/* Aktivt läge, personvy (Design 31/10). Återanvänder dela-hero.jpg i
+   mindre format i stället för ett nytt foto - samma motiv, bara lägre
+   och med en annan beskärning (object-position) så hyllan syns tydligt
+   även i de 132px som den här bannern är hög. */
+.dela-banner{position:relative;height:132px;margin:0 -16px 4px;overflow:hidden}
+.dela-banner img{width:100%;height:100%;object-fit:cover;object-position:50% 58%;display:block}
+.dela-banner-scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(22,15,9,.5) 0%,rgba(22,15,9,0) 55%)}
+
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.pc{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);border:none;padding:0;display:block;width:100%;aspect-ratio:1/1;text-align:left;cursor:pointer}
+.pc .ryggar{position:absolute;inset:0;background:var(--surface-2) center/cover no-repeat}
+.pc .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(22,15,9,.72) 0%,rgba(22,15,9,.08) 46%,transparent 68%)}
+.pc .ctr{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.42);color:#fff;font:600 10.5px var(--font-mono);padding:3px 7px;border-radius:999px}
+.pc .cnt{position:absolute;left:10px;right:10px;bottom:9px;display:flex;align-items:center;gap:8px;color:#fff}
+.pc .cnt .avatar{width:30px;height:30px;font-size:12px;flex:none;border:1.5px solid rgba(255,255,255,.65)}
+.pc .cnt .nm{font:700 13.5px var(--font-body);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.pc.namnlos .cnt .nm{font-style:italic;font-weight:500;opacity:.82}
+.pc.revoked .ryggar{opacity:.35}
+.pc.revoked .ctr{background:rgba(0,0,0,.3)}
+.pc .revoked-tx{position:absolute;left:10px;right:10px;bottom:9px;color:#fff;font:600 11px var(--font-body);text-shadow:0 1px 6px rgba(0,0,0,.5)}
+
+.lrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-subtle)}
+.lrow:last-child{border-bottom:0}
+.lrow .main{flex:1;min-width:0}
+.lrow .main b{display:block;font-size:13.5px}
+.lrow .main small{color:var(--fg-2);font-size:11.5px}
+
+.band{margin:18px -16px 0;padding:14px 16px 18px;background:var(--surface-2)}
+.band .sub-h{margin-top:0}
+.srow{display:flex;align-items:center;gap:11px;width:100%;border:none;background:none;padding:9px 0;text-align:left;cursor:default}
+.srow .thumb{width:52px;height:52px;border-radius:9px;flex:none;background:var(--surface) center/cover no-repeat;position:relative}
+.srow .thumb .noimg{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px;padding:0 5px 4px;border-radius:9px;overflow:hidden}
+.srow .thumb .noimg i{display:block;flex:1;border-radius:1.5px 1.5px 0 0;min-width:2.5px;background:var(--border-default)}
+.srow .main{flex:1;min-width:0}
+.srow .main b{display:block;font-size:14px}
+.srow .main small{color:var(--fg-2);font-size:11.5px}
+.srow .ny{flex:none;width:8px;height:8px;border-radius:50%;background:var(--pink-500)}
+
+.acts{display:flex;gap:10px;margin:20px 0 4px}
+.acts .btn{flex:1}
+
+.dela-toastrow{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:11px 12px;border-radius:12px;background:var(--pink-50);color:var(--pink-600);font:600 12.5px var(--font-body)}
+:root[data-theme="dark"] .dela-toastrow{background:rgba(242,75,120,.14)}
+
+/* Personpanelen (skärm 2) och vem/sluta-dela-arken (skärm 3/4). */
+.pp-head{display:flex;align-items:center;gap:12px;padding:2px 0 4px}
+.pp-head .avatar{width:52px;height:52px;font-size:17px}
+.pp-head .tx{flex:1;min-width:0}
+.pp-head .tx b{display:block;font:700 16.5px var(--font-body)}
+.pp-head .tx small{color:var(--fg-2);font-size:12px}
+.pp-addname{display:flex;gap:8px;align-items:center;margin:8px 0 2px}
+.pp-addname input{flex:1}
+.pp-item{display:flex;align-items:center;gap:11px;width:100%;border:none;background:none;padding:9px 0;text-align:left;border-top:1px solid var(--border-subtle)}
+.pp-item:first-of-type{border-top:none}
+.pp-item .thumb{width:44px;height:44px;border-radius:8px;flex:none;background:var(--surface-2) center/cover no-repeat}
+.pp-item .main{flex:1;min-width:0}
+.pp-item .main b{display:block;font-size:13.5px}
+.pp-item .main small{color:var(--fg-2);font-size:11.5px}
+.pp-wrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border-subtle)}
+.pp-wrow:first-of-type{border-top:none}
+.pp-wrow .main{flex:1;min-width:0}
+.pp-wrow .main b{display:block;font-size:13.5px}
+.pp-wrow .main small{color:var(--fg-2);font-size:11.5px}
+.pp-note{color:var(--fg-2);font-size:11.5px;margin:4px 0 0}
+.pp-stop-all{color:var(--danger-500);border:none;background:none;font:600 13px var(--font-body);padding:16px 0 2px;text-align:left;width:100%}
+
+.dv-item{display:flex;align-items:center;gap:11px;width:100%;border:none;background:none;padding:10px 0;text-align:left;border-top:1px solid var(--border-subtle)}
+.dv-item:first-of-type{border-top:none}
+.dv-item .main{flex:1;min-width:0}
+.dv-item .main b{display:block;font-size:13.5px}
+.dv-item .main small{color:var(--fg-2);font-size:11.5px}
+.dv-item i[data-ic]{flex:none;width:18px;height:18px;color:var(--fg-2)}
+
+.sd-opt{display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--border-default);border-radius:12px;background:transparent;padding:12px 13px;font:700 13.5px var(--font-body);color:var(--fg);margin-bottom:10px;text-align:left}
+.sd-opt[data-on]{border-color:var(--danger-500)}
+.sd-opt .box{width:19px;height:19px;border-radius:5px;border:1.6px solid var(--border-default);flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+.sd-opt[data-on] .box{background:var(--danger-500);border-color:var(--danger-500)}
+.sd-parts{padding-left:6px;margin:-4px 0 10px}
+.sd-part{display:flex;align-items:center;gap:9px;padding:6px 0}
+.sd-part .box{width:17px;height:17px;border-radius:4px;border:1.6px solid var(--border-default);flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+.sd-part[data-on] .box{background:var(--danger-500);border-color:var(--danger-500)}
+.sd-part small{flex:1;font-size:13px}
+
 /* Visuellt urval i #delaSkapaSheet (Design 30/10, punkt 2). */
 .dp-sheet{max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
 .dp-step{overflow-y:auto;flex:1;min-height:0}
