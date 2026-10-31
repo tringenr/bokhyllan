@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261031174550">
+<link rel="stylesheet" href="css/style.css?v=20261031223306">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261031174550";
+  var MY="20261031223306";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -681,10 +681,19 @@
   <span class="grip"></span>
   <h2>Välj böcker att värdera</h2>
   <div class="field"><span class="lbl">Status</span>
+    <!-- Chipen använder samma ord som LISTAN visar, inte sökmotorns interna
+         statusnamn. Thomas 31/10: "Väntar på kontroll" här mot "Kolla själv"
+         i listan gjorde att han inte hittade knappen för att söka om just de
+         böckerna - samma böcker, två namn, på två skärmar man använder
+         tillsammans. "Inget begagnat" saknades helt, så de tolv böckerna med
+         den statusen gick inte att välja alls: de har en status (så "Aldrig
+         sökt" utesluter dem) men inget pris (så "Redan värderad" gör det
+         också). De var inlåsta. -->
     <div class="chips" id="vardStatusChips">
       <button class="chip active" data-v="">Alla</button>
       <button class="chip" data-v="aldrig">Aldrig sökt</button>
-      <button class="chip" data-v="vantar">Väntar på kontroll</button>
+      <button class="chip" data-v="vantar">Kolla själv</button>
+      <button class="chip" data-v="ingen_begagnad">Inget begagnat</button>
       <button class="chip" data-v="osakert">Varierande pris</button>
       <button class="chip" data-v="ingen_traff">Inget hittat</button>
       <button class="chip" data-v="redan">Redan värderad</button>
@@ -793,6 +802,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261031174550"></script>
+<script src="js/app.js?v=20261031223306"></script>
 </body>
 </html>
