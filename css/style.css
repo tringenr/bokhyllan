@@ -1376,6 +1376,8 @@ body.ps-lock{overflow:hidden}
 /* Återbesökssidan */
 .vs-head h1{font:400 27px/1.14 var(--font-display);margin:8px 0 0;max-width:18ch;color:var(--fg)}
 .vs-head p{font:400 14px/1.55 var(--font-body);color:var(--text-secondary);margin:12px 0 0;max-width:38ch}
+.vs-summa{display:flex;flex-direction:column;gap:3px;margin-top:16px}
+.vs-summa .kr{font:600 28px var(--font-mono);color:var(--pink-600);line-height:1.1}
 .vs-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:22px}
 .vs-stat{background:var(--surface);border:1px solid var(--border-default);border-radius:12px;
   padding:14px;display:flex;flex-direction:column;gap:3px;text-align:left;color:var(--fg);
