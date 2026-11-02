@@ -337,7 +337,16 @@ Deno.serve(async (req) => {
         item = created;
       }
 
-      const redanSokt = item.price_status === "bekraftat" || item.price_status === "automatiskt";
+      /* Flödesrapporten 31/10, punkt 9: "manuellt" (ett pris Thomas själv
+         skrivit in för hand, via smpSave) skyddades inte här - bara
+         bekraftat/automatiskt. En ny körning kunde alltså tyst skriva
+         över ett pris en människa skrivit in, utan confirm_overwrite,
+         och sell_price_history fick den gamla raden men UI:t visade bara
+         den nya (eller "-" om inget nytt hittades). Ett manuellt pris är
+         minst lika säkert som ett sökträff-pris ingen kontrollerat, så
+         det hör till samma skydd. */
+      const redanSokt = item.price_status === "bekraftat" || item.price_status === "automatiskt" ||
+        item.price_status === "manuellt";
       if (redanSokt && !confirmOverwrite) {
         resultat.push({ book_id: book.id, status: "skippad_skyddad", price_status: item.price_status });
         continue;
