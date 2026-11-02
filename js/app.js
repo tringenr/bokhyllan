@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261102091828";
+const DV="?v=20261102111727";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2940,11 +2940,28 @@ function renderSell(){
      kategorifiltret behöver den - sell_items har ingen egen kategori. */
   const bokFor=it=>(it.book_id&&data.find(x=>x.id===it.book_id))||
     (it.match_title&&(data.find(x=>x.title===it.match_title)||data.find(x=>x.title.startsWith(it.match_title))))||null;
-  /* Sortering (30/10). Hetta rankas het > medel > låg; "stabil" och
-     tomt faller till medel så att en rad utan hetta inte hamnar först. */
+  /* Sortering (30/10, utökad 2/11 med författare och senast värderad -
+     Thomas: snabbknappar i vyn för namn/författare/pris/datum). Hetta
+     rankas het > medel > låg; "stabil" och tomt faller till medel så att
+     en rad utan hetta inte hamnar först. Böcker utan författare/datum
+     sorteras sist i de respektive lägena i stället för att hamna först
+     på en tom sträng/odefinierat tal. */
   const hettaRang=it=>({het:3,medel:2,stabil:2,lag:1})[it.heat_score||it.heat]||2;
+  const forfOf=it=>{const b=bokFor(it);return b&&b.author?String(b.author).trim():""};
   let items=s.items.slice().sort(
     sellSort==="titel"?(a,b)=>String(a.title||"").localeCompare(String(b.title||""),"sv"):
+    sellSort==="forfattare"?(a,b)=>{
+      const fa=forfOf(a),fb=forfOf(b);
+      if(!fa&&!fb)return String(a.title||"").localeCompare(String(b.title||""),"sv");
+      if(!fa)return 1;if(!fb)return -1;
+      return fa.localeCompare(fb,"sv")||String(a.title||"").localeCompare(String(b.title||""),"sv");
+    }:
+    sellSort==="datum"?(a,b)=>{
+      const ta=a.searched_at?new Date(a.searched_at).getTime():NaN,tb=b.searched_at?new Date(b.searched_at).getTime():NaN;
+      if(isNaN(ta)&&isNaN(tb))return String(a.title||"").localeCompare(String(b.title||""),"sv");
+      if(isNaN(ta))return 1;if(isNaN(tb))return -1;
+      return tb-ta;
+    }:
     sellSort==="hetta"?(a,b)=>hettaRang(b)-hettaRang(a)||val(b)-val(a):
     (a,b)=>val(b)-val(a));
   if(sellQ){const nq=sellQ.toLowerCase();items=items.filter(it=>String(it.title||"").toLowerCase().includes(nq))}
@@ -3144,6 +3161,11 @@ window.smpSave=smpSave;
    takt med filtren. Kallas från renderSell() med antalet träffar före
    antalsbegränsningen, så texten kan säga hur många som finns. */
 function sellSyncUI(totalt){
+  /* Sorteringens snabbknappar (2/11): tänd den som matchar sellSort, släck
+     resten - annars kan "on" bli kvar på fel knapp efter en programmatisk
+     ändring av sellSort (t.ex. om den nollställs någon annanstans). */
+  document.querySelectorAll('#sellSortChips button[data-sort]').forEach(b=>
+    b.classList.toggle("on",b.dataset.sort===(sellSort||"varde")));
   const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus||sellKat);
   /* Filterarket (Design 31/10) öppnas/stängs via sellFiltersOppna, precis
      som appens övriga bottensheet (.sheet/.scrim .open) - inte längre en
@@ -3225,7 +3247,14 @@ document.getElementById("sellFilterClearBtn")?.addEventListener("click",()=>{
 });
 document.getElementById("sellQ")?.addEventListener("input",e=>{sellQ=e.target.value;renderSell()});
 document.getElementById("sellLimit")?.addEventListener("change",e=>{sellLimit=Number(e.target.value)||0;renderSell()});
-document.getElementById("sellSort")?.addEventListener("change",e=>{sellSort=e.target.value||"varde";renderSell()});
+/* Sorteringens snabbknappar (2/11) ersätter den gamla <select id="sellSort">.
+   Delegerad klickhanterare, inte en per knapp, eftersom knapparna ligger
+   fasta i markupen (till skillnad från kategorichipsen, som byggs om per
+   bibliotek) - samma mönster hade fungerat lika bra här, men behövs inte. */
+document.getElementById("sellSortChips")?.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-sort]");if(!b)return;
+  sellSort=b.dataset.sort||"varde";renderSell();
+});
 document.getElementById("sellInfoBtn")?.addEventListener("click",()=>{
   const p=document.getElementById("sellInfoPanel");if(p)p.open=!p.open});
 document.getElementById("sellClearBtn")?.addEventListener("click",async()=>{
