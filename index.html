@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&family=Poiret+One&family=Pinyon+Script&family=Cinzel:wght@500&display=swap">
 <title>Bokhyllan</title>
-<link rel="stylesheet" href="css/style.css?v=20261103130823">
+<link rel="stylesheet" href="css/style.css?v=20261103131239">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -39,7 +39,7 @@
    MY, version.json och ?v= i den här filen ska alltid ha samma värde
    (starttestet kontrollerar det). */
 (function(){
-  var MY="20261103130823";
+  var MY="20261103131239";
   function typing(){
     var a=document.activeElement;
     return !!(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&a.type!=="checkbox"))&&a.value);
@@ -538,15 +538,18 @@
     böcker</p>
   <!-- Snabbknappar för sortering (Thomas 2/11). Ikoner utan text (3/11)
        gick inte att tolka - tillbaka till ett ord per knapp (3/11 igen),
-       men korta nog ("Datum" inte "Senast värderad") för att alla fem
-       fortfarande ska rymmas på en rad. -->
+       med fast (inte krympande) textstorlek och horisontell skroll som
+       säkerhetsventil så raden garanterat aldrig radbryts, se .sell-sort-chips
+       i style.css. sellSortLabel (3/11) säger i klartext vad vald knapp
+       sorterar på, fylls av sellSyncUI() i app.js. -->
   <div class="sell-sort-chips" id="sellSortChips" role="group" aria-label="Sortera listan">
     <button class="sort-chip" type="button" data-sort="titel">Namn</button>
-    <button class="sort-chip" type="button" data-sort="forfattare">Författare</button>
+    <button class="sort-chip" type="button" data-sort="forfattare">Förf.</button>
     <button class="sort-chip on" type="button" data-sort="varde">Pris</button>
     <button class="sort-chip" type="button" data-sort="datum">Datum</button>
     <button class="sort-chip" type="button" data-sort="hetta">Hetta</button>
   </div>
+  <p class="sell-sort-label" id="sellSortLabel"></p>
   <div id="sellList"></div>
   <p id="sellNote" class="fine"></p>
   <div class="sell-empty-msg" id="sellEmptyMsg" style="display:none">Listan är tom. Be Claude köra en ny värderingsrunda, så fylls den igen.</div>
@@ -808,6 +811,6 @@
 <input type="file" accept="image/*" id="ppFile" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/app.js?v=20261103130823"></script>
+<script src="js/app.js?v=20261103131239"></script>
 </body>
 </html>

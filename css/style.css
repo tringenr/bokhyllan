@@ -1670,12 +1670,17 @@ body.har-remsa .toast{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px)
 .sell-sum-lankar .link-btn{font-size:14px}
 .sell-sortera{margin-left:10px;color:var(--ink-500)}
 /* Sorteringens snabbknappar (Thomas 2/11, gjorda om till rena ikonknappar
-   3/11, men ikonerna gick inte att tolka - tillbaka till korta ordknappar
-   3/11 igen: "knappar och inte etiketter... ska rymmas på en rad, minimera
-   text"). Kompakta textknappar som krymper vid behov så alla fem ryms på
-   en rad även på en smal telefon. */
-.sell-sort-chips{display:flex;gap:6px;margin:0 0 12px}
-.sort-chip{flex:1 1 0;min-width:0;height:34px;display:flex;align-items:center;justify-content:center;
+   3/11, men ikonerna gick inte att tolka - tillbaka till ordknappar 3/11
+   igen: "knappar och inte etiketter... ska rymmas på en rad, minimera
+   text"). Krympande/ellipsis-varianten klippte orden på smala skärmar
+   ("inte samma som innan, måste rymmas på en rad") - nu: knapparna är
+   alltid sin naturliga (minimala) bredd, inget ord klipps eller krymps,
+   och den totala radbredden hålls under kontroll med snäv padding/gap
+   och "Förf." istället för "Författare" (etiketten under raden säger
+   fullt namn ändå). */
+.sell-sort-chips{display:flex;gap:4px;margin:0 0 6px;flex-wrap:nowrap}
+.sort-chip{flex:none;height:30px;display:flex;align-items:center;justify-content:center;
   border-radius:999px;border:1px solid var(--chip-bd);background:transparent;color:var(--ink-500);
-  padding:0 8px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  padding:0 8px;font-size:12px;white-space:nowrap}
 .sort-chip.on{background:var(--pink-500);border-color:var(--pink-500);color:#fff}
+.sell-sort-label{margin:0 0 12px;font-size:12.5px;color:var(--ink-500)}
