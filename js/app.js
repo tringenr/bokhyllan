@@ -1,6 +1,6 @@
 (async()=>{
 window.__appStarted=true;
-const DV="?v=20261103125652";
+const DV="?v=20261103131239";
 const SB_URL="https://zuesxdqifsnvhleiukum.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1ZXN4ZHFpZnNudmhsZWl1a3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTAxNjcsImV4cCI6MjEwMzI2NjE2N30.PyutAHmY_he3VoPTT7r67oHOY5P75YpQSThqy4mO8ZI";
 let sbOnline=true;
@@ -2836,7 +2836,6 @@ function renderVardStart(){
       <img src="img/vardera-intro.jpg" alt="" aria-hidden="true">
       <span class="vs-scrim"></span>
       <div class="vs-intro-in">
-        <span class="vs-eyebrow">Värdera</span>
         <h1>Vad är dina böcker värda idag?</h1>
         <p>Vi söker upp priser på andrahandsmarknaden för böckerna i din hylla — innan du bestämmer vad du ska göra med dem.</p>
         <div class="vs-tva">
@@ -2878,7 +2877,6 @@ function renderVardStart(){
   el.innerHTML=`
     <div class="vard-banner"><img src="img/vardera-intro.jpg" alt=""><div class="vard-banner-scrim"></div></div>
     <div class="vs-head">
-      <span class="vs-eyebrow">Värdera</span>
       <h1>Vad är dina böcker värda idag?</h1>
       <p>${fmtN(n.pris)} av ${fmtN(vardera)} sökta ${vardera===1?"bok har":"böcker har"} ett pris. Priser ändras — kör om en sökning för att se vad som hänt sedan sist.</p>
       <div class="vs-summa">
@@ -3177,6 +3175,18 @@ function sellSyncUI(totalt){
      ändring av sellSort (t.ex. om den nollställs någon annanstans). */
   document.querySelectorAll('#sellSortChips button[data-sort]').forEach(b=>
     b.classList.toggle("on",b.dataset.sort===(sellSort||"varde")));
+  /* Rubrik ovanför listan som säger vad vald knapp faktiskt sorterar på
+     (Thomas 3/11): knappnamnet ensamt ("Pris") säger inte åt vilket håll -
+     denna rad gör det explicit, t.ex. "Sorterat på pris, högst först". */
+  const sortLabel={
+    titel:"Sorterat på namn, A–Ö",
+    forfattare:"Sorterat på författare, A–Ö",
+    varde:"Sorterat på pris, högst först",
+    datum:"Sorterat på värderingsdatum, senast först",
+    hetta:"Sorterat på hetta, högst först",
+  }[sellSort||"varde"]||"";
+  const sortLabelEl=document.getElementById("sellSortLabel");
+  if(sortLabelEl)sortLabelEl.textContent=sortLabel;
   const aktiv=!!(sellUnc||sellHeat||sellCat||sellStatus||sellKat);
   /* Filterarket (Design 31/10) öppnas/stängs via sellFiltersOppna, precis
      som appens övriga bottensheet (.sheet/.scrim .open) - inte längre en
